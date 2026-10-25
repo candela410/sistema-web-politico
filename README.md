@@ -36,7 +36,8 @@ python manage.py shell -c "from django.db import connection; c = connection.curs
 Si todo está bien, el primer comando dice `System check identified no issues` y el
 segundo imprime la versión de PostgreSQL de Neon. Ninguno de los dos crea tablas.
 
-Todavía no hay modelos ni migraciones, así que **no** hace falta correr `migrate`.
+Los modelos están en `backend/core/models.py` (usuario propio `core.Usuario` con login por
+email). Todavía no hay migraciones, así que **no** hace falta correr `migrate`.
 
 ### 4. Levantar el servidor
 

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core',
 ]
 
 MIDDLEWARE = [
@@ -86,6 +87,10 @@ DATABASES = {
         ssl_require=True,
     )
 }
+
+
+# Usuario propio con login por email (core.Usuario, tabla usuarios)
+AUTH_USER_MODEL = 'core.Usuario'
 
 
 # Password validation

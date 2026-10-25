@@ -213,6 +213,11 @@ function Mapa() {
       </aside>
 
       <div className="mapa__lienzo">
+        {!barrios && !error && (
+          <div className="mapa__cargando" role="status">
+            Cargando barrios…
+          </div>
+        )}
         {(enDibujo || marcandoRuta) && (
           <div className="mapa__indicacion" role="status">
             {enDibujo

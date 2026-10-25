@@ -32,10 +32,19 @@
 .panel__seccion {
   padding: 8px 14px;
   border-radius: 8px;
-  background: rgb(81 49 143 / 0.1);
-  color: var(--lla-violeta);
+  color: var(--lla-gris);
   font-weight: 700;
   font-size: 0.95rem;
+  text-decoration: none;
+}
+
+.panel__seccion:hover {
+  color: var(--lla-violeta);
+}
+
+.panel__seccion.active {
+  background: rgb(81 49 143 / 0.1);
+  color: var(--lla-violeta);
 }
 
 .panel__usuario {

@@ -1,17 +1,17 @@
+import { NavLink, Outlet } from 'react-router'
 import logo from './assets/logo.png'
-import Mapa from './mapa/Mapa'
 import './Panel.css'
 
-// Estructura de la app una vez iniciada la sesión: barra superior + sección
+// Estructura de la app una vez iniciada la sesión: barra superior + sección actual
 function Panel({ usuario, onSalir }) {
   return (
     <div className="panel">
       <header className="panel__barra">
         <img className="panel__logo" src={logo} alt="La Libertad Avanza" />
         <nav className="panel__nav" aria-label="Secciones">
-          <span className="panel__seccion" aria-current="page">
+          <NavLink to="/mapa" className="panel__seccion">
             Mapa
-          </span>
+          </NavLink>
         </nav>
         <div className="panel__usuario">
           <span className="panel__nombre">{usuario.nombre || usuario.email}</span>
@@ -26,7 +26,7 @@ function Panel({ usuario, onSalir }) {
         <i />
         <i />
       </span>
-      <Mapa />
+      <Outlet />
     </div>
   )
 }

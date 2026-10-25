@@ -140,6 +140,8 @@ def calcular_ruta(paradas, perfil):
             mensaje = detalle.get("message") if isinstance(detalle, dict) else str(detalle)
         except ValueError:
             mensaje = None
+        if mensaje and "routable point" in mensaje:
+            mensaje = "Uno de los puntos está lejos de una calle. Acercalo a una calle e intentá de nuevo."
         if error.code in (401, 403):
             mensaje = "La API key de OpenRouteService no es válida."
         raise ErrorRuteo(mensaje or f"OpenRouteService respondió {error.code}.") from error

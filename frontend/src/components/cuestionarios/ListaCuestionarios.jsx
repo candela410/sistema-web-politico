@@ -135,7 +135,7 @@ function ListaCuestionarios() {
               <button
                 type="button"
                 className="cuestionario-item__abrir"
-                onClick={() => navegar(`/cuestionarios/${c.id}`)}
+                onClick={() => navegar(`/cuestionarios/${c.id}/detalle`)}
               >
                 <span className="cuestionario-item__categoria">{c.categoria.nombre}</span>
                 <h3>{c.titulo}</h3>
@@ -147,6 +147,9 @@ function ListaCuestionarios() {
                 </span>
               </button>
               <div className="cuestionario-item__acciones">
+                <Link to={`/cuestionarios/${c.id}/detalle`} className="boton boton--chico">
+                  Ver detalle
+                </Link>
                 <Link to={`/cuestionarios/${c.id}`} className="boton boton--borde boton--chico">
                   Editar
                 </Link>

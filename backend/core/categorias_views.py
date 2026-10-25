@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
-from .api import error, leer_json, requiere_sesion
+from .api import error, leer_json, requiere_admin
 from .models import Categoria
 
 
@@ -40,7 +40,7 @@ def _validar(datos, categoria=None):
 
 
 @require_http_methods(["GET", "POST"])
-@requiere_sesion
+@requiere_admin
 def categorias(request):
     if request.method == "GET":
         lista = Categoria.objects.annotate(cantidad_cuestionarios=Count("cuestionarios")).order_by("nombre")
@@ -60,7 +60,7 @@ def categorias(request):
 
 
 @require_http_methods(["PATCH", "DELETE"])
-@requiere_sesion
+@requiere_admin
 def categoria_detalle(request, pk):
     categoria = get_object_or_404(Categoria, pk=pk)
 

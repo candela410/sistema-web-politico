@@ -487,6 +487,132 @@
   background: rgb(47 180 233 / 0.12);
 }
 
+/* --- Ver detalle: estadísticas ---------------------------------------- */
+
+.detalle__categoria {
+  align-self: flex-start;
+}
+
+.detalle__titulo {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 800;
+}
+
+.detalle__seccion {
+  margin: 12px 0 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.datos-grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.dato {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f7f6fa;
+}
+
+.dato__valor {
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.dato__etiqueta {
+  color: var(--lla-gris);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.estadistica__cabecera {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.estadistica__cabecera .tarjeta-pregunta__numero {
+  margin-top: 0;
+}
+
+.estadistica__cabecera h3 {
+  margin: 0 0 2px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.barras {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 40px;
+}
+
+.barras__fila {
+  display: grid;
+  grid-template-columns: minmax(90px, 32%) 1fr 72px;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.barras__texto {
+  overflow-wrap: anywhere;
+}
+
+.barras__pista {
+  height: 14px;
+  border-radius: 4px;
+  background: #f0eff4;
+}
+
+.barras__barra {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: 4px;
+  background: var(--lla-violeta);
+}
+
+.barras__valor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.barras__valor small {
+  color: var(--lla-gris);
+}
+
+.textos {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.textos li {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f7f6fa;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tarjeta-form,
   .interruptor__pista,
@@ -532,8 +658,18 @@
   }
 
   .opciones,
-  .respuesta-muestra {
+  .respuesta-muestra,
+  .barras,
+  .textos {
     padding-left: 0;
     margin-left: 0;
+  }
+
+  .barras__fila {
+    grid-template-columns: 1fr 64px;
+  }
+
+  .barras__texto {
+    grid-column: 1 / -1;
   }
 }

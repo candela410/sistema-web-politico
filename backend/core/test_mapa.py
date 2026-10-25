@@ -21,7 +21,7 @@ RUTA_ORS = (
 
 class MapaTests(TestCase):
     def setUp(self):
-        Usuario.objects.create_user(username="ana", email="ana@ejemplo.com", password="clave-segura-123")
+        Usuario.objects.create_user(username="ana", email="ana@ejemplo.com", password="clave-segura-123", is_staff=True)
         self.client = Client(enforce_csrf_checks=True)
         self.client.get("/api/auth/csrf/")
         self.enviar("post", "/api/auth/login/", {"email": "ana@ejemplo.com", "password": "clave-segura-123"})

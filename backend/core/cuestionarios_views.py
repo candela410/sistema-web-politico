@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
-from .api import campana_de, error, leer_json, requiere_sesion
+from .api import campana_de, error, leer_json, requiere_admin
 from .models import Categoria, Cuestionario, Opcion, Pregunta
 
 MAX_PREGUNTAS = 100
@@ -134,7 +134,7 @@ def _crear_preguntas(cuestionario, preguntas):
 
 
 @require_http_methods(["GET", "POST"])
-@requiere_sesion
+@requiere_admin
 def cuestionarios(request):
     if request.method == "GET":
         lista = (
@@ -162,7 +162,7 @@ def cuestionarios(request):
 
 
 @require_http_methods(["GET", "PUT", "DELETE"])
-@requiere_sesion
+@requiere_admin
 def cuestionario_detalle(request, pk):
     cuestionario = get_object_or_404(Cuestionario, pk=pk)
 

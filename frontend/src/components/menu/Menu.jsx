@@ -9,14 +9,21 @@ function Menu({ usuario, onSalir }) {
       <header className="panel__barra">
         <img className="panel__logo" src={logo} alt="La Libertad Avanza" />
         <nav className="panel__nav" aria-label="Secciones">
-          <NavLink to="/mapa" className="panel__seccion">
-            Mapa
-          </NavLink>
-          <NavLink to="/cuestionarios" className="panel__seccion">
-            Cuestionarios
-          </NavLink>
-          <NavLink to="/categorias" className="panel__seccion">
-            Categorías
+          {usuario.es_staff && (
+            <>
+              <NavLink to="/mapa" className="panel__seccion">
+                Mapa
+              </NavLink>
+              <NavLink to="/cuestionarios" className="panel__seccion">
+                Cuestionarios
+              </NavLink>
+              <NavLink to="/categorias" className="panel__seccion">
+                Categorías
+              </NavLink>
+            </>
+          )}
+          <NavLink to="/responder" className="panel__seccion">
+            {usuario.es_staff ? 'Cargar encuesta' : 'Encuestas'}
           </NavLink>
         </nav>
         <div className="panel__usuario">

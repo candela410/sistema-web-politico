@@ -22,6 +22,21 @@ def requiere_sesion(vista):
     return envoltura
 
 
+def requiere_admin(vista):
+    """Solo para la administración (usuarios con is_staff). Los militantes
+    reciben 403."""
+
+    @wraps(vista)
+    def envoltura(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return error("No autenticado.", 401)
+        if not request.user.is_staff:
+            return error("Esta sección es solo para la administración.", 403)
+        return vista(request, *args, **kwargs)
+
+    return envoltura
+
+
 def leer_json(request):
     """Devuelve el cuerpo JSON como dict, o None si no es un objeto JSON válido."""
     try:

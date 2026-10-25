@@ -17,6 +17,7 @@ def _usuario_json(usuario):
         "nombre": usuario.first_name,
         "apellido": usuario.last_name,
         "es_staff": usuario.is_staff,
+        "es_militante": hasattr(usuario, "militante"),
         "grupos": list(usuario.groups.values_list("name", flat=True)),
         "campana": usuario.campana_id,
     }

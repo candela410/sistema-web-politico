@@ -12,7 +12,7 @@ from django.views.decorators.http import require_http_methods
 from .api import error as _error
 from .api import leer_json as _leer_json
 from .api import campana_de as _campana_de
-from .api import requiere_sesion
+from .api import requiere_admin
 from .geo import ErrorRuteo, calcular_ruta, centro, es_poligono_valido, punto_en_poligono
 from .models import Barrio, Calle, Ruta, Zona
 
@@ -43,7 +43,7 @@ def _barrio_props(barrio):
 
 
 @require_http_methods(["GET"])
-@requiere_sesion
+@requiere_admin
 def barrios(request):
     lista = Barrio.objects.annotate(cantidad_calles=Count("calles")).order_by("nombre")
     return JsonResponse(
@@ -53,7 +53,7 @@ def barrios(request):
 
 
 @require_http_methods(["GET"])
-@requiere_sesion
+@requiere_admin
 def calles(request):
     consulta = Calle.objects.select_related("barrio")
     if request.GET.get("barrio"):
@@ -120,7 +120,7 @@ def _validar_zona(datos, zona=None):
 
 
 @require_http_methods(["GET", "POST"])
-@requiere_sesion
+@requiere_admin
 def zonas(request):
     if request.method == "GET":
         return JsonResponse({"zonas": [_zona_json(z) for z in Zona.objects.order_by("nombre")]})
@@ -144,7 +144,7 @@ def zonas(request):
 
 
 @require_http_methods(["PATCH", "DELETE"])
-@requiere_sesion
+@requiere_admin
 def zona_detalle(request, pk):
     zona = get_object_or_404(Zona, pk=pk)
     if request.method == "DELETE":
@@ -249,7 +249,7 @@ def _guardar_ruta(ruta, datos):
 
 
 @require_http_methods(["GET", "POST"])
-@requiere_sesion
+@requiere_admin
 def rutas(request):
     if request.method == "GET":
         lista = Ruta.objects.prefetch_related("equipos").order_by("nombre")
@@ -266,7 +266,7 @@ def rutas(request):
 
 
 @require_http_methods(["PATCH", "DELETE"])
-@requiere_sesion
+@requiere_admin
 def ruta_detalle(request, pk):
     ruta = get_object_or_404(Ruta, pk=pk)
     if request.method == "DELETE":

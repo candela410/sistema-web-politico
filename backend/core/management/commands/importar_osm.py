@@ -143,20 +143,47 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("Simulación: no se guardó nada."))
             return
 
+        # Inserciones en bloque: con una base remota (Neon) cada consulta suma
+        # latencia, así que se evita guardar fila por fila.
         with transaction.atomic():
-            por_osm = {}
+            # Un barrio existente se reconoce por su osm_id o, si OpenStreetMap
+            # cambió el elemento, por su nombre (que es único).
+            existentes = list(Barrio.objects.all())
+            por_id_osm = {b.osm_id: b for b in existentes if b.osm_id is not None}
+            por_nombre = {b.nombre.lower(): b for b in existentes}
+            nuevos, actualizados = [], []
             for b in barrios:
-                barrio, _ = Barrio.objects.update_or_create(
-                    osm_id=b["osm_id"],
-                    defaults={"nombre": b["nombre"], "geometria": b["geometria"]},
-                )
-                por_osm[b["osm_id"]] = barrio
-            for (osm_id, nombre_calle), tramos in asignadas.items():
-                Calle.objects.update_or_create(
-                    barrio=por_osm[osm_id],
-                    nombre=nombre_calle,
-                    defaults={"geometria": {"type": "MultiLineString", "coordinates": tramos}},
-                )
+                barrio = por_id_osm.get(b["osm_id"]) or por_nombre.get(b["nombre"].lower())
+                if barrio is None:
+                    nuevos.append(Barrio(osm_id=b["osm_id"], nombre=b["nombre"], geometria=b["geometria"]))
+                    continue
+                if barrio.osm_id != b["osm_id"]:
+                    # Libera el osm_id si lo tenía otro barrio
+                    otro = por_id_osm.get(b["osm_id"])
+                    if otro and otro is not barrio:
+                        otro.osm_id = None
+                        actualizados.append(otro)
+                barrio.osm_id, barrio.nombre, barrio.geometria = b["osm_id"], b["nombre"], b["geometria"]
+                actualizados.append(barrio)
+            Barrio.objects.bulk_update(actualizados, ["osm_id", "nombre", "geometria"], batch_size=200)
+            Barrio.objects.bulk_create(nuevos, batch_size=200)
+            por_osm = dict(
+                Barrio.objects.filter(osm_id__in=[b["osm_id"] for b in barrios]).values_list("osm_id", "pk")
+            )
+            Calle.objects.bulk_create(
+                [
+                    Calle(
+                        barrio_id=por_osm[osm_id],
+                        nombre=nombre_calle,
+                        geometria={"type": "MultiLineString", "coordinates": tramos},
+                    )
+                    for (osm_id, nombre_calle), tramos in asignadas.items()
+                ],
+                update_conflicts=True,
+                unique_fields=["barrio", "nombre"],
+                update_fields=["geometria"],
+                batch_size=500,
+            )
         self.stdout.write(self.style.SUCCESS("Barrios y calles guardados."))
 
     def _buscar_ciudad(self, ciudad):

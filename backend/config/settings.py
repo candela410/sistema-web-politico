@@ -84,9 +84,20 @@ DATABASES = {
     'default': dj_database_url.config(
         env='DATABASE_URL',
         conn_max_age=600,
-        ssl_require=True,
     )
 }
+# Neon exige SSL; los tests pueden usar SQLite local (ver README).
+if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+    DATABASES['default'].setdefault('OPTIONS', {}).setdefault('sslmode', 'require')
+
+# El frontend en desarrollo (Vite, puerto 5173) llama a /api a través de su
+# proxy, así que cookies y CSRF funcionan como mismo origen.
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'DJANGO_CSRF_TRUSTED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173'
+).split(',')
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
 
 
 # Usuario propio con login por email (core.Usuario, tabla usuarios)

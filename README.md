@@ -37,12 +37,33 @@ Si todo está bien, el primer comando dice `System check identified no issues` y
 segundo imprime la versión de PostgreSQL de Neon. Ninguno de los dos crea tablas.
 
 Los modelos están en `backend/core/models.py` (usuario propio `core.Usuario` con login por
-email). Todavía no hay migraciones, así que **no** hace falta correr `migrate`.
+email). Las tablas ya están creadas en Neon. Si se cambian los modelos:
+
+```powershell
+python manage.py makemigrations
+python manage.py migrate
+```
 
 ### 4. Levantar el servidor
 
 ```powershell
 python manage.py runserver
+```
+
+### 5. Crear un usuario para entrar
+
+```powershell
+python manage.py createsuperuser   # pide email, username y contraseña
+```
+
+También se pueden crear usuarios desde el admin: http://127.0.0.1:8000/admin/
+
+### 6. Tests
+
+Corren sobre SQLite local, sin tocar Neon:
+
+```powershell
+$env:DATABASE_URL = "sqlite:///test.sqlite3"; python manage.py test core; Remove-Item Env:DATABASE_URL
 ```
 
 ## Frontend
@@ -53,3 +74,22 @@ npm install
 npm run dev      # servidor de desarrollo en http://localhost:5173
 npm run build    # compilación de producción en frontend/dist
 ```
+
+## Login
+
+Usa las tablas de Django (`usuarios`, `django_session`, grupos y permisos) con sesiones y
+CSRF, sin librerías extra. Con `runserver` y `npm run dev` levantados, entrar a
+http://localhost:5173 con el email y la contraseña de un usuario.
+
+El servidor de Vite reenvía `/api` a Django (`http://127.0.0.1:8000`), así el navegador
+trata todo como el mismo sitio. Si Django corre en otro puerto:
+`$env:API_PROXY_TARGET = "http://127.0.0.1:8001"` antes de `npm run dev`.
+
+| Endpoint | Método | Qué hace |
+|---|---|---|
+| `/api/auth/csrf/` | GET | Deja la cookie `csrftoken` |
+| `/api/auth/login/` | POST | `{"email", "password"}`, inicia la sesión |
+| `/api/auth/me/` | GET | Usuario actual, o 401 si no hay sesión |
+| `/api/auth/logout/` | POST | Cierra la sesión |
+
+Los POST llevan el header `X-CSRFToken` con el valor de la cookie `csrftoken`.

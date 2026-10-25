@@ -5,6 +5,8 @@ from functools import wraps
 
 from django.http import JsonResponse
 
+from .models import Campana
+
 
 def error(mensaje, status=400):
     return JsonResponse({"error": mensaje}, status=status)
@@ -27,3 +29,11 @@ def leer_json(request):
     except json.JSONDecodeError:
         return None
     return datos if isinstance(datos, dict) else None
+
+
+def campana_de(usuario):
+    """La campaña del usuario; si no tiene, la primera activa (o se crea una)."""
+    if usuario.campana_id:
+        return usuario.campana
+    campana = Campana.objects.filter(activa=True).order_by("id_campana").first()
+    return campana or Campana.objects.create(nombre="Campaña principal")

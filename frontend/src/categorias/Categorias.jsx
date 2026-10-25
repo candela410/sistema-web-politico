@@ -1,35 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import * as api from '../api/categorias'
+import Modal from '../componentes/Modal'
 import './categorias.css'
 
 const ordenar = (lista) => [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-
-// Ventana modal basada en <dialog>: Escape y el fondo la cierran
-function Modal({ titulo, children, onCerrar }) {
-  const ref = useRef(null)
-  useEffect(() => {
-    const dialogo = ref.current
-    dialogo.showModal()
-    return () => dialogo.close()
-  }, [])
-  return (
-    <dialog
-      ref={ref}
-      className="modal"
-      aria-labelledby="modal-titulo"
-      onCancel={(e) => {
-        e.preventDefault()
-        onCerrar()
-      }}
-      onClick={(e) => e.target === ref.current && onCerrar()}
-    >
-      <div className="modal__contenido">
-        <h2 id="modal-titulo">{titulo}</h2>
-        {children}
-      </div>
-    </dialog>
-  )
-}
 
 function FormularioCategoria({ categoria, onGuardada, onCerrar }) {
   const [nombre, setNombre] = useState(categoria?.nombre ?? '')
@@ -81,7 +55,7 @@ function FormularioCategoria({ categoria, onGuardada, onCerrar }) {
         />
 
         {error && (
-          <p className="categorias__error" role="alert">
+          <p className="texto-error" role="alert">
             {error}
           </p>
         )}
@@ -121,7 +95,7 @@ function ConfirmarBorrado({ categoria, onBorrada, onCerrar }) {
         ¿Seguro que querés borrar <b>{categoria.nombre}</b>? Esta acción no se puede deshacer.
       </p>
       {error && (
-        <p className="categorias__error" role="alert">
+        <p className="texto-error" role="alert">
           {error}
         </p>
       )}
@@ -166,24 +140,24 @@ function Categorias() {
   }
 
   return (
-    <main className="categorias">
-      <header className="categorias__encabezado">
+    <main className="pagina">
+      <header className="pagina__encabezado">
         <div>
           <h1>Categorías</h1>
           <p>Agrupan los cuestionarios por tema.</p>
-          <span className="categorias__franja" aria-hidden="true">
+          <span className="franja-corta" aria-hidden="true">
             <i />
             <i />
             <i />
             <i />
           </span>
         </div>
-        <button type="button" className="boton categorias__nueva" onClick={() => setEditando('nueva')}>
+        <button type="button" className="boton pagina__accion" onClick={() => setEditando('nueva')}>
           + Nueva categoría
         </button>
       </header>
 
-      <div className="categorias__buscador">
+      <div className="buscador">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="11" cy="11" r="7" />
           <path d="m20 20-3.5-3.5" />
@@ -198,19 +172,19 @@ function Categorias() {
       </div>
 
       {aviso && (
-        <p className="categorias__aviso" role="status">
+        <p className="aviso-ok" role="status">
           {aviso}
         </p>
       )}
 
       {errorCarga ? (
-        <p className="categorias__error" role="alert">
+        <p className="texto-error" role="alert">
           {errorCarga}
         </p>
       ) : categorias === null ? (
-        <p className="categorias__vacio">Cargando…</p>
+        <p className="vacio-tarjeta">Cargando…</p>
       ) : visibles.length === 0 ? (
-        <div className="categorias__vacio">
+        <div className="vacio-tarjeta">
           {categorias.length === 0 ? (
             <>
               <b>Todavía no hay categorías.</b>
@@ -221,7 +195,7 @@ function Categorias() {
           )}
         </div>
       ) : (
-        <ul className="categorias__lista">
+        <ul className="categorias-lista">
           {visibles.map((c) => (
             <li key={c.id} className="categoria">
               <div className="categoria__texto">

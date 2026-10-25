@@ -1,0 +1,197 @@
+"""API de cuestionarios: se guardan completos (título, preguntas y opciones)
+en un solo pedido, como un formulario de Google Forms."""
+
+from django.db import transaction
+from django.db.models import Count
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_http_methods
+
+from .api import campana_de, error, leer_json, requiere_sesion
+from .models import Categoria, Cuestionario, Opcion, Pregunta
+
+MAX_PREGUNTAS = 100
+MAX_OPCIONES = 30
+OPCIONES_SI_NO = ["Sí", "No"]
+TIPOS_CON_OPCIONES = {Pregunta.Tipo.OPCION_MULTIPLE, Pregunta.Tipo.SI_NO}
+
+
+class DatosInvalidos(Exception):
+    pass
+
+
+def _resumen_json(c):
+    return {
+        "id": c.pk,
+        "titulo": c.titulo,
+        "descripcion": c.descripcion or "",
+        "categoria": {"id": c.categoria_id, "nombre": c.categoria.nombre},
+        "activo": c.activo,
+        "creado_en": c.creado_en.isoformat(),
+        "preguntas": c.cantidad_preguntas,
+        "encuestas": c.cantidad_encuestas,
+    }
+
+
+def _detalle_json(c):
+    encuestas = c.encuestas.count()
+    return {
+        "id": c.pk,
+        "titulo": c.titulo,
+        "descripcion": c.descripcion or "",
+        "categoria": c.categoria_id,
+        "activo": c.activo,
+        "encuestas": encuestas,
+        # Con encuestas cargadas, preguntas y opciones ya no se pueden cambiar
+        "bloqueado": encuestas > 0,
+        "preguntas": [
+            {
+                "id": p.pk,
+                "enunciado": p.enunciado,
+                "tipo": p.tipo,
+                "obligatoria": p.obligatoria,
+                "opciones": [{"id": o.pk, "texto": o.texto} for o in p.opciones.all()],
+            }
+            for p in c.preguntas.prefetch_related("opciones")
+        ],
+    }
+
+
+def _texto(valor, campo, maximo=None, obligatorio=True):
+    if valor is None:
+        valor = ""
+    if not isinstance(valor, str):
+        raise DatosInvalidos(f"{campo} debe ser texto.")
+    valor = valor.strip()
+    if obligatorio and not valor:
+        raise DatosInvalidos(f"Falta {campo.lower()}.")
+    if maximo and len(valor) > maximo:
+        raise DatosInvalidos(f"{campo} es muy largo (máximo {maximo} caracteres).")
+    return valor
+
+
+def _limpiar_cabecera(datos):
+    titulo = _texto(datos.get("titulo"), "El título", 180)
+    descripcion = _texto(datos.get("descripcion"), "La descripción", obligatorio=False)
+    categoria_id = datos.get("categoria")
+    if not categoria_id or not Categoria.objects.filter(pk=categoria_id).exists():
+        raise DatosInvalidos("Elegí una categoría.")
+    activo = datos.get("activo", True)
+    if not isinstance(activo, bool):
+        raise DatosInvalidos("El estado activo debe ser verdadero o falso.")
+    return {"titulo": titulo, "descripcion": descripcion or None, "categoria_id": categoria_id, "activo": activo}
+
+
+def _limpiar_preguntas(preguntas):
+    if not isinstance(preguntas, list) or not preguntas:
+        raise DatosInvalidos("Agregá al menos una pregunta.")
+    if len(preguntas) > MAX_PREGUNTAS:
+        raise DatosInvalidos(f"Un cuestionario puede tener hasta {MAX_PREGUNTAS} preguntas.")
+    limpias = []
+    for n, p in enumerate(preguntas, start=1):
+        if not isinstance(p, dict):
+            raise DatosInvalidos(f"La pregunta {n} no es válida.")
+        enunciado = _texto(p.get("enunciado"), f"El texto de la pregunta {n}")
+        tipo = p.get("tipo", Pregunta.Tipo.OPCION_MULTIPLE)
+        if tipo not in Pregunta.Tipo.values:
+            raise DatosInvalidos(f"El tipo de la pregunta {n} no es válido.")
+        if tipo == Pregunta.Tipo.SI_NO:
+            opciones = OPCIONES_SI_NO
+        elif tipo == Pregunta.Tipo.OPCION_MULTIPLE:
+            crudas = p.get("opciones") or []
+            if not isinstance(crudas, list):
+                raise DatosInvalidos(f"Las opciones de la pregunta {n} no son válidas.")
+            opciones = [
+                _texto(o.get("texto") if isinstance(o, dict) else o, f"La opción {i} de la pregunta {n}")
+                for i, o in enumerate(crudas, start=1)
+            ]
+            if len(opciones) < 2:
+                raise DatosInvalidos(f"La pregunta {n} necesita al menos 2 opciones.")
+            if len(opciones) > MAX_OPCIONES:
+                raise DatosInvalidos(f"La pregunta {n} puede tener hasta {MAX_OPCIONES} opciones.")
+            if len({o.lower() for o in opciones}) != len(opciones):
+                raise DatosInvalidos(f"La pregunta {n} tiene opciones repetidas.")
+        else:
+            opciones = []
+        limpias.append(
+            {"enunciado": enunciado, "tipo": tipo, "obligatoria": bool(p.get("obligatoria")), "opciones": opciones}
+        )
+    return limpias
+
+
+def _crear_preguntas(cuestionario, preguntas):
+    for orden, p in enumerate(preguntas, start=1):
+        pregunta = Pregunta.objects.create(
+            cuestionario=cuestionario,
+            enunciado=p["enunciado"],
+            tipo=p["tipo"],
+            obligatoria=p["obligatoria"],
+            orden=orden,
+        )
+        Opcion.objects.bulk_create(
+            [Opcion(pregunta=pregunta, texto=texto, orden=i) for i, texto in enumerate(p["opciones"], start=1)]
+        )
+
+
+@require_http_methods(["GET", "POST"])
+@requiere_sesion
+def cuestionarios(request):
+    if request.method == "GET":
+        lista = (
+            Cuestionario.objects.select_related("categoria")
+            .annotate(
+                cantidad_preguntas=Count("preguntas", distinct=True),
+                cantidad_encuestas=Count("encuestas", distinct=True),
+            )
+            .order_by("-creado_en")
+        )
+        return JsonResponse({"cuestionarios": [_resumen_json(c) for c in lista]})
+
+    datos = leer_json(request)
+    if datos is None:
+        return error("JSON inválido.")
+    try:
+        cabecera = _limpiar_cabecera(datos)
+        preguntas = _limpiar_preguntas(datos.get("preguntas"))
+    except DatosInvalidos as e:
+        return error(str(e))
+    with transaction.atomic():
+        cuestionario = Cuestionario.objects.create(campana=campana_de(request.user), **cabecera)
+        _crear_preguntas(cuestionario, preguntas)
+    return JsonResponse({"cuestionario": _detalle_json(cuestionario)}, status=201)
+
+
+@require_http_methods(["GET", "PUT", "DELETE"])
+@requiere_sesion
+def cuestionario_detalle(request, pk):
+    cuestionario = get_object_or_404(Cuestionario, pk=pk)
+
+    if request.method == "GET":
+        return JsonResponse({"cuestionario": _detalle_json(cuestionario)})
+
+    if request.method == "DELETE":
+        if cuestionario.encuestas.exists():
+            return error("No se puede borrar: ya tiene encuestas cargadas. Podés desactivarlo.", 409)
+        if cuestionario.militantes.exists():
+            return error("No se puede borrar: está asignado a militantes. Quitá las asignaciones primero.", 409)
+        cuestionario.delete()  # preguntas y opciones se borran en cascada
+        return JsonResponse({"ok": True})
+
+    # PUT: reemplaza el cuestionario completo
+    datos = leer_json(request)
+    if datos is None:
+        return error("JSON inválido.")
+    bloqueado = cuestionario.encuestas.exists()
+    try:
+        cabecera = _limpiar_cabecera(datos)
+        preguntas = None if bloqueado else _limpiar_preguntas(datos.get("preguntas"))
+    except DatosInvalidos as e:
+        return error(str(e))
+    with transaction.atomic():
+        for campo, valor in cabecera.items():
+            setattr(cuestionario, campo, valor)
+        cuestionario.save()
+        if preguntas is not None:
+            cuestionario.preguntas.all().delete()
+            _crear_preguntas(cuestionario, preguntas)
+    return JsonResponse({"cuestionario": _detalle_json(cuestionario)})

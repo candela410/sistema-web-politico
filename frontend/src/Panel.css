@@ -25,11 +25,20 @@
 
 .panel__nav {
   flex: 1;
+  min-width: 0;
   display: flex;
   gap: 8px;
+  /* En pantallas angostas el menú se desplaza de costado */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.panel__nav::-webkit-scrollbar {
+  display: none;
 }
 
 .panel__seccion {
+  flex: none;
   padding: 8px 14px;
   border-radius: 8px;
   color: var(--lla-gris);
@@ -87,6 +96,7 @@
   font: inherit;
   font-size: 0.9rem;
   font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
   transition: background-color 150ms ease, transform 100ms ease;
 }
@@ -135,6 +145,145 @@
   font-size: 0.85rem;
 }
 
+.boton--rojo {
+  background: #c0182f;
+}
+
+.boton--rojo:hover:not(:disabled) {
+  background: #a3142a;
+}
+
+/* Páginas de listado (categorías, cuestionarios) */
+
+.pagina {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pagina__encabezado {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pagina__encabezado h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.pagina__encabezado p {
+  margin: 4px 0 12px;
+  color: var(--lla-gris);
+}
+
+.franja-corta {
+  display: flex;
+  width: 72px;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.franja-corta i {
+  flex: 1;
+}
+.franja-corta i:nth-child(1) { background: var(--lla-violeta); }
+.franja-corta i:nth-child(2) { background: var(--lla-celeste); }
+.franja-corta i:nth-child(3) { background: var(--lla-magenta); }
+.franja-corta i:nth-child(4) { background: var(--lla-naranja); }
+
+.pagina__accion {
+  height: 48px;
+  padding: 0 22px;
+  font-size: 0.95rem;
+}
+
+/* --- Buscador --------------------------------------------------------- */
+
+.buscador {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 14px;
+  background: #fff;
+  border: 1px solid var(--lla-borde);
+  border-radius: 10px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.buscador:focus-within {
+  border-color: var(--lla-violeta);
+  box-shadow: 0 0 0 3px rgb(81 49 143 / 0.15);
+}
+
+.buscador svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--lla-gris);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.buscador input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--lla-texto);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.buscador input::placeholder {
+  color: #a3a1ab;
+}
+
+.vacio-tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 40px 16px;
+  border: 1px dashed var(--lla-borde);
+  border-radius: 12px;
+  color: var(--lla-gris);
+  text-align: center;
+}
+
+.texto-error {
+  margin: 0;
+  color: #c0182f;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.aviso-ok {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgb(31 157 107 / 0.12);
+  color: #146b49;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 /* Formularios compartidos */
 
 .entrada {
@@ -163,12 +312,28 @@
 }
 
 @media (max-width: 640px) {
+  .pagina {
+    padding: 20px 16px 32px;
+  }
+
+  .pagina__accion {
+    width: 100%;
+  }
+
   .panel__barra {
     gap: 12px;
     padding: 0 12px;
   }
   .panel__logo {
-    height: 32px;
+    height: 28px;
+  }
+  .panel__seccion {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+  .panel__usuario .boton {
+    height: 36px;
+    padding: 0 12px;
   }
   .panel__nombre {
     display: none;

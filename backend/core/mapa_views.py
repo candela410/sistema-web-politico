@@ -11,9 +11,10 @@ from django.views.decorators.http import require_http_methods
 
 from .api import error as _error
 from .api import leer_json as _leer_json
+from .api import campana_de as _campana_de
 from .api import requiere_sesion
 from .geo import ErrorRuteo, calcular_ruta, centro, es_poligono_valido, punto_en_poligono
-from .models import Barrio, Calle, Campana, Ruta, Zona
+from .models import Barrio, Calle, Ruta, Zona
 
 COLOR_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 MAX_PARADAS = 50  # límite de puntos por pedido de OpenRouteService
@@ -190,14 +191,6 @@ def _ruta_json(ruta):
         "duracion_s": ruta.duracion_s,
         "equipos": list(ruta.equipos.values_list("nombre", flat=True)),
     }
-
-
-def _campana_de(usuario):
-    """La campaña del usuario; si no tiene, la primera activa (o se crea una)."""
-    if usuario.campana_id:
-        return usuario.campana
-    campana = Campana.objects.filter(activa=True).order_by("id_campana").first()
-    return campana or Campana.objects.create(nombre="Campaña principal")
 
 
 def _validar_paradas(paradas):

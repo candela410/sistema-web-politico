@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import categorias_views, mapa_views, views
+from . import categorias_views, cuestionarios_views, mapa_views, views
 
 urlpatterns = [
     path("auth/csrf/", views.csrf, name="auth-csrf"),
@@ -9,6 +9,8 @@ urlpatterns = [
     path("auth/me/", views.me, name="auth-me"),
     path("categorias/", categorias_views.categorias, name="categorias"),
     path("categorias/<int:pk>/", categorias_views.categoria_detalle, name="categoria"),
+    path("cuestionarios/", cuestionarios_views.cuestionarios, name="cuestionarios"),
+    path("cuestionarios/<int:pk>/", cuestionarios_views.cuestionario_detalle, name="cuestionario"),
     path("mapa/barrios/", mapa_views.barrios, name="mapa-barrios"),
     path("mapa/calles/", mapa_views.calles, name="mapa-calles"),
     path("mapa/zonas/", mapa_views.zonas, name="mapa-zonas"),

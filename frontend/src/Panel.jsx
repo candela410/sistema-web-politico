@@ -12,6 +12,9 @@ function Panel({ usuario, onSalir }) {
           <NavLink to="/mapa" className="panel__seccion">
             Mapa
           </NavLink>
+          <NavLink to="/cuestionarios" className="panel__seccion">
+            Cuestionarios
+          </NavLink>
           <NavLink to="/categorias" className="panel__seccion">
             Categorías
           </NavLink>

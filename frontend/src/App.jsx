@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { cerrarSesion, prepararCsrf, usuarioActual } from './api/auth'
 import Categorias from './categorias/Categorias'
+import EditorCuestionario from './cuestionarios/EditorCuestionario'
+import ListaCuestionarios from './cuestionarios/ListaCuestionarios'
 import Login from './Login'
 import Mapa from './mapa/Mapa'
 import Panel from './Panel'
@@ -10,6 +12,7 @@ import Panel from './Panel'
 //   /login  pantalla de ingreso (si ya hay sesión, va al panel)
 //   /mapa   mapa de barrios, zonas y rutas (requiere sesión)
 //   /categorias  ABM de categorías de cuestionarios (requiere sesión)
+//   /cuestionarios, /cuestionarios/nuevo, /cuestionarios/:id  lista y editor (requiere sesión)
 //   /       y cualquier otra dirección redirigen a /mapa
 
 function RequiereSesion({ usuario, children }) {
@@ -65,6 +68,9 @@ function Rutas() {
       >
         <Route path="/mapa" element={<Mapa />} />
         <Route path="/categorias" element={<Categorias />} />
+        <Route path="/cuestionarios" element={<ListaCuestionarios />} />
+        <Route path="/cuestionarios/nuevo" element={<EditorCuestionario key="nuevo" />} />
+        <Route path="/cuestionarios/:id" element={<EditorCuestionario />} />
       </Route>
       <Route path="*" element={<Navigate to="/mapa" replace />} />
     </Routes>

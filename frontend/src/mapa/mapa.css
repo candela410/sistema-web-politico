@@ -201,12 +201,6 @@
   font-weight: 600;
 }
 
-.acciones {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
 /* --- Formularios ------------------------------------------------------ */
 
 .formulario h2 {
@@ -220,25 +214,6 @@
   margin-bottom: -6px;
   font-size: 0.85rem;
   font-weight: 600;
-}
-
-.entrada {
-  width: 100%;
-  min-height: 42px;
-  padding: 9px 12px;
-  border: 1px solid var(--lla-borde);
-  border-radius: 10px;
-  background: #fff;
-  color: var(--lla-texto);
-  font: inherit;
-  font-size: 1rem;
-  resize: vertical;
-}
-
-.entrada:focus {
-  outline: none;
-  border-color: var(--lla-violeta);
-  box-shadow: 0 0 0 3px rgb(81 49 143 / 0.15);
 }
 
 .paso {

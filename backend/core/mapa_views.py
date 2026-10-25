@@ -1,9 +1,7 @@
 """API del mapa: barrios y calles (solo lectura), zonas y rutas (crear,
 editar y borrar). Todo en GeoJSON. Requiere sesión iniciada."""
 
-import json
 import re
-from functools import wraps
 
 from django.db import transaction
 from django.db.models import Count
@@ -11,33 +9,14 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
+from .api import error as _error
+from .api import leer_json as _leer_json
+from .api import requiere_sesion
 from .geo import ErrorRuteo, calcular_ruta, centro, es_poligono_valido, punto_en_poligono
 from .models import Barrio, Calle, Campana, Ruta, Zona
 
 COLOR_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 MAX_PARADAS = 50  # límite de puntos por pedido de OpenRouteService
-
-
-def _error(mensaje, status=400):
-    return JsonResponse({"error": mensaje}, status=status)
-
-
-def requiere_sesion(vista):
-    @wraps(vista)
-    def envoltura(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return _error("No autenticado.", 401)
-        return vista(request, *args, **kwargs)
-
-    return envoltura
-
-
-def _leer_json(request):
-    try:
-        datos = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
-        return None
-    return datos if isinstance(datos, dict) else None
 
 
 def _feature(geometria, propiedades):

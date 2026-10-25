@@ -1,12 +1,14 @@
 from django.urls import path
 
-from . import mapa_views, views
+from . import categorias_views, mapa_views, views
 
 urlpatterns = [
     path("auth/csrf/", views.csrf, name="auth-csrf"),
     path("auth/login/", views.login_view, name="auth-login"),
     path("auth/logout/", views.logout_view, name="auth-logout"),
     path("auth/me/", views.me, name="auth-me"),
+    path("categorias/", categorias_views.categorias, name="categorias"),
+    path("categorias/<int:pk>/", categorias_views.categoria_detalle, name="categoria"),
     path("mapa/barrios/", mapa_views.barrios, name="mapa-barrios"),
     path("mapa/calles/", mapa_views.calles, name="mapa-calles"),
     path("mapa/zonas/", mapa_views.zonas, name="mapa-zonas"),

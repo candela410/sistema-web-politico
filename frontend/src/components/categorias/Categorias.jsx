@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import * as api from '../api/categorias'
-import Modal from '../componentes/Modal'
+import * as api from '../../api/categorias'
+import Modal from '../comunes/Modal'
 import './categorias.css'
 
 const ordenar = (lista) => [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))

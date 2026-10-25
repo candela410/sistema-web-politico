@@ -1,9 +1,9 @@
 import { NavLink, Outlet } from 'react-router'
-import logo from './assets/logo.png'
-import './Panel.css'
+import logo from '../../assets/logo.png'
+import './Menu.css'
 
-// Estructura de la app una vez iniciada la sesión: barra superior + sección actual
-function Panel({ usuario, onSalir }) {
+// Menú superior de la app (logo, secciones y "Salir") con la sección actual debajo
+function Menu({ usuario, onSalir }) {
   return (
     <div className="panel">
       <header className="panel__barra">
@@ -37,4 +37,4 @@ function Panel({ usuario, onSalir }) {
   )
 }
 
-export default Panel
+export default Menu

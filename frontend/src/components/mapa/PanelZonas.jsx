@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import * as api from '../api/mapa'
+import * as api from '../../api/mapa'
 import { COLORES_ZONA } from './formato'
 
 function SelectorColor({ valor, onCambio }) {

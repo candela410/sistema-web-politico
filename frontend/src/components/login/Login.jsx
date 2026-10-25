@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { iniciarSesion } from './api/auth'
-import logo from './assets/logo.png'
+import { iniciarSesion } from '../../api/auth'
+import logo from '../../assets/logo.png'
 import './Login.css'
 
 function IconoCorreo() {

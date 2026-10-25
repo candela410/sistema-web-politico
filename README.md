@@ -75,6 +75,23 @@ npm run dev      # servidor de desarrollo en http://localhost:5173
 npm run build    # compilación de producción en frontend/dist
 ```
 
+### Estructura del frontend
+
+```
+frontend/src/
+├── App.jsx            rutas de navegación (React Router)
+├── index.css          colores de la campaña y estilos compartidos (botones, formularios)
+├── api/               llamadas a la API de Django
+├── assets/            logo
+└── components/        todas las vistas
+    ├── login/         pantalla de ingreso
+    ├── menu/          menú superior (logo, secciones, Salir)
+    ├── mapa/          mapa de barrios, zonas y rutas
+    ├── categorias/    ABM de categorías
+    ├── cuestionarios/ lista y editor de cuestionarios
+    └── comunes/       piezas reutilizables (ventana modal)
+```
+
 ## Login
 
 Usa las tablas de Django (`usuarios`, `django_session`, grupos y permisos) con sesiones y

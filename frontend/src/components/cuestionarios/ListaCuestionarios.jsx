@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
-import * as api from '../api/cuestionarios'
-import Modal from '../componentes/Modal'
+import * as api from '../../api/cuestionarios'
+import Modal from '../comunes/Modal'
 import './cuestionarios.css'
 
 function ConfirmarBorrado({ cuestionario, onBorrado, onCerrar }) {

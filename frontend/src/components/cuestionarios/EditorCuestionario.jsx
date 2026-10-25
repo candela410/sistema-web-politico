@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { obtenerCategorias } from '../api/categorias'
-import * as api from '../api/cuestionarios'
+import { obtenerCategorias } from '../../api/categorias'
+import * as api from '../../api/cuestionarios'
 import './cuestionarios.css'
 
 // Editor de cuestionarios al estilo Google Forms: una tarjeta para el título

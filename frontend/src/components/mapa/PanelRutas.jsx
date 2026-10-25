@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import * as api from '../api/mapa'
+import * as api from '../../api/mapa'
 import { PERFILES, distancia, duracion } from './formato'
 
 function PanelRutas({ rutas, zonas, modo, setModo, seleccionada, onSeleccionar, onGuardada, onBorrada, onError }) {

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { cerrarSesion, prepararCsrf, usuarioActual } from './api/auth'
-import Categorias from './categorias/Categorias'
-import EditorCuestionario from './cuestionarios/EditorCuestionario'
-import ListaCuestionarios from './cuestionarios/ListaCuestionarios'
-import Login from './Login'
-import Mapa from './mapa/Mapa'
-import Panel from './Panel'
+import Categorias from './components/categorias/Categorias'
+import EditorCuestionario from './components/cuestionarios/EditorCuestionario'
+import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
+import Login from './components/login/Login'
+import Mapa from './components/mapa/Mapa'
+import Menu from './components/menu/Menu'
 
 // Rutas de la app:
 //   /login  pantalla de ingreso (si ya hay sesión, va al panel)
@@ -62,7 +62,7 @@ function Rutas() {
       <Route
         element={
           <RequiereSesion usuario={usuario}>
-            <Panel usuario={usuario} onSalir={salir} />
+            <Menu usuario={usuario} onSalir={salir} />
           </RequiereSesion>
         }
       >

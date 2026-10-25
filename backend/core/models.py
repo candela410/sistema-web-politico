@@ -1,8 +1,20 @@
+import re
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
+
+NUMERO = re.compile(r"^\s*-?\d+([.,]\d+)?\s*$")
+
+
+def numero_de(texto):
+    """Convierte "4", "4,5" o "4.5" en número; None si no es un número."""
+    if not NUMERO.match(str(texto)):
+        return None
+    return float(str(texto).strip().replace(",", "."))
+
 
 # Convenciones:
 # - Clases en singular (convención de Django); las tablas conservan su nombre.
@@ -375,15 +387,19 @@ class AsignacionCuestionario(models.Model):
 
 
 class Pregunta(models.Model):
+    # Toda pregunta se responde eligiendo opciones. Si todas las opciones son
+    # números la variable es cuantitativa; si no, cualitativa (ver variable()).
     class Tipo(models.TextChoices):
+        UNA_OPCION = "una_opcion", "Una sola opción"
         OPCION_MULTIPLE = "opcion_multiple", "Opción múltiple"
-        TEXTO = "texto", "Texto libre"
-        SI_NO = "si_no", "Sí / No"
-        NUMERO = "numero", "Número"
+
+    class Variable(models.TextChoices):
+        CUALITATIVA = "cualitativa", "Cualitativa"
+        CUANTITATIVA = "cuantitativa", "Cuantitativa"
 
     id_pregunta = models.AutoField(primary_key=True)
     enunciado = models.TextField()
-    tipo = models.CharField(max_length=30, choices=Tipo, default=Tipo.OPCION_MULTIPLE)
+    tipo = models.CharField(max_length=30, choices=Tipo, default=Tipo.UNA_OPCION)
     orden = models.PositiveIntegerField(default=1)
     obligatoria = models.BooleanField(default=False)
 
@@ -406,6 +422,17 @@ class Pregunta(models.Model):
 
     def __str__(self):
         return self.enunciado
+
+    @staticmethod
+    def variable_de(textos):
+        """Cuantitativa si todas las opciones son números; si no, cualitativa."""
+        textos = list(textos)
+        if textos and all(numero_de(t) is not None for t in textos):
+            return Pregunta.Variable.CUANTITATIVA
+        return Pregunta.Variable.CUALITATIVA
+
+    def variable(self):
+        return self.variable_de(o.texto for o in self.opciones.all())
 
 
 class Opcion(models.Model):
@@ -498,16 +525,13 @@ class RespuestaCargada(models.Model):
         db_column="id_pregunta",
         related_name="respuestas",
     )
+    # En "opción múltiple" una pregunta tiene una fila por cada opción elegida
     opcion = models.ForeignKey(
         Opcion,
         on_delete=models.PROTECT,
         db_column="id_opcion",
-        null=True,
-        blank=True,
         related_name="respuestas",
     )
-
-    respuesta_texto = models.TextField(blank=True, null=True)
     cargada_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -516,13 +540,8 @@ class RespuestaCargada(models.Model):
         verbose_name_plural = "respuestas cargadas"
         constraints = [
             models.UniqueConstraint(
-                fields=["encuesta", "pregunta"],
-                name="uq_respuesta_encuesta_pregunta",
-            ),
-            models.CheckConstraint(
-                condition=Q(opcion__isnull=False)
-                | (Q(respuesta_texto__isnull=False) & ~Q(respuesta_texto="")),
-                name="ck_respuesta_con_contenido",
+                fields=["encuesta", "opcion"],
+                name="uq_respuesta_encuesta_opcion",
             ),
         ]
 

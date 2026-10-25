@@ -3,16 +3,16 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { obtenerCategorias } from '../../api/categorias'
 import * as api from '../../api/cuestionarios'
 import './cuestionarios.css'
+import { variableDe } from './variable'
 
 // Editor de cuestionarios al estilo Google Forms: una tarjeta para el título
 // y una tarjeta por pregunta, con sus opciones.
 
 const TIPOS = [
+  ['una_opcion', 'Una sola opción'],
   ['opcion_multiple', 'Opción múltiple'],
-  ['si_no', 'Sí / No'],
-  ['texto', 'Respuesta de texto'],
-  ['numero', 'Número'],
 ]
+
 
 let siguienteClave = 1
 const clave = () => `c${siguienteClave++}`
@@ -21,9 +21,9 @@ const nuevaOpcion = (texto = '') => ({ clave: clave(), texto })
 const nuevaPregunta = () => ({
   clave: clave(),
   enunciado: '',
-  tipo: 'opcion_multiple',
+  tipo: 'una_opcion',
   obligatoria: false,
-  opciones: [nuevaOpcion('Opción 1')],
+  opciones: [nuevaOpcion('Opción 1'), nuevaOpcion('Opción 2')],
 })
 
 function desdeServidor(c) {
@@ -37,7 +37,7 @@ function desdeServidor(c) {
       enunciado: p.enunciado,
       tipo: p.tipo,
       obligatoria: p.obligatoria,
-      opciones: p.tipo === 'opcion_multiple' ? p.opciones.map((o) => nuevaOpcion(o.texto)) : [nuevaOpcion('Opción 1')],
+      opciones: p.opciones.map((o) => nuevaOpcion(o.texto)),
     })),
   }
 }
@@ -52,7 +52,7 @@ function paraServidor(f) {
       enunciado: p.enunciado,
       tipo: p.tipo,
       obligatoria: p.obligatoria,
-      opciones: p.tipo === 'opcion_multiple' ? p.opciones.map((o) => ({ texto: o.texto })) : [],
+      opciones: p.opciones.map((o) => ({ texto: o.texto })),
     })),
   }
 }
@@ -128,62 +128,52 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
         </select>
       </div>
 
-      {pregunta.tipo === 'opcion_multiple' && (
-        <ul className="opciones">
-          {pregunta.opciones.map((o, i) => (
-            <li key={o.clave} className="opcion">
-              <span className="opcion__circulo" aria-hidden="true" />
-              <input
-                ref={(el) => (refsOpciones.current[o.clave] = el)}
-                className="campo-linea"
-                value={o.texto}
-                onChange={(e) => cambiarOpcion(o.clave, e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    agregarOpcion(o.clave)
-                  }
-                }}
-                aria-label={`Opción ${i + 1} de la pregunta ${numero}`}
-                disabled={bloqueado}
-              />
-              {!bloqueado && pregunta.opciones.length > 1 && (
-                <button
-                  type="button"
-                  className="boton-icono"
-                  onClick={() => quitarOpcion(o.clave)}
-                  aria-label={`Quitar opción ${i + 1}`}
-                  title="Quitar opción"
-                >
-                  <Icono d={ICONOS.quitar} />
-                </button>
-              )}
-            </li>
-          ))}
-          {!bloqueado && (
-            <li className="opcion">
-              <span className="opcion__circulo" aria-hidden="true" />
-              <button type="button" className="opcion__agregar" onClick={() => agregarOpcion()}>
-                Agregar opción
+      <ul className={`opciones${pregunta.tipo === 'opcion_multiple' ? ' opciones--multiple' : ''}`}>
+        {pregunta.opciones.map((o, i) => (
+          <li key={o.clave} className="opcion">
+            <span className="opcion__circulo" aria-hidden="true" />
+            <input
+              ref={(el) => (refsOpciones.current[o.clave] = el)}
+              className="campo-linea"
+              value={o.texto}
+              onChange={(e) => cambiarOpcion(o.clave, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  agregarOpcion(o.clave)
+                }
+              }}
+              aria-label={`Opción ${i + 1} de la pregunta ${numero}`}
+              disabled={bloqueado}
+            />
+            {!bloqueado && pregunta.opciones.length > 2 && (
+              <button
+                type="button"
+                className="boton-icono"
+                onClick={() => quitarOpcion(o.clave)}
+                aria-label={`Quitar opción ${i + 1}`}
+                title="Quitar opción"
+              >
+                <Icono d={ICONOS.quitar} />
               </button>
-            </li>
-          )}
-        </ul>
-      )}
+            )}
+          </li>
+        ))}
+        {!bloqueado && (
+          <li className="opcion">
+            <span className="opcion__circulo" aria-hidden="true" />
+            <button type="button" className="opcion__agregar" onClick={() => agregarOpcion()}>
+              Agregar opción
+            </button>
+          </li>
+        )}
+      </ul>
 
-      {pregunta.tipo === 'si_no' && (
-        <ul className="opciones opciones--fijas">
-          {['Sí', 'No'].map((t) => (
-            <li key={t} className="opcion">
-              <span className="opcion__circulo" aria-hidden="true" />
-              {t}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {pregunta.tipo === 'texto' && <p className="respuesta-muestra">Respuesta de texto libre</p>}
-      {pregunta.tipo === 'numero' && <p className="respuesta-muestra respuesta-muestra--corta">Número</p>}
+      <p className={`variable variable--${variableDe(pregunta.opciones)}`}>
+        {variableDe(pregunta.opciones) === 'cuantitativa'
+          ? 'Variable cuantitativa: las opciones son números'
+          : 'Variable cualitativa: las opciones son texto'}
+      </p>
 
       <footer className="tarjeta-pregunta__pie">
         <label className="interruptor">

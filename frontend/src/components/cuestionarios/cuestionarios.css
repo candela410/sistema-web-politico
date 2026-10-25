@@ -295,6 +295,30 @@
   border-radius: 50%;
 }
 
+/* Opción múltiple: casillas cuadradas, como en Google Forms */
+.opciones--multiple .opcion__circulo {
+  border-radius: 4px;
+}
+
+.variable {
+  align-self: flex-start;
+  margin: 0 0 0 40px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.variable--cualitativa {
+  background: rgb(195 38 140 / 0.1);
+  color: #8f1c66;
+}
+
+.variable--cuantitativa {
+  background: rgb(47 180 233 / 0.14);
+  color: #136a8c;
+}
+
 .opcion .campo-linea {
   flex: 1;
   border-bottom-color: transparent;
@@ -320,19 +344,6 @@
 
 .opciones--fijas .opcion {
   color: var(--lla-gris);
-}
-
-.respuesta-muestra {
-  margin: 0 0 0 40px;
-  padding: 8px 2px;
-  width: min(100%, 360px);
-  border-bottom: 1px dotted #b9b5c7;
-  color: #a3a1ab;
-  font-size: 0.9rem;
-}
-
-.respuesta-muestra--corta {
-  width: 160px;
 }
 
 .tarjeta-pregunta__pie {
@@ -594,23 +605,160 @@
   color: var(--lla-gris);
 }
 
-.textos {
+.estadistica__cabecera > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.estadistica__variable {
+  margin: 0;
+  flex: none;
+}
+
+/* Barra 100 % (distribución de una variable cualitativa de una sola opción) */
+.distribucion {
+  margin: 0;
+  padding-left: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.distribucion figcaption,
+.histograma figcaption,
+.tabla-frecuencias caption {
+  color: var(--lla-gris);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.distribucion__barra {
+  display: flex;
+  gap: 2px; /* separación del color de fondo entre partes */
+  height: 28px;
+}
+
+.distribucion__parte {
+  display: grid;
+  place-items: center;
+  min-width: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.distribucion__parte:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.distribucion__parte:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.distribucion__parte:only-child {
+  border-radius: 4px;
+}
+
+.leyenda {
   list-style: none;
   margin: 0;
-  padding: 0 0 0 40px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 0.85rem;
+}
+
+.leyenda li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.leyenda__muestra {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* Histograma (variable cuantitativa) */
+.histograma {
+  margin: 0;
+  padding-left: 40px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 320px;
-  overflow-y: auto;
 }
 
-.textos li {
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: #f7f6fa;
-  font-size: 0.9rem;
-  overflow-wrap: anywhere;
+.histograma svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.histograma__columna {
+  fill: var(--lla-violeta);
+}
+
+.histograma g:hover .histograma__columna {
+  fill: var(--lla-violeta-oscuro);
+}
+
+.histograma__grilla {
+  stroke: #ecebf0;
+  stroke-width: 1;
+}
+
+.histograma__base {
+  stroke: #c3c2cc;
+  stroke-width: 1;
+}
+
+.histograma__eje {
+  fill: var(--lla-gris);
+  font-size: 12px;
+}
+
+.histograma__valor {
+  fill: var(--lla-texto);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Tabla de frecuencias */
+.tabla-envoltura {
+  padding-left: 40px;
+  overflow-x: auto;
+}
+
+.tabla-frecuencias {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla-frecuencias caption {
+  padding-bottom: 6px;
+}
+
+.tabla-frecuencias th,
+.tabla-frecuencias td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #ecebf0;
+  text-align: right;
+}
+
+.tabla-frecuencias th:first-child {
+  text-align: left;
+}
+
+.tabla-frecuencias thead th {
+  color: var(--lla-gris);
+  font-weight: 700;
+  cursor: help;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -658,9 +806,11 @@
   }
 
   .opciones,
-  .respuesta-muestra,
+  .variable,
   .barras,
-  .textos {
+  .distribucion,
+  .histograma,
+  .tabla-envoltura {
     padding-left: 0;
     margin-left: 0;
   }

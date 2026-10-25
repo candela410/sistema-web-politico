@@ -5,22 +5,29 @@ from .models import Campana, Categoria, Cuestionario, Encuesta, Encuestado, Mili
 
 class EncuestasTests(TestCase):
     def setUp(self):
-        self.admin = Usuario.objects.create_user(username="adm", email="adm@ejemplo.com", password="clave-segura-123", is_staff=True)
+        Usuario.objects.create_user(username="adm", email="adm@ejemplo.com", password="clave-segura-123", is_staff=True)
         usuario = Usuario.objects.create_user(username="mili", email="mili@ejemplo.com", password="clave-segura-123")
         self.militante = Militante.objects.create(nombre="Juan", apellido="Pérez", usuario=usuario)
         self.client = Client(enforce_csrf_checks=True)
         self.client.get("/api/auth/csrf/")
         self.login("mili@ejemplo.com")
 
-        c = Cuestionario.objects.create(
+        self.c = Cuestionario.objects.create(
             titulo="Barrial", categoria=Categoria.objects.create(nombre="G"), campana=Campana.objects.create(nombre="C")
         )
-        self.c = c
-        self.p_mult = Pregunta.objects.create(cuestionario=c, orden=1, enunciado="Problema", tipo="opcion_multiple", obligatoria=True)
-        self.seg = Opcion.objects.create(pregunta=self.p_mult, orden=1, texto="Seguridad")
-        self.sal = Opcion.objects.create(pregunta=self.p_mult, orden=2, texto="Salud")
-        self.p_num = Pregunta.objects.create(cuestionario=c, orden=2, enunciado="Personas", tipo="numero")
-        self.p_txt = Pregunta.objects.create(cuestionario=c, orden=3, enunciado="Comentarios", tipo="texto")
+        # Una sola opción, cualitativa
+        self.p_una = self.pregunta(1, "Problema", "una_opcion", ["Seguridad", "Salud"], obligatoria=True)
+        # Opción múltiple, cualitativa
+        self.p_mult = self.pregunta(2, "Medios", "opcion_multiple", ["Radio", "TV", "Redes"])
+        # Una sola opción, cuantitativa
+        self.p_num = self.pregunta(3, "Personas en la casa", "una_opcion", ["1", "2", "3", "4"])
+
+    def pregunta(self, orden, enunciado, tipo, opciones, obligatoria=False):
+        p = Pregunta.objects.create(
+            cuestionario=self.c, orden=orden, enunciado=enunciado, tipo=tipo, obligatoria=obligatoria
+        )
+        p.ops = {t: Opcion.objects.create(pregunta=p, orden=i, texto=t).pk for i, t in enumerate(opciones, 1)}
+        return p
 
     def login(self, email):
         self.enviar("post", "/api/auth/login/", {"email": email, "password": "clave-segura-123"})
@@ -29,15 +36,14 @@ class EncuestasTests(TestCase):
         csrf = self.client.cookies["csrftoken"].value
         return getattr(self.client, metodo)(url, datos or {}, content_type="application/json", HTTP_X_CSRFTOKEN=csrf)
 
-    def responder(self, documento, opcion, numero="", texto="", **extra):
+    def responder(self, documento, una=None, medios=(), personas=None, **extra):
+        respuestas = [
+            {"pregunta": self.p_una.pk, "opciones": [self.p_una.ops[una]] if una else []},
+            {"pregunta": self.p_mult.pk, "opciones": [self.p_mult.ops[m] for m in medios]},
+            {"pregunta": self.p_num.pk, "opciones": [self.p_num.ops[personas]] if personas else []},
+        ]
         return self.enviar("post", f"/api/responder/{self.c.pk}/", {
-            "encuestado": {"documento": documento, "nombre": "Ana"},
-            "respuestas": [
-                {"pregunta": self.p_mult.pk, "opcion": opcion},
-                {"pregunta": self.p_num.pk, "texto": numero},
-                {"pregunta": self.p_txt.pk, "texto": texto},
-            ],
-            **extra,
+            "encuestado": {"documento": documento, "nombre": "Ana"}, "respuestas": respuestas, **extra,
         })
 
     def test_militante_no_entra_a_la_administracion(self):
@@ -50,42 +56,60 @@ class EncuestasTests(TestCase):
         lista = self.client.get("/api/responder/").json()["cuestionarios"]
         self.assertEqual([c["titulo"] for c in lista], ["Barrial"])
         detalle = self.client.get(f"/api/responder/{self.c.pk}/").json()["cuestionario"]
-        self.assertEqual(len(detalle["preguntas"]), 3)
+        self.assertEqual([p["tipo"] for p in detalle["preguntas"]], ["una_opcion", "opcion_multiple", "una_opcion"])
 
     def test_responder_guarda_encuesta_con_militante(self):
-        r = self.responder("30.123.456", self.seg.pk, "4", "Falta luz", latitud=-24.79, longitud=-65.41)
+        r = self.responder("30.123.456", "Seguridad", ["Radio", "Redes"], "4", latitud=-24.79, longitud=-65.41)
         self.assertEqual(r.status_code, 201, r.content)
         encuesta = Encuesta.objects.get()
         self.assertEqual(encuesta.militante, self.militante)
         self.assertEqual(encuesta.encuestado.documento, "30123456")
-        self.assertEqual(encuesta.respuestas.count(), 3)
+        self.assertEqual(encuesta.respuestas.count(), 4)  # 1 + 2 + 1
         self.assertEqual(float(encuesta.latitud), -24.79)
 
     def test_no_responde_dos_veces(self):
-        self.responder("1", self.seg.pk)
-        r = self.responder("1", self.sal.pk)
+        self.responder("1", "Seguridad")
+        r = self.responder("1", "Salud")
         self.assertEqual(r.status_code, 409)
         self.assertEqual(Encuesta.objects.count(), 1)
 
     def test_validaciones(self):
-        self.assertIn("documento", self.responder("", self.seg.pk).json()["error"])
-        self.assertIn("pregunta 1", self.responder("2", None).json()["error"])
-        otra = Opcion.objects.create(pregunta=Pregunta.objects.create(cuestionario=self.c, orden=4, enunciado="x"), orden=1, texto="x")
-        self.assertIn("no es válida", self.responder("2", otra.pk).json()["error"])
-        self.assertIn("número", self.responder("2", self.seg.pk, numero="muchos").json()["error"])
+        self.assertIn("documento", self.responder("", "Seguridad").json()["error"])
+        self.assertIn("pregunta 1", self.responder("2").json()["error"])
+        r = self.enviar("post", f"/api/responder/{self.c.pk}/", {
+            "encuestado": {"documento": "2"},
+            "respuestas": [{"pregunta": self.p_una.pk, "opciones": list(self.p_una.ops.values())}],
+        })
+        self.assertIn("una sola opción", r.json()["error"])
+        r = self.enviar("post", f"/api/responder/{self.c.pk}/", {
+            "encuestado": {"documento": "2"},
+            "respuestas": [{"pregunta": self.p_una.pk, "opciones": [self.p_mult.ops["TV"]]}],
+        })
+        self.assertIn("no es válida", r.json()["error"])
         self.assertFalse(Encuesta.objects.exists())
         self.assertFalse(Encuestado.objects.exists())
 
     def test_estadisticas(self):
-        self.responder("1", self.seg.pk, "2", "Hola")
-        self.responder("2", self.seg.pk, "4")
-        self.responder("3", self.sal.pk, "6,5")
+        self.responder("1", "Seguridad", ["Radio", "TV"], "2")
+        self.responder("2", "Seguridad", ["Radio"], "4")
+        self.responder("3", "Salud", [], "4")
         self.enviar("post", "/api/auth/logout/")
         self.login("adm@ejemplo.com")
         e = self.client.get(f"/api/cuestionarios/{self.c.pk}/estadisticas/").json()
         self.assertEqual((e["total_encuestas"], e["militantes"]), (3, 1))
-        mult, num, txt = e["preguntas"]
-        self.assertEqual([(o["texto"], o["cantidad"], o["porcentaje"]) for o in mult["opciones"]],
+        una, mult, num = e["preguntas"]
+
+        self.assertEqual(una["variable"], "cualitativa")
+        self.assertEqual([(o["texto"], o["cantidad"], o["porcentaje"]) for o in una["opciones"]],
                          [("Seguridad", 2, 66.7), ("Salud", 1, 33.3)])
-        self.assertEqual(num["numeros"], {"promedio": 4.17, "mediana": 4.0, "minimo": 2.0, "maximo": 6.5})
-        self.assertEqual((txt["respondidas"], txt["sin_responder"], txt["textos"]), (1, 2, ["Hola"]))
+        # Opción múltiple: porcentaje sobre las personas que respondieron (2)
+        self.assertEqual((mult["respondidas"], mult["sin_responder"], mult["elecciones"]), (2, 1, 3))
+        self.assertEqual([(o["texto"], o["porcentaje"]) for o in mult["opciones"]],
+                         [("Radio", 100.0), ("TV", 50.0), ("Redes", 0)])
+
+        self.assertEqual(num["variable"], "cuantitativa")
+        self.assertEqual([o["valor"] for o in num["opciones"]], [1, 2, 3, 4])
+        self.assertEqual(num["medidas"], {
+            "n": 3, "media": 3.33, "mediana": 4, "moda": [4.0], "desvio": 1.15,
+            "minimo": 2.0, "maximo": 4.0, "rango": 2.0,
+        })

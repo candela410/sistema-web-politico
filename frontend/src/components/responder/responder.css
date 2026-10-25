@@ -160,14 +160,12 @@
   align-self: flex-end;
 }
 
-.respuesta__texto,
-.respuesta__numero {
-  margin-left: 40px;
-  width: calc(100% - 40px);
-}
-
-.respuesta__numero {
-  max-width: 220px;
+.respuesta__ayuda {
+  display: block;
+  margin-top: 2px;
+  color: var(--lla-gris);
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .respuesta .texto-error {
@@ -241,11 +239,8 @@
     padding-left: 0;
   }
 
-  .respuesta__texto,
-  .respuesta__numero,
   .respuesta .texto-error {
     margin-left: 0;
-    width: 100%;
   }
 
   .boton--grande {

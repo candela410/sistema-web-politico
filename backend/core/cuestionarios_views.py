@@ -12,8 +12,6 @@ from .models import Categoria, Cuestionario, Opcion, Pregunta
 
 MAX_PREGUNTAS = 100
 MAX_OPCIONES = 30
-OPCIONES_SI_NO = ["Sí", "No"]
-TIPOS_CON_OPCIONES = {Pregunta.Tipo.OPCION_MULTIPLE, Pregunta.Tipo.SI_NO}
 
 
 class DatosInvalidos(Exception):
@@ -50,6 +48,7 @@ def _detalle_json(c):
                 "enunciado": p.enunciado,
                 "tipo": p.tipo,
                 "obligatoria": p.obligatoria,
+                "variable": p.variable(),
                 "opciones": [{"id": o.pk, "texto": o.texto} for o in p.opciones.all()],
             }
             for p in c.preguntas.prefetch_related("opciones")
@@ -92,27 +91,22 @@ def _limpiar_preguntas(preguntas):
         if not isinstance(p, dict):
             raise DatosInvalidos(f"La pregunta {n} no es válida.")
         enunciado = _texto(p.get("enunciado"), f"El texto de la pregunta {n}")
-        tipo = p.get("tipo", Pregunta.Tipo.OPCION_MULTIPLE)
+        tipo = p.get("tipo", Pregunta.Tipo.UNA_OPCION)
         if tipo not in Pregunta.Tipo.values:
-            raise DatosInvalidos(f"El tipo de la pregunta {n} no es válido.")
-        if tipo == Pregunta.Tipo.SI_NO:
-            opciones = OPCIONES_SI_NO
-        elif tipo == Pregunta.Tipo.OPCION_MULTIPLE:
-            crudas = p.get("opciones") or []
-            if not isinstance(crudas, list):
-                raise DatosInvalidos(f"Las opciones de la pregunta {n} no son válidas.")
-            opciones = [
-                _texto(o.get("texto") if isinstance(o, dict) else o, f"La opción {i} de la pregunta {n}")
-                for i, o in enumerate(crudas, start=1)
-            ]
-            if len(opciones) < 2:
-                raise DatosInvalidos(f"La pregunta {n} necesita al menos 2 opciones.")
-            if len(opciones) > MAX_OPCIONES:
-                raise DatosInvalidos(f"La pregunta {n} puede tener hasta {MAX_OPCIONES} opciones.")
-            if len({o.lower() for o in opciones}) != len(opciones):
-                raise DatosInvalidos(f"La pregunta {n} tiene opciones repetidas.")
-        else:
-            opciones = []
+            raise DatosInvalidos(f"El tipo de la pregunta {n} no es válido: elegí una sola opción u opción múltiple.")
+        crudas = p.get("opciones") or []
+        if not isinstance(crudas, list):
+            raise DatosInvalidos(f"Las opciones de la pregunta {n} no son válidas.")
+        opciones = [
+            _texto(o.get("texto") if isinstance(o, dict) else o, f"La opción {i} de la pregunta {n}", 300)
+            for i, o in enumerate(crudas, start=1)
+        ]
+        if len(opciones) < 2:
+            raise DatosInvalidos(f"La pregunta {n} necesita al menos 2 opciones.")
+        if len(opciones) > MAX_OPCIONES:
+            raise DatosInvalidos(f"La pregunta {n} puede tener hasta {MAX_OPCIONES} opciones.")
+        if len({o.lower() for o in opciones}) != len(opciones):
+            raise DatosInvalidos(f"La pregunta {n} tiene opciones repetidas.")
         limpias.append(
             {"enunciado": enunciado, "tipo": tipo, "obligatoria": bool(p.get("obligatoria")), "opciones": opciones}
         )

@@ -9,8 +9,15 @@ import './responder.css'
 
 const ENCUESTADO_VACIO = { documento: '', nombre: '', apellido: '', telefono: '', direccion: '' }
 
-function Pregunta({ pregunta, numero, valor, error, onCambio }) {
+function Pregunta({ pregunta, numero, elegidas, error, onCambio }) {
+  const multiple = pregunta.tipo === 'opcion_multiple'
   const nombre = `pregunta-${pregunta.id}`
+
+  function alternar(id) {
+    if (!multiple) onCambio([id])
+    else onCambio(elegidas.includes(id) ? elegidas.filter((x) => x !== id) : [...elegidas, id])
+  }
+
   return (
     <fieldset className={`tarjeta-form respuesta${error ? ' respuesta--error' : ''}`}>
       <legend className="respuesta__enunciado">
@@ -23,55 +30,28 @@ function Pregunta({ pregunta, numero, valor, error, onCambio }) {
               *
             </span>
           )}
+          {multiple && <span className="respuesta__ayuda">Podés elegir varias opciones</span>}
         </span>
       </legend>
 
-      {(pregunta.tipo === 'opcion_multiple' || pregunta.tipo === 'si_no') && (
-        <div className="respuesta__opciones">
-          {pregunta.opciones.map((o) => (
-            <label key={o.id} className="respuesta__opcion">
-              <input
-                type="radio"
-                name={nombre}
-                checked={valor === o.id}
-                onChange={() => onCambio(o.id)}
-                required={pregunta.obligatoria}
-              />
-              <span>{o.texto}</span>
-            </label>
-          ))}
-          {!pregunta.obligatoria && valor != null && (
-            <button type="button" className="enlace-boton respuesta__limpiar" onClick={() => onCambio(null)}>
-              Borrar selección
-            </button>
-          )}
-        </div>
-      )}
-
-      {pregunta.tipo === 'texto' && (
-        <textarea
-          className="campo-linea respuesta__texto"
-          rows={2}
-          value={valor ?? ''}
-          onChange={(e) => onCambio(e.target.value)}
-          placeholder="Tu respuesta"
-          aria-label={pregunta.enunciado}
-          required={pregunta.obligatoria}
-        />
-      )}
-
-      {pregunta.tipo === 'numero' && (
-        <input
-          className="campo-linea respuesta__numero"
-          type="text"
-          inputMode="decimal"
-          value={valor ?? ''}
-          onChange={(e) => onCambio(e.target.value)}
-          placeholder="Número"
-          aria-label={pregunta.enunciado}
-          required={pregunta.obligatoria}
-        />
-      )}
+      <div className="respuesta__opciones">
+        {pregunta.opciones.map((o) => (
+          <label key={o.id} className="respuesta__opcion">
+            <input
+              type={multiple ? 'checkbox' : 'radio'}
+              name={nombre}
+              checked={elegidas.includes(o.id)}
+              onChange={() => alternar(o.id)}
+            />
+            <span>{o.texto}</span>
+          </label>
+        ))}
+        {!pregunta.obligatoria && !multiple && elegidas.length > 0 && (
+          <button type="button" className="enlace-boton respuesta__limpiar" onClick={() => onCambio([])}>
+            Borrar selección
+          </button>
+        )}
+      </div>
 
       {error && (
         <p className="texto-error" role="alert">
@@ -120,11 +100,7 @@ function ResponderCuestionario() {
   function validar() {
     const faltan = {}
     for (const p of cuestionario.preguntas) {
-      const v = respuestas[p.id]
-      const vacio = v == null || (typeof v === 'string' && !v.trim())
-      if (p.obligatoria && vacio) faltan[p.id] = 'Esta pregunta es obligatoria.'
-      else if (p.tipo === 'numero' && !vacio && Number.isNaN(Number(String(v).replace(',', '.'))))
-        faltan[p.id] = 'Ingresá un número.'
+      if (p.obligatoria && !(respuestas[p.id]?.length > 0)) faltan[p.id] = 'Esta pregunta es obligatoria.'
     }
     setErrores(faltan)
     return Object.keys(faltan).length === 0
@@ -142,12 +118,8 @@ function ResponderCuestionario() {
       await api.enviarRespuestas(id, {
         encuestado,
         respuestas: cuestionario.preguntas
-          .filter((p) => respuestas[p.id] != null && respuestas[p.id] !== '')
-          .map((p) =>
-            p.tipo === 'opcion_multiple' || p.tipo === 'si_no'
-              ? { pregunta: p.id, opcion: respuestas[p.id] }
-              : { pregunta: p.id, texto: respuestas[p.id] },
-          ),
+          .filter((p) => respuestas[p.id]?.length > 0)
+          .map((p) => ({ pregunta: p.id, opciones: respuestas[p.id] })),
         ...ubicacion,
       })
       setEnviado(true)
@@ -271,7 +243,7 @@ function ResponderCuestionario() {
             key={p.id}
             pregunta={p}
             numero={i + 1}
-            valor={respuestas[p.id]}
+            elegidas={respuestas[p.id] ?? []}
             error={errores[p.id]}
             onCambio={(v) => responder(p.id, v)}
           />

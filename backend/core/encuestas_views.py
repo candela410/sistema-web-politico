@@ -11,10 +11,8 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
 from .api import error, leer_json, requiere_admin, requiere_sesion
-from .models import Barrio, Cuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada
+from .models import Barrio, Cuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada, numero_de
 
-MAX_TEXTO = 2000
-ULTIMAS_RESPUESTAS_TEXTO = 30
 
 
 def _cuestionario_para_responder(c):
@@ -80,42 +78,31 @@ def _limpiar_encuestado(datos):
 
 
 def _limpiar_respuestas(cuestionario, respuestas):
+    """Cada respuesta es {pregunta, opciones: [ids]}. "Una sola opción" admite
+    exactamente una; "opción múltiple", una o más."""
     if not isinstance(respuestas, list):
         raise RespuestaInvalida("Las respuestas no son válidas.")
     por_pregunta = {}
     for r in respuestas:
         if isinstance(r, dict) and r.get("pregunta") is not None:
-            por_pregunta[r["pregunta"]] = r
+            por_pregunta[r["pregunta"]] = r.get("opciones") or []
 
     limpias = []
     for n, pregunta in enumerate(cuestionario.preguntas.prefetch_related("opciones"), start=1):
-        r = por_pregunta.get(pregunta.pk, {})
-        opcion_id, texto = r.get("opcion"), r.get("texto")
-        texto = str(texto).strip() if texto is not None else ""
-
-        if pregunta.tipo in (Pregunta.Tipo.OPCION_MULTIPLE, Pregunta.Tipo.SI_NO):
-            if opcion_id is None:
-                if pregunta.obligatoria:
-                    raise RespuestaInvalida(f"Falta responder la pregunta {n}.")
-                continue
-            if opcion_id not in {o.pk for o in pregunta.opciones.all()}:
-                raise RespuestaInvalida(f"La opción elegida en la pregunta {n} no es válida.")
-            limpias.append(RespuestaCargada(pregunta=pregunta, opcion_id=opcion_id))
-            continue
-
-        if not texto:
+        elegidas = por_pregunta.get(pregunta.pk, [])
+        if not isinstance(elegidas, list):
+            raise RespuestaInvalida(f"La respuesta de la pregunta {n} no es válida.")
+        elegidas = list(dict.fromkeys(elegidas))  # sin repetidas, en orden
+        if not elegidas:
             if pregunta.obligatoria:
                 raise RespuestaInvalida(f"Falta responder la pregunta {n}.")
             continue
-        if pregunta.tipo == Pregunta.Tipo.NUMERO:
-            try:
-                numero = Decimal(texto.replace(",", "."))
-            except InvalidOperation:
-                raise RespuestaInvalida(f"La respuesta de la pregunta {n} debe ser un número.") from None
-            if not numero.is_finite():
-                raise RespuestaInvalida(f"La respuesta de la pregunta {n} debe ser un número.")
-            texto = format(numero.normalize(), "f")
-        limpias.append(RespuestaCargada(pregunta=pregunta, respuesta_texto=texto[:MAX_TEXTO]))
+        if pregunta.tipo == Pregunta.Tipo.UNA_OPCION and len(elegidas) > 1:
+            raise RespuestaInvalida(f"En la pregunta {n} se elige una sola opción.")
+        validas = {o.pk for o in pregunta.opciones.all()}
+        if not all(o in validas for o in elegidas):
+            raise RespuestaInvalida(f"La opción elegida en la pregunta {n} no es válida.")
+        limpias += [RespuestaCargada(pregunta=pregunta, opcion_id=o) for o in elegidas]
     return limpias
 
 
@@ -179,11 +166,23 @@ def responder(request, pk):
 # ---------------------------------------------------------------------------
 
 
-def _numero(texto):
-    try:
-        return float(texto.replace(",", "."))
-    except (AttributeError, ValueError):
+def _medidas(valores):
+    """Medidas de una variable cuantitativa (una lista con un valor por respuesta)."""
+    if not valores:
         return None
+    frecuencias = Counter(valores)
+    maximo = max(frecuencias.values())
+    return {
+        "n": len(valores),
+        "media": round(statistics.fmean(valores), 2),
+        "mediana": round(statistics.median(valores), 2),
+        # Puede haber más de una moda; si ningún valor se repite, no hay moda
+        "moda": [] if maximo == 1 and len(frecuencias) > 1 else sorted(v for v, f in frecuencias.items() if f == maximo),
+        "desvio": round(statistics.stdev(valores), 2) if len(valores) > 1 else 0,
+        "minimo": min(valores),
+        "maximo": max(valores),
+        "rango": max(valores) - min(valores),
+    }
 
 
 @require_http_methods(["GET"])
@@ -195,43 +194,38 @@ def estadisticas(request, pk):
 
     preguntas = []
     for p in cuestionario.preguntas.prefetch_related("opciones"):
-        respuestas = RespuestaCargada.objects.filter(pregunta=p)
-        respondidas = respuestas.count()
+        opciones = list(p.opciones.all())
+        variable = Pregunta.variable_de(o.texto for o in opciones)
+        filas = RespuestaCargada.objects.filter(pregunta=p)
+        conteo = Counter(filas.values_list("opcion_id", flat=True))
+        # Personas que respondieron (en opción múltiple una persona elige varias)
+        respondidas = filas.values("encuesta").distinct().count()
+
+        lista = [
+            {
+                "id": o.pk,
+                "texto": o.texto,
+                "cantidad": conteo.get(o.pk, 0),
+                "porcentaje": round(100 * conteo.get(o.pk, 0) / respondidas, 1) if respondidas else 0,
+            }
+            for o in opciones
+        ]
         dato = {
             "id": p.pk,
             "enunciado": p.enunciado,
             "tipo": p.tipo,
+            "variable": variable,
             "obligatoria": p.obligatoria,
             "respondidas": respondidas,
             "sin_responder": total - respondidas,
+            "elecciones": sum(conteo.values()),
         }
-        if p.tipo in (Pregunta.Tipo.OPCION_MULTIPLE, Pregunta.Tipo.SI_NO):
-            conteo = Counter(respuestas.values_list("opcion_id", flat=True))
-            dato["opciones"] = [
-                {
-                    "id": o.pk,
-                    "texto": o.texto,
-                    "cantidad": conteo.get(o.pk, 0),
-                    "porcentaje": round(100 * conteo.get(o.pk, 0) / respondidas, 1) if respondidas else 0,
-                }
-                for o in p.opciones.all()
-            ]
-        elif p.tipo == Pregunta.Tipo.NUMERO:
-            valores = [v for v in (_numero(t) for t in respuestas.values_list("respuesta_texto", flat=True)) if v is not None]
-            dato["numeros"] = (
-                {
-                    "promedio": round(statistics.fmean(valores), 2),
-                    "mediana": round(statistics.median(valores), 2),
-                    "minimo": min(valores),
-                    "maximo": max(valores),
-                }
-                if valores
-                else None
-            )
-        else:
-            dato["textos"] = list(
-                respuestas.order_by("-cargada_en").values_list("respuesta_texto", flat=True)[:ULTIMAS_RESPUESTAS_TEXTO]
-            )
+        if variable == Pregunta.Variable.CUANTITATIVA:
+            for o in lista:
+                o["valor"] = numero_de(o["texto"])
+            lista.sort(key=lambda o: o["valor"])  # eje ordenado de menor a mayor
+            dato["medidas"] = _medidas([o["valor"] for o in lista for _ in range(o["cantidad"])])
+        dato["opciones"] = lista
         preguntas.append(dato)
 
     return JsonResponse({

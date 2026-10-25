@@ -7,11 +7,12 @@ FORMULARIO = {
     "descripcion": "Relevamiento de necesidades",
     "activo": True,
     "preguntas": [
-        {"enunciado": "¿Qué problema es más urgente?", "tipo": "opcion_multiple", "obligatoria": True,
+        {"enunciado": "¿Qué problema es más urgente?", "tipo": "una_opcion", "obligatoria": True,
          "opciones": [{"texto": "Seguridad"}, {"texto": "Salud"}, {"texto": "Trabajo"}]},
-        {"enunciado": "¿Votó en la última elección?", "tipo": "si_no"},
-        {"enunciado": "Comentarios", "tipo": "texto", "opciones": [{"texto": "ignorada"}]},
-        {"enunciado": "¿Cuántas personas viven en la casa?", "tipo": "numero"},
+        {"enunciado": "¿Qué medios usa para informarse?", "tipo": "opcion_multiple",
+         "opciones": [{"texto": "Radio"}, {"texto": "TV"}, {"texto": "Redes"}]},
+        {"enunciado": "¿Cuántas personas viven en la casa?", "tipo": "una_opcion",
+         "opciones": [{"texto": "1"}, {"texto": "2"}, {"texto": "3"}, {"texto": "4,5"}]},
     ],
 }
 
@@ -41,25 +42,26 @@ class CuestionariosTests(TestCase):
         r = self.crear()
         self.assertEqual(r.status_code, 201, r.content)
         c = r.json()["cuestionario"]
-        self.assertEqual([p["tipo"] for p in c["preguntas"]], ["opcion_multiple", "si_no", "texto", "numero"])
+        self.assertEqual([p["tipo"] for p in c["preguntas"]], ["una_opcion", "opcion_multiple", "una_opcion"])
+        # Opciones con texto: cualitativa. Todas números: cuantitativa
+        self.assertEqual([p["variable"] for p in c["preguntas"]], ["cualitativa", "cualitativa", "cuantitativa"])
         self.assertEqual([o["texto"] for o in c["preguntas"][0]["opciones"]], ["Seguridad", "Salud", "Trabajo"])
-        self.assertEqual([o["texto"] for o in c["preguntas"][1]["opciones"]], ["Sí", "No"])
-        self.assertEqual(c["preguntas"][2]["opciones"], [])
         self.assertTrue(c["preguntas"][0]["obligatoria"])
-        self.assertEqual(list(Pregunta.objects.values_list("orden", flat=True)), [1, 2, 3, 4])
+        self.assertEqual(list(Pregunta.objects.values_list("orden", flat=True)), [1, 2, 3])
 
         lista = self.client.get("/api/cuestionarios/").json()["cuestionarios"]
-        self.assertEqual((lista[0]["preguntas"], lista[0]["categoria"]["nombre"]), (4, "General"))
+        self.assertEqual((lista[0]["preguntas"], lista[0]["categoria"]["nombre"]), (3, "General"))
 
     def test_validaciones(self):
         casos = [
             ({"titulo": " "}, "título"),
             ({"categoria": None}, "categoría"),
             ({"preguntas": []}, "al menos una pregunta"),
-            ({"preguntas": [{"enunciado": "", "tipo": "texto"}]}, "pregunta 1"),
+            ({"preguntas": [{"enunciado": "", "tipo": "una_opcion"}]}, "pregunta 1"),
+            ({"preguntas": [{"enunciado": "A", "tipo": "texto", "opciones": ["x", "y"]}]}, "tipo"),
+            ({"preguntas": [{"enunciado": "A", "tipo": "una_opcion", "opciones": []}]}, "2 opciones"),
             ({"preguntas": [{"enunciado": "A", "tipo": "opcion_multiple", "opciones": [{"texto": "Uno"}]}]}, "2 opciones"),
             ({"preguntas": [{"enunciado": "A", "tipo": "opcion_multiple", "opciones": ["Sí", "sí"]}]}, "repetidas"),
-            ({"preguntas": [{"enunciado": "A", "tipo": "raro"}]}, "tipo"),
         ]
         for cambios, texto in casos:
             r = self.crear(**cambios)
@@ -70,12 +72,12 @@ class CuestionariosTests(TestCase):
     def test_editar_reemplaza_preguntas(self):
         c = self.crear().json()["cuestionario"]
         nuevo = {**FORMULARIO, "categoria": self.categoria.pk, "titulo": "Otra",
-                 "preguntas": [{"enunciado": "Única", "tipo": "texto"}]}
+                 "preguntas": [{"enunciado": "Única", "tipo": "una_opcion", "opciones": ["Sí", "No"]}]}
         r = self.enviar("put", f"/api/cuestionarios/{c['id']}/", nuevo)
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual(r.json()["cuestionario"]["titulo"], "Otra")
         self.assertEqual(Pregunta.objects.count(), 1)
-        self.assertEqual(Opcion.objects.count(), 0)
+        self.assertEqual(Opcion.objects.count(), 2)
 
     def test_con_encuestas_solo_cambia_cabecera(self):
         c = self.crear().json()["cuestionario"]
@@ -85,7 +87,7 @@ class CuestionariosTests(TestCase):
         self.assertEqual(r.status_code, 200, r.content)
         detalle = r.json()["cuestionario"]
         self.assertTrue(detalle["bloqueado"])
-        self.assertEqual((detalle["titulo"], len(detalle["preguntas"])), ("Renombrado", 4))
+        self.assertEqual((detalle["titulo"], len(detalle["preguntas"])), ("Renombrado", 3))
         self.assertEqual(self.enviar("delete", f"/api/cuestionarios/{c['id']}/").status_code, 409)
 
     def test_borrar(self):

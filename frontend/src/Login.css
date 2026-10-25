@@ -2,16 +2,6 @@
    Siempre en modo claro: es una pantalla de marca. */
 
 .login {
-  --lla-violeta: #51318f;
-  --lla-violeta-oscuro: #41267a;
-  --lla-celeste: #2fb4e9;
-  --lla-magenta: #c3268c;
-  --lla-naranja: #f7a832;
-  --lla-texto: #15121c;
-  --lla-gris: #5d5a66;
-  --lla-borde: #d9d8df;
-  --lla-fondo: #fafafb;
-
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;

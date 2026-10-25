@@ -63,24 +63,23 @@ class Zona(models.Model):
 
 class Barrio(models.Model):
     id_barrio = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=120)
+    nombre = models.CharField(max_length=120, unique=True)
+    # Los barrios se cargan primero (desde OpenStreetMap); la zona se asigna
+    # después, al dibujar zonas en el mapa.
     zona = models.ForeignKey(
         Zona,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         db_column="id_zona",
+        null=True,
+        blank=True,
         related_name="barrios",
     )
     geometria = models.JSONField(blank=True, null=True)
+    osm_id = models.BigIntegerField(unique=True, null=True, blank=True)
 
     class Meta:
         db_table = "barrios"
         ordering = ["nombre"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["zona", "nombre"],
-                name="uq_barrio_zona_nombre",
-            )
-        ]
 
     def __str__(self):
         return self.nombre
@@ -95,6 +94,8 @@ class Calle(models.Model):
         db_column="id_barrio",
         related_name="calles",
     )
+    # Tramos de la calle dentro del barrio (GeoJSON MultiLineString)
+    geometria = models.JSONField(blank=True, null=True)
 
     class Meta:
         db_table = "calles"
@@ -128,6 +129,14 @@ class Ruta(models.Model):
         blank=True,
         related_name="rutas",
     )
+    class Perfil(models.TextChoices):
+        A_PIE = "foot-walking", "A pie"
+        AUTO = "driving-car", "En auto"
+        BICICLETA = "cycling-regular", "En bicicleta"
+
+    perfil = models.CharField(max_length=30, choices=Perfil, default=Perfil.A_PIE)
+    # Puntos marcados en el mapa, en orden: [[lng, lat], ...]
+    paradas = models.JSONField(default=list, blank=True)
     # Recorrido calculado por OpenRouteService (GeoJSON LineString)
     geometria = models.JSONField(blank=True, null=True)
     distancia_m = models.PositiveIntegerField(blank=True, null=True)

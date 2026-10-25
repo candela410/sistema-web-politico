@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { cerrarSesion, prepararCsrf, usuarioActual } from './api/auth'
 import Login from './Login'
+import Panel from './Panel'
 
 function App() {
   const [usuario, setUsuario] = useState(null)
@@ -23,17 +24,7 @@ function App() {
 
   if (!usuario) return <Login onIngreso={setUsuario} />
 
-  return (
-    <main className="centrado">
-      <section className="tarjeta">
-        <h1>Hola, {usuario.nombre || usuario.email}</h1>
-        <p className="secundario">Sesión iniciada como {usuario.email}</p>
-        <button type="button" onClick={salir}>
-          Cerrar sesión
-        </button>
-      </section>
-    </main>
-  )
+  return <Panel usuario={usuario} onSalir={salir} />
 }
 
 export default App

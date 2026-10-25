@@ -93,3 +93,45 @@ trata todo como el mismo sitio. Si Django corre en otro puerto:
 | `/api/auth/logout/` | POST | Cierra la sesión |
 
 Los POST llevan el header `X-CSRFToken` con el valor de la cookie `csrftoken`.
+
+## Mapa: barrios, calles, zonas y rutas
+
+Después de iniciar sesión se abre el mapa (Leaflet + OpenStreetMap):
+
+- **Barrios y calles** ya vienen cargados. Clic en un barrio para ver sus calles.
+- **Zonas**: "+ Nueva zona", se dibuja el contorno en el mapa (Leaflet-Geoman) y los barrios
+  cuyo centro queda adentro se asignan a la zona.
+- **Rutas**: "+ Nueva ruta", se marcan los puntos en orden y OpenRouteService calcula el
+  recorrido por las calles, con distancia y tiempo estimado.
+
+Todo se guarda en GeoJSON (`geometria`) en la base.
+
+### Cargar barrios y calles de una ciudad (OpenStreetMap)
+
+```powershell
+cd backend
+python manage.py importar_osm "Córdoba, Córdoba, Argentina" --simular   # muestra qué cargaría
+python manage.py importar_osm "Córdoba, Córdoba, Argentina"             # guarda
+```
+
+Se puede correr de nuevo: actualiza lo existente y no borra nada. Algunos barrios en
+OpenStreetMap son solo un punto (sin contorno); se muestran como círculos.
+
+### API key de OpenRouteService
+
+Registrarse en https://openrouteservice.org/dev/#/signup, crear un token y agregarlo en
+`backend/.env`:
+
+```
+ORS_API_KEY=el-token
+```
+
+| Endpoint | Métodos | Qué hace |
+|---|---|---|
+| `/api/mapa/barrios/` | GET | Barrios (GeoJSON) |
+| `/api/mapa/calles/?barrio=ID` | GET | Calles de un barrio (GeoJSON) |
+| `/api/mapa/zonas/` | GET, POST | Listar / crear zonas |
+| `/api/mapa/zonas/ID/` | PATCH, DELETE | Editar / borrar una zona |
+| `/api/mapa/rutas/` | GET, POST | Listar / crear rutas (calcula con OpenRouteService) |
+| `/api/mapa/rutas/ID/` | PATCH, DELETE | Editar / borrar una ruta |
+

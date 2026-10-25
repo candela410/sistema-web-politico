@@ -1,4 +1,15 @@
 :root {
+  /* Colores de la campaña (login, mapa y panel) */
+  --lla-violeta: #51318f;
+  --lla-violeta-oscuro: #41267a;
+  --lla-celeste: #2fb4e9;
+  --lla-magenta: #c3268c;
+  --lla-naranja: #f7a832;
+  --lla-texto: #15121c;
+  --lla-gris: #5d5a66;
+  --lla-borde: #d9d8df;
+  --lla-fondo: #fafafb;
+
   --fondo: #f4f5f7;
   --tarjeta: #ffffff;
   --texto: #1d2330;

@@ -39,10 +39,10 @@ export async function usuarioActual() {
   }
 }
 
-export async function iniciarSesion(email, password) {
+export async function iniciarSesion(email, password, recordar = false) {
   const { usuario } = await pedir('/api/auth/login/', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, recordar }),
   })
   return usuario
 }

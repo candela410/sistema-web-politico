@@ -1,0 +1,316 @@
+/* Pantalla de login con la identidad visual de la campaña.
+   Siempre en modo claro: es una pantalla de marca. */
+
+.login {
+  --lla-violeta: #51318f;
+  --lla-violeta-oscuro: #41267a;
+  --lla-celeste: #2fb4e9;
+  --lla-magenta: #c3268c;
+  --lla-naranja: #f7a832;
+  --lla-texto: #15121c;
+  --lla-gris: #5d5a66;
+  --lla-borde: #d9d8df;
+  --lla-fondo: #fafafb;
+
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--lla-fondo);
+  color: var(--lla-texto);
+  color-scheme: light;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  display: flex;
+  justify-content: center;
+}
+
+/* --- Ondas ------------------------------------------------------------ */
+
+.login__ola-superior,
+.login__ola-inferior {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.login__ola-superior {
+  top: 0;
+  height: clamp(150px, 24vh, 260px);
+  fill: var(--lla-violeta);
+}
+
+.login__topografia {
+  fill: none;
+  stroke: #fff;
+  stroke-opacity: 0.09;
+  stroke-width: 0.8;
+  vector-effect: non-scaling-stroke;
+}
+
+.login__ola-inferior {
+  bottom: 0;
+  height: clamp(90px, 13vh, 150px);
+}
+
+.login__ola-violeta {
+  fill: var(--lla-violeta);
+}
+
+.login__ola-naranja {
+  fill: var(--lla-naranja);
+  opacity: 0.9;
+}
+
+/* --- Contenido -------------------------------------------------------- */
+
+.login__contenido {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  padding: clamp(110px, 17vh, 190px) 24px clamp(110px, 15vh, 170px);
+  display: flex;
+  flex-direction: column;
+}
+
+.login__logo {
+  display: block;
+  width: min(300px, 80%);
+  height: auto;
+  margin: 0 auto 32px;
+}
+
+.login__encabezado h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 6vw, 2.1rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.login__encabezado p {
+  margin: 4px 0 12px;
+  color: var(--lla-gris);
+  font-size: 1rem;
+}
+
+.login__franja {
+  display: flex;
+  width: 72px;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.login__franja i {
+  flex: 1;
+}
+.login__franja i:nth-child(1) { background: var(--lla-violeta); }
+.login__franja i:nth-child(2) { background: var(--lla-celeste); }
+.login__franja i:nth-child(3) { background: var(--lla-magenta); }
+.login__franja i:nth-child(4) { background: var(--lla-naranja); }
+
+/* --- Formulario ------------------------------------------------------- */
+
+.login__form {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+.login__form > label {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--lla-texto);
+}
+
+.campo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 14px;
+  margin-bottom: 20px;
+  background: #fff;
+  border: 1px solid var(--lla-borde);
+  border-radius: 10px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.campo:focus-within {
+  border-color: var(--lla-violeta);
+  box-shadow: 0 0 0 3px rgb(81 49 143 / 0.15);
+}
+
+.campo svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--lla-gris);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.campo input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--lla-texto);
+  font: inherit;
+  font-size: 1rem; /* 16px: evita el zoom en iPhone */
+}
+
+.campo input::placeholder {
+  color: #a3a1ab;
+}
+
+.campo__ver {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: 0 -6px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.campo__ver:hover svg {
+  stroke: var(--lla-violeta);
+}
+
+.campo__ver:focus-visible {
+  outline: 2px solid var(--lla-violeta);
+}
+
+/* --- Recordar / olvidaste -------------------------------------------- */
+
+.login__opciones {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 2px 0 28px;
+  font-size: 0.9rem;
+}
+
+.casilla {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.casilla input {
+  appearance: none;
+  background: #fff;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 1.5px solid var(--lla-gris);
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.casilla input:checked {
+  background: var(--lla-violeta);
+  border-color: var(--lla-violeta);
+}
+
+.casilla input:checked::after {
+  content: '';
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: translateY(-1px) rotate(45deg);
+}
+
+.casilla input:focus-visible {
+  outline: 2px solid var(--lla-violeta);
+  outline-offset: 2px;
+}
+
+.enlace {
+  color: var(--lla-violeta);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.enlace:hover {
+  text-decoration: underline;
+}
+
+.enlace--fuerte {
+  font-weight: 700;
+}
+
+/* --- Botón y pie ------------------------------------------------------ */
+
+.login__error {
+  margin: -12px 0 16px;
+  color: #c0182f;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.login__boton {
+  align-self: center;
+  width: min(100%, 300px);
+  height: 52px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--lla-violeta);
+  color: #fff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 100ms ease;
+}
+
+.login__boton:hover:not(:disabled) {
+  background: var(--lla-violeta-oscuro);
+}
+
+.login__boton:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.login__boton:focus-visible {
+  outline: 3px solid rgb(81 49 143 / 0.35);
+  outline-offset: 2px;
+}
+
+.login__boton:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.login__registro {
+  margin: 20px 0 0;
+  text-align: center;
+  color: var(--lla-gris);
+  font-size: 0.9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .campo,
+  .login__boton {
+    transition: none;
+  }
+}

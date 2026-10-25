@@ -54,17 +54,17 @@ body {
   border-radius: 12px;
 }
 
-h1 {
+.tarjeta h1 {
   margin: 0 0 16px;
   font-size: 1.5rem;
 }
 
-label {
+.tarjeta label {
   font-size: 0.9rem;
   color: var(--secundario);
 }
 
-input {
+.tarjeta input {
   padding: 10px 12px;
   margin-bottom: 8px;
   font: inherit;
@@ -74,12 +74,12 @@ input {
   border-radius: 8px;
 }
 
-input:focus {
+.tarjeta input:focus {
   outline: 2px solid var(--primario);
   outline-offset: 1px;
 }
 
-button {
+.tarjeta button {
   margin-top: 8px;
   padding: 10px 12px;
   font: inherit;
@@ -91,11 +91,11 @@ button {
   cursor: pointer;
 }
 
-button:hover:not(:disabled) {
+.tarjeta button:hover:not(:disabled) {
   background: var(--primario-hover);
 }
 
-button:disabled {
+.tarjeta button:disabled {
   opacity: 0.6;
   cursor: default;
 }

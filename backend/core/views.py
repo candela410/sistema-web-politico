@@ -46,6 +46,9 @@ def login_view(request):
         return JsonResponse({"error": "Email o contraseña incorrectos."}, status=401)
 
     login(request, usuario)
+    if not datos.get("recordar"):
+        # Sin "Recordar", la sesión termina al cerrar el navegador
+        request.session.set_expiry(0)
     return JsonResponse({"usuario": _usuario_json(usuario)})
 
 

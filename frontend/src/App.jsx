@@ -4,6 +4,7 @@ import { cerrarSesion, prepararCsrf, usuarioActual } from './api/auth'
 import Categorias from './components/categorias/Categorias'
 import DetalleCuestionario from './components/cuestionarios/DetalleCuestionario'
 import EditorCuestionario from './components/cuestionarios/EditorCuestionario'
+import Inicio from './components/inicio/Inicio'
 import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
 import Login from './components/login/Login'
 import Mapa from './components/mapa/Mapa'
@@ -11,8 +12,9 @@ import Menu from './components/menu/Menu'
 import ListaResponder from './components/responder/ListaResponder'
 import ResponderCuestionario from './components/responder/ResponderCuestionario'
 
-// Rutas de la app:
+// Rutas de la app (las opciones del menú lateral están en components/menu/opciones.js):
 //   /login  pantalla de ingreso (si ya hay sesión, va a la pantalla de inicio)
+//   /inicio  panel de inicio (todos; muestra lo que corresponde a cada rol)
 //   Administración (is_staff):
 //     /mapa  mapa de barrios, zonas y rutas
 //     /cuestionarios, /cuestionarios/nuevo, /cuestionarios/:id  lista y editor
@@ -22,7 +24,7 @@ import ResponderCuestionario from './components/responder/ResponderCuestionario'
 //     /responder, /responder/:id  cargar encuestas
 //   Cualquier otra dirección va a la pantalla de inicio de cada rol.
 
-const inicioDe = (usuario) => (usuario?.es_staff ? '/mapa' : '/responder')
+const inicioDe = () => '/inicio'
 
 function RequiereSesion({ usuario, children }) {
   const ubicacion = useLocation()
@@ -81,6 +83,7 @@ function Rutas() {
           </RequiereSesion>
         }
       >
+        <Route path="/inicio" element={<Inicio usuario={usuario} />} />
         <Route path="/mapa" element={<SoloAdmin usuario={usuario}><Mapa /></SoloAdmin>} />
         <Route path="/categorias" element={<SoloAdmin usuario={usuario}><Categorias /></SoloAdmin>} />
         <Route path="/cuestionarios" element={<SoloAdmin usuario={usuario}><ListaCuestionarios /></SoloAdmin>} />

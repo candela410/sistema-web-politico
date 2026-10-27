@@ -1,7 +1,7 @@
 import re
 
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Permission
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
@@ -579,3 +579,29 @@ class RespuestaCargada(models.Model):
         if self.opcion_id and self.pregunta_id:
             if self.opcion.pregunta_id != self.pregunta_id:
                 raise ValidationError("La opción elegida no pertenece a esa pregunta.")
+
+
+# ---------------------------------------------------------------------------
+# Grupos
+# ---------------------------------------------------------------------------
+
+
+class Grupo(models.Model):
+    id_grupo = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=120, unique=True)
+    descripcion = models.TextField(blank=True, default="")
+    # Permisos de Django (tabla auth_permission) que tiene el grupo
+    permisos = models.ManyToManyField(
+        Permission,
+        blank=True,
+        related_name="grupos_core",
+        db_table="grupos_permisos",
+    )
+
+    class Meta:
+        db_table = "grupos"
+        ordering = ["nombre"]
+        verbose_name = "grupo"
+
+    def __str__(self):
+        return self.nombre

@@ -1,4 +1,15 @@
-import { ClipboardList, ClipboardPen, Flag, House, Map, ScrollText, ShieldCheck, Tags, Users } from 'lucide-react'
+import {
+  ClipboardList,
+  ClipboardPen,
+  Flag,
+  House,
+  Map,
+  ScrollText,
+  ShieldCheck,
+  Tags,
+  Users,
+  UsersRound,
+} from 'lucide-react'
 import { tiene } from '../../permisos'
 
 // Opciones del menú lateral, agrupadas por sección.
@@ -51,6 +62,13 @@ export const SECCIONES = [
     titulo: 'Gestión',
     opciones: [
       { ruta: '/usuarios', texto: 'Usuarios', descripcion: 'Cuentas y grupos', icono: Users, permiso: 'core.view_usuario' },
+      {
+        ruta: '/grupos',
+        texto: 'Grupos',
+        descripcion: 'Grupos con sus permisos',
+        icono: UsersRound,
+        permiso: 'core.view_grupo',
+      },
       {
         ruta: '/permisos',
         texto: 'Permisos',

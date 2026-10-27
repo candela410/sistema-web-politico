@@ -5,7 +5,9 @@ from . import (
     categorias_views,
     cuestionarios_views,
     encuestas_views,
+    grupos_views,
     mapa_views,
+    permisos_views,
     usuarios_views,
     views,
 )
@@ -23,6 +25,10 @@ urlpatterns = [
     path("usuarios/<int:pk>/", usuarios_views.usuario_detalle, name="usuario"),
     path("permisos/", usuarios_views.permisos, name="permisos"),
     path("historial/", usuarios_views.historial, name="historial"),
+    path("grupos/", grupos_views.grupos, name="grupos"),
+    path("grupos/<int:pk>/", grupos_views.grupo_detalle, name="grupo"),
+    # Permisos para asignar a un grupo (distinto de /permisos/, que es la tabla de Gestión → Permisos)
+    path("grupos/permisos/", permisos_views.permisos, name="grupos-permisos"),
     path("categorias/", categorias_views.categorias, name="categorias"),
     path("categorias/<int:pk>/", categorias_views.categoria_detalle, name="categoria"),
     path("cuestionarios/", cuestionarios_views.cuestionarios, name="cuestionarios"),

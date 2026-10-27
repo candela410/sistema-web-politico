@@ -8,6 +8,7 @@ import Categorias from './components/categorias/Categorias'
 import Aviso from './components/comunes/Aviso'
 import DetalleCuestionario from './components/cuestionarios/DetalleCuestionario'
 import EditorCuestionario from './components/cuestionarios/EditorCuestionario'
+import Grupos from './components/grupos/grupos'
 import Inicio from './components/inicio/Inicio'
 import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
 import Login from './components/login/Login'
@@ -25,7 +26,7 @@ import { inicioDe, tiene } from './permisos'
 //   /inicio       panel de inicio (todos los que tienen campaña)
 //   /campana      elegir la campaña (superusuario o permiso "elegir_campana")
 //   /mapa, /cuestionarios(/nuevo|/:id|/:id/estadisticas), /categorias, /responder(/:id)
-//   /usuarios, /permisos, /actividad, /campanas
+//   /usuarios, /grupos, /permisos, /actividad, /campanas
 // Todo lo que no sea /login, /campana o /campanas necesita una campaña elegida.
 
 function RequiereSesion({ usuario, children }) {
@@ -131,6 +132,7 @@ function Rutas() {
         <Route path="/responder" element={s('core.add_encuesta', <ListaResponder />)} />
         <Route path="/responder/:id" element={s('core.add_encuesta', <ResponderCuestionario key="responder" />)} />
         <Route path="/usuarios" element={s('core.view_usuario', <Usuarios usuario={usuario} />)} />
+        <Route path="/grupos" element={s('core.view_grupo', <Grupos />)} />
         <Route path="/permisos" element={s('auth.view_group', <Permisos />)} />
         <Route path="/actividad" element={s('admin.view_logentry', <Actividad usuario={usuario} />)} />
         <Route path="/campanas" element={s('core.view_campana', <Campanas usuario={usuario} />, true)} />

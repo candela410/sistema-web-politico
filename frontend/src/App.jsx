@@ -1,28 +1,29 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { cerrarSesion, prepararCsrf, usuarioActual } from './api/auth'
+import Actividad from './components/actividad/Actividad'
+import Campanas from './components/campanas/Campanas'
+import ElegirCampana from './components/campanas/ElegirCampana'
 import Categorias from './components/categorias/Categorias'
+import Aviso from './components/comunes/Aviso'
 import DetalleCuestionario from './components/cuestionarios/DetalleCuestionario'
 import EditorCuestionario from './components/cuestionarios/EditorCuestionario'
 import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
 import Login from './components/login/Login'
 import Mapa from './components/mapa/Mapa'
 import Menu from './components/menu/Menu'
+import Permisos from './components/permisos/Permisos'
 import ListaResponder from './components/responder/ListaResponder'
 import ResponderCuestionario from './components/responder/ResponderCuestionario'
+import Usuarios from './components/usuarios/Usuarios'
+import { inicioDe, tiene } from './permisos'
 
-// Rutas de la app:
-//   /login  pantalla de ingreso (si ya hay sesión, va a la pantalla de inicio)
-//   Administración (is_staff):
-//     /mapa  mapa de barrios, zonas y rutas
-//     /cuestionarios, /cuestionarios/nuevo, /cuestionarios/:id  lista y editor
-//     /cuestionarios/:id/detalle  ver detalle con estadísticas
-//     /categorias  ABM de categorías
-//   Todos (militantes y administración):
-//     /responder, /responder/:id  cargar encuestas
-//   Cualquier otra dirección va a la pantalla de inicio de cada rol.
-
-const inicioDe = (usuario) => (usuario?.es_staff ? '/mapa' : '/responder')
+// Rutas de la app. Cada sección pide un permiso de Django (ver permisos.js):
+//   /login        ingreso
+//   /campana      elegir la campaña (superusuario o permiso "elegir_campana")
+//   /mapa, /cuestionarios(/nuevo|/:id|/:id/estadisticas), /categorias, /responder(/:id)
+//   /usuarios, /permisos, /actividad, /campanas
+// Todo lo que no sea /login, /campana o /campanas necesita una campaña elegida.
 
 function RequiereSesion({ usuario, children }) {
   const ubicacion = useLocation()
@@ -30,21 +31,21 @@ function RequiereSesion({ usuario, children }) {
   return children
 }
 
-// Las secciones de administración no se muestran a los militantes
-function SoloAdmin({ usuario, children }) {
-  if (!usuario.es_staff) return <Navigate to="/responder" replace />
+function Seccion({ usuario, permiso, sinCampana = false, children }) {
+  if (!sinCampana && !usuario.campana) return <Navigate to={inicioDe(usuario)} replace />
+  if (permiso && !tiene(usuario, permiso)) return <Navigate to={inicioDe(usuario)} replace />
   return children
 }
 
 function PaginaLogin({ usuario, onIngreso }) {
   const navegar = useNavigate()
   const { state } = useLocation()
-  if (usuario) return <Navigate to={state?.desde ?? inicioDe(usuario)} replace />
+  if (usuario) return <Navigate to={usuario.campana && state?.desde ? state.desde : inicioDe(usuario)} replace />
   return (
     <Login
       onIngreso={(u) => {
         onIngreso(u)
-        navegar(state?.desde ?? inicioDe(u), { replace: true })
+        navegar(u.campana && state?.desde ? state.desde : inicioDe(u), { replace: true })
       }}
     />
   )
@@ -63,40 +64,90 @@ function Rutas() {
       .finally(() => setCargando(false))
   }, [])
 
+  // Si el servidor dice que no hay campaña elegida, se vuelve a elegir
+  useEffect(() => {
+    const volver = () => {
+      setUsuario((u) => (u ? { ...u, campana: null } : u))
+      navegar('/campana', { replace: true })
+    }
+    window.addEventListener('sin-campana', volver)
+    return () => window.removeEventListener('sin-campana', volver)
+  }, [navegar])
+
   async function salir() {
     await cerrarSesion()
-    setUsuario(null)
-    navegar('/login', { replace: true })
+    // Recarga completa: el próximo usuario empieza de cero, sin heredar la
+    // página ni los datos del anterior
+    window.location.replace('/login')
   }
 
   if (cargando) return <main className="centrado">Cargando…</main>
+
+  const s = (permiso, elemento, sinCampana) => (
+    <Seccion usuario={usuario} permiso={permiso} sinCampana={sinCampana}>
+      {elemento}
+    </Seccion>
+  )
 
   return (
     <Routes>
       <Route path="/login" element={<PaginaLogin usuario={usuario} onIngreso={setUsuario} />} />
       <Route
+        path="/campana"
         element={
           <RequiereSesion usuario={usuario}>
-            <Menu usuario={usuario} onSalir={salir} />
+            {usuario?.puede_elegir_campana ? (
+              <ElegirCampana
+                usuario={usuario}
+                onElegida={(u) => {
+                  setUsuario(u)
+                  navegar(inicioDe(u), { replace: true })
+                }}
+                onSalir={salir}
+              />
+            ) : (
+              <Navigate to={inicioDe(usuario)} replace />
+            )}
+          </RequiereSesion>
+        }
+      />
+      <Route
+        element={
+          <RequiereSesion usuario={usuario}>
+            <Menu usuario={usuario} onCambio={setUsuario} onSalir={salir} />
           </RequiereSesion>
         }
       >
-        <Route path="/mapa" element={<SoloAdmin usuario={usuario}><Mapa /></SoloAdmin>} />
-        <Route path="/categorias" element={<SoloAdmin usuario={usuario}><Categorias /></SoloAdmin>} />
-        <Route path="/cuestionarios" element={<SoloAdmin usuario={usuario}><ListaCuestionarios /></SoloAdmin>} />
+        <Route path="/mapa" element={s('core.view_zona', <Mapa />)} />
+        <Route path="/categorias" element={s('core.view_categoria', <Categorias usuario={usuario} />)} />
+        <Route path="/cuestionarios" element={s('core.view_cuestionario', <ListaCuestionarios usuario={usuario} />)} />
+        <Route path="/cuestionarios/nuevo" element={s('core.add_cuestionario', <EditorCuestionario key="nuevo" />)} />
+        <Route path="/cuestionarios/:id" element={s('core.view_cuestionario', <EditorCuestionario />)} />
+        <Route path="/cuestionarios/:id/estadisticas" element={s('core.view_encuesta', <DetalleCuestionario />)} />
+        <Route path="/responder" element={s('core.add_encuesta', <ListaResponder />)} />
+        <Route path="/responder/:id" element={s('core.add_encuesta', <ResponderCuestionario key="responder" />)} />
+        <Route path="/usuarios" element={s('core.view_usuario', <Usuarios usuario={usuario} />)} />
+        <Route path="/permisos" element={s('auth.view_group', <Permisos />)} />
+        <Route path="/actividad" element={s('admin.view_logentry', <Actividad usuario={usuario} />)} />
+        <Route path="/campanas" element={s('core.view_campana', <Campanas usuario={usuario} />, true)} />
         <Route
-          path="/cuestionarios/nuevo"
-          element={<SoloAdmin usuario={usuario}><EditorCuestionario key="nuevo" /></SoloAdmin>}
+          path="/sin-campana"
+          element={
+            <Aviso titulo="Tu usuario no tiene una campaña asignada">
+              Pedile a la administración que te asigne a una campaña para poder trabajar.
+            </Aviso>
+          }
         />
-        <Route path="/cuestionarios/:id" element={<SoloAdmin usuario={usuario}><EditorCuestionario /></SoloAdmin>} />
         <Route
-          path="/cuestionarios/:id/detalle"
-          element={<SoloAdmin usuario={usuario}><DetalleCuestionario /></SoloAdmin>}
+          path="/sin-permisos"
+          element={
+            <Aviso titulo="Todavía no tenés secciones habilitadas">
+              Pedile a la administración que te agregue a un grupo con permisos.
+            </Aviso>
+          }
         />
-        <Route path="/responder" element={<ListaResponder />} />
-        <Route path="/responder/:id" element={<ResponderCuestionario key="responder" />} />
       </Route>
-      <Route path="*" element={<Navigate to={usuario ? inicioDe(usuario) : '/login'} replace />} />
+      <Route path="*" element={<Navigate to={inicioDe(usuario)} replace />} />
     </Routes>
   )
 }

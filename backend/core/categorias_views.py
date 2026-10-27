@@ -5,7 +5,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
-from .api import error, leer_json, requiere_admin
+from .api import crud, error, leer_json, requiere_permiso
+from .bitacora import diferencias, registrar
 from .models import Categoria
 
 
@@ -20,6 +21,10 @@ def _categoria_json(categoria):
         "descripcion": categoria.descripcion or "",
         "cuestionarios": cantidad,
     }
+
+
+def _foto(c):
+    return {"Nombre": c.nombre, "Descripción": c.descripcion or ""}
 
 
 def _validar(datos, categoria=None):
@@ -40,7 +45,7 @@ def _validar(datos, categoria=None):
 
 
 @require_http_methods(["GET", "POST"])
-@requiere_admin
+@requiere_permiso(crud("categoria"))
 def categorias(request):
     if request.method == "GET":
         lista = Categoria.objects.annotate(cantidad_cuestionarios=Count("cuestionarios")).order_by("nombre")
@@ -56,11 +61,12 @@ def categorias(request):
         nombre=datos["nombre"].strip(),
         descripcion=(datos.get("descripcion") or "").strip() or None,
     )
+    registrar(request, categoria, "crear", detalle=f"Creó la categoría {categoria.nombre}")
     return JsonResponse({"categoria": _categoria_json(categoria)}, status=201)
 
 
 @require_http_methods(["PATCH", "DELETE"])
-@requiere_admin
+@requiere_permiso(crud("categoria"))
 def categoria_detalle(request, pk):
     categoria = get_object_or_404(Categoria, pk=pk)
 
@@ -72,6 +78,7 @@ def categoria_detalle(request, pk):
                 409,
             )
         categoria.delete()
+        registrar(request, categoria, "borrar", detalle=f"Borró la categoría {categoria.nombre}")
         return JsonResponse({"ok": True})
 
     datos = leer_json(request)
@@ -81,8 +88,12 @@ def categoria_detalle(request, pk):
     mensaje = _validar(datos, categoria)
     if mensaje:
         return error(mensaje)
+    antes = _foto(categoria)
     categoria.nombre = datos["nombre"].strip()
     if "descripcion" in datos:
         categoria.descripcion = (datos["descripcion"] or "").strip() or None
     categoria.save()
+    cambios = diferencias(antes, _foto(categoria))
+    if cambios:
+        registrar(request, categoria, "editar", cambios=cambios)
     return JsonResponse({"categoria": _categoria_json(categoria)})

@@ -10,7 +10,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
-from .api import error, leer_json, requiere_admin, requiere_sesion
+from .api import error, leer_json, requiere_permiso
+from .bitacora import registrar
 from .models import Barrio, Cuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada, numero_de
 
 
@@ -35,9 +36,9 @@ def _cuestionario_para_responder(c):
 
 
 @require_http_methods(["GET"])
-@requiere_sesion
+@requiere_permiso("core.add_encuesta")
 def cuestionarios_para_responder(request):
-    lista = Cuestionario.objects.filter(activo=True).select_related("categoria").order_by("titulo")
+    lista = Cuestionario.objects.filter(activo=True, campana=request.campana).select_related("categoria").order_by("titulo")
     return JsonResponse({
         "cuestionarios": [
             {
@@ -115,9 +116,11 @@ def _coordenada(valor, minimo, maximo):
 
 
 @require_http_methods(["GET", "POST"])
-@requiere_sesion
+@requiere_permiso("core.add_encuesta")
 def responder(request, pk):
-    cuestionario = get_object_or_404(Cuestionario.objects.select_related("categoria"), pk=pk, activo=True)
+    cuestionario = get_object_or_404(
+        Cuestionario.objects.select_related("categoria"), pk=pk, activo=True, campana=request.campana
+    )
     if request.method == "GET":
         return JsonResponse({"cuestionario": _cuestionario_para_responder(cuestionario)})
 
@@ -158,6 +161,10 @@ def responder(request, pk):
             RespuestaCargada.objects.bulk_create(respuestas)
     except IntegrityError:
         return error("Esta persona ya respondió este cuestionario.", 409)
+    registrar(
+        request, encuesta, "crear",
+        detalle=f"Cargó una encuesta de {cuestionario.titulo} (documento {encuestado.documento})",
+    )
     return JsonResponse({"ok": True, "encuesta": encuesta.pk}, status=201)
 
 
@@ -186,9 +193,9 @@ def _medidas(valores):
 
 
 @require_http_methods(["GET"])
-@requiere_admin
+@requiere_permiso("core.view_cuestionario", "core.view_encuesta")
 def estadisticas(request, pk):
-    cuestionario = get_object_or_404(Cuestionario.objects.select_related("categoria"), pk=pk)
+    cuestionario = get_object_or_404(Cuestionario.objects.select_related("categoria"), pk=pk, campana=request.campana)
     total = cuestionario.encuestas.count()
     ultima = cuestionario.encuestas.order_by("-realizada_en").values_list("realizada_en", flat=True).first()
 

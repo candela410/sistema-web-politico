@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Group
 from django.test import Client, TestCase
 
 from .models import Campana, Categoria, Cuestionario, Encuesta, Encuestado, Militante, Opcion, Pregunta, Usuario
@@ -5,15 +6,19 @@ from .models import Campana, Categoria, Cuestionario, Encuesta, Encuestado, Mili
 
 class EncuestasTests(TestCase):
     def setUp(self):
-        Usuario.objects.create_user(username="adm", email="adm@ejemplo.com", password="clave-segura-123", is_staff=True)
-        usuario = Usuario.objects.create_user(username="mili", email="mili@ejemplo.com", password="clave-segura-123")
+        self.campana = Campana.objects.create(nombre="C")
+        Usuario.objects.create_superuser(username="adm", email="adm@ejemplo.com", password="clave-segura-123")
+        usuario = Usuario.objects.create_user(
+            username="mili", email="mili@ejemplo.com", password="clave-segura-123", campana=self.campana
+        )
+        usuario.groups.add(Group.objects.get(name="Militantes"))
         self.militante = Militante.objects.create(nombre="Juan", apellido="Pérez", usuario=usuario)
         self.client = Client(enforce_csrf_checks=True)
         self.client.get("/api/auth/csrf/")
         self.login("mili@ejemplo.com")
 
         self.c = Cuestionario.objects.create(
-            titulo="Barrial", categoria=Categoria.objects.create(nombre="G"), campana=Campana.objects.create(nombre="C")
+            titulo="Barrial", categoria=Categoria.objects.create(nombre="G"), campana=self.campana
         )
         # Una sola opción, cualitativa
         self.p_una = self.pregunta(1, "Problema", "una_opcion", ["Seguridad", "Salud"], obligatoria=True)
@@ -31,6 +36,8 @@ class EncuestasTests(TestCase):
 
     def login(self, email):
         self.enviar("post", "/api/auth/login/", {"email": email, "password": "clave-segura-123"})
+        if email.startswith("adm"):
+            self.enviar("post", "/api/campanas/activa/", {"campana": self.campana.pk})
 
     def enviar(self, metodo, url, datos=None):
         csrf = self.client.cookies["csrftoken"].value

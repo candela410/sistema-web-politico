@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router'
 import { obtenerEstadisticas } from '../../api/encuestas'
 import './cuestionarios.css'
 
-// "Ver detalle" de un cuestionario: resumen y estadísticas de cada pregunta.
+// Estadísticas de un cuestionario (se abren con el botón "Estadísticas" de la
+// lista): resumen y gráficos de cada pregunta.
 // Variable cualitativa (opciones con texto): barras de frecuencia y, si es de
 // una sola opción, la distribución en una barra 100 %.
 // Variable cuantitativa (opciones numéricas): histograma de columnas sobre el

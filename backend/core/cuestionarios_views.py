@@ -7,7 +7,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
-from .api import campana_de, error, leer_json, requiere_admin
+from .api import crud, error, leer_json, requiere_permiso
+from .bitacora import diferencias, registrar
 from .models import Categoria, Cuestionario, Opcion, Pregunta
 
 MAX_PREGUNTAS = 100
@@ -127,12 +128,27 @@ def _crear_preguntas(cuestionario, preguntas):
         )
 
 
+def _foto(c):
+    return {
+        "Título": c.titulo,
+        "Descripción": c.descripcion or "",
+        "Categoría": c.categoria.nombre,
+        "Activo": "Sí" if c.activo else "No",
+        # Las preguntas se resumen: "1. ¿…? (Opción 1 / Opción 2)"
+        "Preguntas": " | ".join(
+            f"{p.orden}. {p.enunciado} ({' / '.join(o.texto for o in p.opciones.all())})"
+            for p in c.preguntas.prefetch_related("opciones")
+        ),
+    }
+
+
 @require_http_methods(["GET", "POST"])
-@requiere_admin
+@requiere_permiso(crud("cuestionario"))
 def cuestionarios(request):
     if request.method == "GET":
         lista = (
-            Cuestionario.objects.select_related("categoria")
+            Cuestionario.objects.filter(campana=request.campana)
+            .select_related("categoria")
             .annotate(
                 cantidad_preguntas=Count("preguntas", distinct=True),
                 cantidad_encuestas=Count("encuestas", distinct=True),
@@ -150,15 +166,19 @@ def cuestionarios(request):
     except DatosInvalidos as e:
         return error(str(e))
     with transaction.atomic():
-        cuestionario = Cuestionario.objects.create(campana=campana_de(request.user), **cabecera)
+        cuestionario = Cuestionario.objects.create(campana=request.campana, **cabecera)
         _crear_preguntas(cuestionario, preguntas)
+    registrar(
+        request, cuestionario, "crear",
+        detalle=f"Creó el cuestionario {cuestionario.titulo} con {len(preguntas)} pregunta(s)",
+    )
     return JsonResponse({"cuestionario": _detalle_json(cuestionario)}, status=201)
 
 
 @require_http_methods(["GET", "PUT", "DELETE"])
-@requiere_admin
+@requiere_permiso(crud("cuestionario"))
 def cuestionario_detalle(request, pk):
-    cuestionario = get_object_or_404(Cuestionario, pk=pk)
+    cuestionario = get_object_or_404(Cuestionario, pk=pk, campana=request.campana)
 
     if request.method == "GET":
         return JsonResponse({"cuestionario": _detalle_json(cuestionario)})
@@ -169,6 +189,7 @@ def cuestionario_detalle(request, pk):
         if cuestionario.militantes.exists():
             return error("No se puede borrar: está asignado a militantes. Quitá las asignaciones primero.", 409)
         cuestionario.delete()  # preguntas y opciones se borran en cascada
+        registrar(request, cuestionario, "borrar", detalle=f"Borró el cuestionario {cuestionario.titulo}")
         return JsonResponse({"ok": True})
 
     # PUT: reemplaza el cuestionario completo
@@ -181,6 +202,7 @@ def cuestionario_detalle(request, pk):
         preguntas = None if bloqueado else _limpiar_preguntas(datos.get("preguntas"))
     except DatosInvalidos as e:
         return error(str(e))
+    antes = _foto(cuestionario)
     with transaction.atomic():
         for campo, valor in cabecera.items():
             setattr(cuestionario, campo, valor)
@@ -188,4 +210,8 @@ def cuestionario_detalle(request, pk):
         if preguntas is not None:
             cuestionario.preguntas.all().delete()
             _crear_preguntas(cuestionario, preguntas)
+    cuestionario.refresh_from_db()
+    cambios = diferencias(antes, _foto(cuestionario))
+    if cambios:
+        registrar(request, cuestionario, "editar", cambios=cambios)
     return JsonResponse({"cuestionario": _detalle_json(cuestionario)})

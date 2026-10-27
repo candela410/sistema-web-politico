@@ -5,21 +5,29 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
+from .api import campana_activa, puede_elegir_campana
+from .bitacora import registrar
+
 # API de autenticación con las sesiones de Django (tablas usuarios y
 # django_session). El frontend manda la cookie de sesión y el token CSRF.
 
 
-def _usuario_json(usuario):
+def usuario_json(request):
+    usuario = request.user
+    campana = campana_activa(request)
     return {
         "id": usuario.pk,
         "email": usuario.email,
         "username": usuario.username,
         "nombre": usuario.first_name,
         "apellido": usuario.last_name,
-        "es_staff": usuario.is_staff,
+        "es_superusuario": usuario.is_superuser,
         "es_militante": hasattr(usuario, "militante"),
         "grupos": list(usuario.groups.values_list("name", flat=True)),
-        "campana": usuario.campana_id,
+        # Permisos de Django ("core.add_cuestionario", …): el frontend arma el menú con esto
+        "permisos": sorted(usuario.get_all_permissions()),
+        "puede_elegir_campana": puede_elegir_campana(usuario),
+        "campana": {"id": campana.pk, "nombre": campana.nombre} if campana else None,
     }
 
 
@@ -50,11 +58,14 @@ def login_view(request):
     if not datos.get("recordar"):
         # Sin "Recordar", la sesión termina al cerrar el navegador
         request.session.set_expiry(0)
-    return JsonResponse({"usuario": _usuario_json(usuario)})
+    registrar(request, usuario, "sesion", detalle="Inició sesión", campana=usuario.campana)
+    return JsonResponse({"usuario": usuario_json(request)})
 
 
 @require_POST
 def logout_view(request):
+    if request.user.is_authenticated:
+        registrar(request, request.user, "sesion", detalle="Cerró sesión", campana=campana_activa(request))
     logout(request)
     return JsonResponse({"ok": True})
 
@@ -63,4 +74,4 @@ def logout_view(request):
 def me(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "No autenticado."}, status=401)
-    return JsonResponse({"usuario": _usuario_json(request.user)})
+    return JsonResponse({"usuario": usuario_json(request)})

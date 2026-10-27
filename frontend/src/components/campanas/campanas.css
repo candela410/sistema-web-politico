@@ -1,0 +1,149 @@
+/* Pantalla "Elegí la campaña": misma identidad visual que el login */
+
+.elegir {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  background: var(--lla-fondo);
+  color: var(--lla-texto);
+  color-scheme: light;
+  font-family: 'Montserrat', system-ui, sans-serif;
+}
+
+.elegir__ola {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: clamp(120px, 20vh, 220px);
+  fill: var(--lla-violeta);
+  pointer-events: none;
+}
+
+.elegir__contenido {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  padding: clamp(90px, 14vh, 150px) 20px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.elegir__logo {
+  width: min(220px, 60%);
+  margin: 0 auto;
+}
+
+.elegir h1 {
+  margin: 0;
+  font-size: clamp(1.7rem, 5vw, 2.1rem);
+  font-weight: 800;
+}
+
+.elegir header p {
+  margin: 4px 0 12px;
+  color: var(--lla-gris);
+  line-height: 1.45;
+}
+
+.elegir__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.elegir__campana {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'nombre entrar'
+    'descripcion entrar'
+    'datos entrar';
+  gap: 4px 16px;
+  align-items: center;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid var(--lla-borde);
+  border-left: 5px solid var(--lla-violeta);
+  border-radius: 14px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 150ms ease, transform 120ms ease, border-color 150ms ease;
+}
+
+.elegir__campana:hover:not(:disabled) {
+  border-color: var(--lla-violeta);
+  box-shadow: 0 6px 20px rgb(81 49 143 / 0.14);
+}
+
+.elegir__campana:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.elegir__campana:focus-visible {
+  outline: 3px solid rgb(81 49 143 / 0.35);
+  outline-offset: 2px;
+}
+
+.elegir__campana:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.elegir__nombre {
+  grid-area: nombre;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.elegir__descripcion {
+  grid-area: descripcion;
+  color: var(--lla-gris);
+  font-size: 0.9rem;
+}
+
+.elegir__datos {
+  grid-area: datos;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--lla-gris);
+  font-size: 0.8rem;
+}
+
+.elegir__entrar {
+  grid-area: entrar;
+  color: var(--lla-violeta);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.elegir__pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .elegir__campana {
+    transition: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .elegir__campana {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'nombre' 'descripcion' 'datos' 'entrar';
+  }
+}

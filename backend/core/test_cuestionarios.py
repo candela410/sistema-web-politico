@@ -1,6 +1,6 @@
 from django.test import Client, TestCase
 
-from .models import Categoria, Cuestionario, Encuestado, Encuesta, Opcion, Pregunta, Usuario
+from .models import Campana, Categoria, Cuestionario, Encuestado, Encuesta, Opcion, Pregunta, Usuario
 
 FORMULARIO = {
     "titulo": "Encuesta barrial",
@@ -19,10 +19,12 @@ FORMULARIO = {
 
 class CuestionariosTests(TestCase):
     def setUp(self):
-        Usuario.objects.create_user(username="ana", email="ana@ejemplo.com", password="clave-segura-123", is_staff=True)
+        self.campana = Campana.objects.create(nombre="Campaña de prueba")
+        Usuario.objects.create_superuser(username="ana", email="ana@ejemplo.com", password="clave-segura-123")
         self.client = Client(enforce_csrf_checks=True)
         self.client.get("/api/auth/csrf/")
         self.enviar("post", "/api/auth/login/", {"email": "ana@ejemplo.com", "password": "clave-segura-123"})
+        self.enviar("post", "/api/campanas/activa/", {"campana": self.campana.pk})
         self.categoria = Categoria.objects.create(nombre="General")
 
     def enviar(self, metodo, url, datos=None):

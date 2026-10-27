@@ -4,6 +4,7 @@ Las coordenadas siguen el orden GeoJSON: [longitud, latitud].
 """
 
 import json
+import math
 import os
 import urllib.error
 import urllib.request
@@ -155,3 +156,79 @@ def calcular_ruta(paradas, perfil):
         round(resumen.get("distance", 0)),
         round(resumen.get("duration", 0)),
     )
+
+
+def formato_distancia(metros):
+    if metros is None:
+        return "—"
+    return f"{metros} m" if metros < 1000 else f"{metros / 1000:.1f} km".replace(".", ",")
+
+
+def formato_duracion(segundos):
+    if segundos is None:
+        return "—"
+    minutos = round(segundos / 60)
+    return f"{minutos} min" if minutos < 60 else f"{minutos // 60} h {minutos % 60} min"
+
+
+# ---------------------------------------------------------------------------
+# Contorno aproximado de barrios que en OpenStreetMap son solo un punto
+# ---------------------------------------------------------------------------
+
+RADIO_BARRIO_M = 450
+LADOS_CIRCULO = 24
+
+
+def _recortar(poligono, a, b, c):
+    """Sutherland–Hodgman: deja la parte del polígono donde a*x + b*y <= c."""
+    resultado = []
+    for i, actual in enumerate(poligono):
+        previo = poligono[i - 1]
+        dentro_actual = a * actual[0] + b * actual[1] <= c
+        dentro_previo = a * previo[0] + b * previo[1] <= c
+        if dentro_actual != dentro_previo:
+            dx, dy = actual[0] - previo[0], actual[1] - previo[1]
+            t = (c - a * previo[0] - b * previo[1]) / (a * dx + b * dy)
+            resultado.append((previo[0] + t * dx, previo[1] + t * dy))
+        if dentro_actual:
+            resultado.append(actual)
+    return resultado
+
+
+def contornos_aproximados(puntos, vecinos, radio_m=RADIO_BARRIO_M):
+    """Estima el contorno de cada barrio que solo tiene un punto.
+
+    Cada barrio se queda con la zona que está más cerca de su punto que de
+    cualquier otro barrio (celda de Voronoi), limitada a un círculo de
+    radio_m metros. puntos: {id: (lng, lat)}; vecinos: centros de los demás
+    barrios [(lng, lat), ...]. Devuelve {id: GeoJSON Polygon}.
+    """
+    if not puntos:
+        return {}
+    lat0 = sum(p[1] for p in puntos.values()) / len(puntos)
+    kx, ky = 111320 * math.cos(math.radians(lat0)), 110540  # metros por grado
+
+    def a_metros(p):
+        return (p[0] * kx, p[1] * ky)
+
+    semillas = [a_metros(p) for p in list(puntos.values()) + list(vecinos)]
+    contornos = {}
+    for id_barrio, punto in puntos.items():
+        px, py = a_metros(punto)
+        poligono = [
+            (px + radio_m * math.cos(2 * math.pi * i / LADOS_CIRCULO), py + radio_m * math.sin(2 * math.pi * i / LADOS_CIRCULO))
+            for i in range(LADOS_CIRCULO)
+        ]
+        for qx, qy in semillas:
+            dx, dy = qx - px, qy - py
+            if (dx == 0 and dy == 0) or dx * dx + dy * dy > (2 * radio_m) ** 2:
+                continue
+            # Mitad del plano más cerca de este barrio que del vecino
+            poligono = _recortar(poligono, dx, dy, dx * (px + qx) / 2 + dy * (py + qy) / 2)
+            if len(poligono) < 3:
+                break
+        if len(poligono) >= 3:
+            anillo = [[round(x / kx, 6), round(y / ky, 6)] for x, y in poligono]
+            anillo.append(anillo[0])
+            contornos[id_barrio] = {"type": "Polygon", "coordinates": [anillo]}
+    return contornos

@@ -69,12 +69,14 @@ function Mapa() {
       const color = colorDeZona[zona]
       const resaltado = seleccion?.tipo === 'barrio' && seleccion.id === id
       return {
-        color: resaltado ? '#15121c' : color || '#8a8794',
-        weight: resaltado ? 2.5 : 1,
-        opacity: 0.8,
-        fillColor: color || '#b9b6c2',
-        fillOpacity: zonaSeleccionada && zona === zonaSeleccionada ? 0.45 : color ? 0.25 : 0.06,
-        ...(feature.geometry.type === 'Point' && { fillColor: color || '#ffffff', fillOpacity: 0.9, color: resaltado ? '#15121c' : color || '#51318f', weight: resaltado ? 3 : 1.5 }),
+        // Sin zona: contorno violeta; con zona: el color de su zona
+        color: resaltado ? '#15121c' : color || '#51318f',
+        weight: resaltado ? 3 : 1.6,
+        opacity: color ? 0.9 : 0.7,
+        fillColor: color || '#51318f',
+        fillOpacity: zonaSeleccionada && zona === zonaSeleccionada ? 0.45 : color ? 0.25 : 0.07,
+        // Contorno estimado (OpenStreetMap no tiene el límite real): línea punteada
+        dashArray: feature.properties.aproximado ? '5 5' : null,
       }
     },
     [colorDeZona, seleccion, zonaSeleccionada],
@@ -82,7 +84,11 @@ function Mapa() {
 
   const alHacerClicEnBarrio = useCallback(
     (feature, capa) => {
-      capa.bindTooltip(feature.properties.nombre, { sticky: true, className: 'mapa-tooltip' })
+      const { nombre, aproximado } = feature.properties
+      capa.bindTooltip(aproximado ? `${nombre} (límite aproximado)` : nombre, {
+        sticky: true,
+        className: 'mapa-tooltip',
+      })
       capa.on('click', () => {
         if (modo) return
         setSeleccion({ tipo: 'barrio', id: feature.properties.id })
@@ -225,6 +231,20 @@ function Mapa() {
               : 'Hacé clic en el mapa para agregar puntos a la ruta. Podés arrastrarlos para moverlos.'}
           </div>
         )}
+        <div className="mapa__leyenda" aria-label="Referencias del mapa">
+          <span>
+            <i className="ref ref--barrio" /> Barrio
+          </span>
+          <span>
+            <i className="ref ref--aproximado" /> Barrio con límite aproximado
+          </span>
+          <span>
+            <i className="ref ref--zona" /> Zona (en su color)
+          </span>
+          <span>
+            <i className="ref ref--ruta" /> Ruta
+          </span>
+        </div>
         <MapContainer center={CENTRO_ARGENTINA} zoom={5} preferCanvas className="mapa__leaflet">
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -237,10 +257,6 @@ function Mapa() {
               data={barrios}
               style={estiloBarrio}
               onEachFeature={alHacerClicEnBarrio}
-              // Barrios que en OpenStreetMap son solo un punto: círculo chico
-              pointToLayer={(feature, latlng) =>
-                L.circleMarker(latlng, { radius: 6, interactive: !modo, ...estiloBarrio(feature), fillOpacity: 0.85, weight: 1.5 })
-              }
               interactive={!modo}
             />
           )}

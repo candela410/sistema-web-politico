@@ -152,3 +152,27 @@ ORS_API_KEY=el-token
 | `/api/mapa/rutas/` | GET, POST | Listar / crear rutas (calcula con OpenRouteService) |
 | `/api/mapa/rutas/ID/` | PATCH, DELETE | Editar / borrar una ruta |
 
+## Campañas, usuarios y permisos
+
+- **Campañas:** el superusuario (o quien tenga el permiso "Puede elegir la campaña al
+  ingresar") elige la campaña después de iniciar sesión. Todo lo que ve (zonas, rutas,
+  cuestionarios, usuarios y actividad) es de esa campaña. El resto de los usuarios trabaja
+  siempre en la campaña de su usuario.
+- **Permisos:** se usan los permisos y grupos de Django. La migración `0005_grupos` crea
+  "Administración de campaña" y "Militantes". En la app se consultan en Gestión → Permisos;
+  se modifican desde el admin de Django (`/admin`).
+- **Usuarios:** Gestión → Usuarios. Al crear un usuario se le elige un grupo; los usuarios no se
+  borran, se desactivan (así se conserva su historial).
+- **Actividad:** cada alta, cambio, baja e inicio de sesión queda en el log de Django
+  (`django_admin_log`) con el valor anterior y el nuevo de cada campo.
+
+### Barrios sin contorno en OpenStreetMap
+
+Algunos barrios figuran solo como un punto. El importador les estima un contorno (el área
+más cercana a ese barrio que a los vecinos, hasta 450 m) y lo marca como aproximado; en el
+mapa se dibuja con línea punteada. Para datos ya cargados:
+
+```powershell
+python manage.py aproximar_barrios
+```
+

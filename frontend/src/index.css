@@ -360,3 +360,234 @@ body {
     width: 100%;
   }
 }
+
+/* Interruptor (Obligatoria / Activo) */
+.interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.interruptor input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.interruptor__pista {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: #cfcdd6;
+  transition: background-color 150ms ease;
+}
+
+.interruptor__pista::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+  transition: transform 150ms ease;
+}
+
+.interruptor input:checked + .interruptor__pista {
+  background: var(--lla-violeta);
+}
+
+.interruptor input:checked + .interruptor__pista::after {
+  transform: translateX(16px);
+}
+
+.interruptor input:focus-visible + .interruptor__pista {
+  outline: 2px solid var(--lla-violeta);
+  outline-offset: 2px;
+}
+
+.interruptor input:disabled + .interruptor__pista {
+  opacity: 0.5;
+}
+
+/* Listas de tarjetas (campañas, usuarios) */
+.tarjetas-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.tarjeta-fila {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid var(--lla-borde);
+  border-left: 4px solid var(--lla-violeta);
+  border-radius: 12px;
+}
+
+.tarjeta-fila--apagada {
+  border-left-color: #cfcdd6;
+  background: #fbfbfc;
+}
+
+.tarjeta-fila__texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tarjeta-fila__texto h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.tarjeta-fila__texto p {
+  margin: 0;
+  color: var(--lla-gris);
+  font-size: 0.9rem;
+}
+
+.tarjeta-fila__datos {
+  color: var(--lla-gris);
+  font-size: 0.82rem;
+}
+
+.tarjeta-fila__acciones {
+  flex: none;
+  display: flex;
+  gap: 8px;
+}
+
+.etiqueta {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #f0eff4;
+  color: var(--lla-gris);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.etiqueta--violeta {
+  background: rgb(81 49 143 / 0.1);
+  color: var(--lla-violeta);
+}
+
+.etiqueta--verde {
+  background: rgb(31 157 107 / 0.14);
+  color: #146b49;
+}
+
+.etiqueta--magenta {
+  background: rgb(195 38 140 / 0.1);
+  color: #8f1c66;
+}
+
+/* Formularios dentro de ventanas modales */
+.formulario-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.formulario-modal label:not(.interruptor):not(.casilla-texto) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.formulario-modal__fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.formulario-modal fieldset {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--lla-borde);
+  border-radius: 10px;
+}
+
+.formulario-modal legend {
+  padding: 0 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.casilla-texto {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.casilla-texto input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--lla-violeta);
+}
+
+.casilla-texto small {
+  display: block;
+  color: var(--lla-gris);
+}
+
+.opcional {
+  color: var(--lla-gris);
+  font-weight: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .interruptor__pista,
+  .interruptor__pista::after {
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .tarjeta-fila {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tarjeta-fila__acciones {
+    justify-content: flex-end;
+  }
+
+  .formulario-modal__fila {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Los bloques de una página no se achican: la página entera es la que se desplaza */
+.pagina > * {
+  flex-shrink: 0;
+}

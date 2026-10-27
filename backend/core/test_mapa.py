@@ -2,7 +2,7 @@ from unittest import mock
 
 from django.test import Client, TestCase
 
-from .models import Barrio, Calle, Equipo, Ruta, Usuario, Zona
+from .models import Barrio, Calle, Campana, Equipo, Ruta, Usuario, Zona
 
 
 def cuadrado(x0, y0, lado):
@@ -21,10 +21,12 @@ RUTA_ORS = (
 
 class MapaTests(TestCase):
     def setUp(self):
-        Usuario.objects.create_user(username="ana", email="ana@ejemplo.com", password="clave-segura-123", is_staff=True)
+        self.campana = Campana.objects.create(nombre="Campaña de prueba")
+        Usuario.objects.create_superuser(username="ana", email="ana@ejemplo.com", password="clave-segura-123")
         self.client = Client(enforce_csrf_checks=True)
         self.client.get("/api/auth/csrf/")
         self.enviar("post", "/api/auth/login/", {"email": "ana@ejemplo.com", "password": "clave-segura-123"})
+        self.enviar("post", "/api/campanas/activa/", {"campana": self.campana.pk})
 
         # Dos barrios dentro de (0,0)-(2,2) y uno afuera
         self.centro = Barrio.objects.create(nombre="Centro", geometria=cuadrado(0, 0, 1))
@@ -59,8 +61,7 @@ class MapaTests(TestCase):
         self.assertEqual(r.status_code, 201)
         nombres = {b["nombre"] for b in r.json()["zona"]["barrios"]}
         self.assertEqual(nombres, {"Centro", "Norte"})
-        self.lejos.refresh_from_db()
-        self.assertIsNone(self.lejos.zona)
+        self.assertFalse(self.lejos.zonas.exists())
 
     def test_zona_no_roba_barrios_de_otra_zona(self):
         self.enviar("post", "/api/mapa/zonas/", {"nombre": "Zona 1", "geometria": cuadrado(0, 0, 1.2)})
@@ -78,11 +79,11 @@ class MapaTests(TestCase):
         r = self.enviar("patch", f"/api/mapa/zonas/{zona['id']}/", {"geometria": cuadrado(0, 0, 1.2)})
         self.assertEqual([b["nombre"] for b in r.json()["zona"]["barrios"]], ["Centro"])
         self.assertEqual(self.enviar("delete", f"/api/mapa/zonas/{zona['id']}/").status_code, 200)
-        self.assertFalse(Barrio.objects.exclude(zona=None).exists())
+        self.assertFalse(Zona.barrios.through.objects.exists())
 
     @mock.patch("core.mapa_views.calcular_ruta", return_value=RUTA_ORS)
     def test_crear_ruta_con_openrouteservice(self, calcular):
-        zona = Zona.objects.create(nombre="Z", geometria=cuadrado(0, 0, 3))
+        zona = Zona.objects.create(nombre="Z", geometria=cuadrado(0, 0, 3), campana=self.campana)
         paradas = [[-64.2, -31.4], [-64.19, -31.41]]
         r = self.enviar("post", "/api/mapa/rutas/", {"nombre": "Recorrido 1", "paradas": paradas, "zona": zona.pk})
         self.assertEqual(r.status_code, 201, r.content)
@@ -90,7 +91,7 @@ class MapaTests(TestCase):
         self.assertEqual((ruta["distancia_m"], ruta["duracion_s"]), (1234, 900))
         calcular.assert_called_once_with(paradas, "foot-walking")
         # Se crea una campaña si no había ninguna
-        self.assertEqual(Ruta.objects.get().campana.nombre, "Campaña principal")
+        self.assertEqual(Ruta.objects.get().campana, self.campana)
 
     @mock.patch("core.mapa_views.calcular_ruta", return_value=RUTA_ORS)
     def test_renombrar_ruta_no_recalcula(self, calcular):

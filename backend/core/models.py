@@ -38,6 +38,8 @@ class Campana(models.Model):
         db_table = "campanas"
         verbose_name = "campaña"
         verbose_name_plural = "campañas"
+        ordering = ["-activa", "nombre"]
+        permissions = [("elegir_campana", "Puede elegir la campaña al ingresar")]
         constraints = [
             models.CheckConstraint(
                 condition=(
@@ -60,14 +62,26 @@ class Campana(models.Model):
 
 class Zona(models.Model):
     id_zona = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100, unique=True)
+    nombre = models.CharField(max_length=100)
+    campana = models.ForeignKey(
+        Campana,
+        on_delete=models.PROTECT,
+        db_column="id_campana",
+        null=True,
+        related_name="zonas",
+    )
     # Polígono dibujado en el mapa (GeoJSON Polygon/MultiPolygon)
     geometria = models.JSONField(blank=True, null=True)
     color = models.CharField(max_length=7, blank=True, default="")  # "#RRGGBB"
+    barrios = models.ManyToManyField("Barrio", db_table="zonasxbarrios", related_name="zonas", blank=True)
 
     class Meta:
         db_table = "zonas"
+        verbose_name = "zona"
         ordering = ["nombre"]
+        constraints = [
+            models.UniqueConstraint(fields=["campana", "nombre"], name="uq_zona_campana_nombre")
+        ]
 
     def __str__(self):
         return self.nombre
@@ -76,21 +90,17 @@ class Zona(models.Model):
 class Barrio(models.Model):
     id_barrio = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=120, unique=True)
-    # Los barrios se cargan primero (desde OpenStreetMap); la zona se asigna
-    # después, al dibujar zonas en el mapa.
-    zona = models.ForeignKey(
-        Zona,
-        on_delete=models.SET_NULL,
-        db_column="id_zona",
-        null=True,
-        blank=True,
-        related_name="barrios",
-    )
+    # Los barrios se cargan primero (desde OpenStreetMap). Las zonas de cada
+    # campaña los agrupan después (Zona.barrios).
     geometria = models.JSONField(blank=True, null=True)
+    # True cuando OpenStreetMap solo tiene un punto para el barrio y el
+    # contorno se estimó (ver importar_osm)
+    geometria_aproximada = models.BooleanField(default=False)
     osm_id = models.BigIntegerField(unique=True, null=True, blank=True)
 
     class Meta:
         db_table = "barrios"
+        verbose_name = "barrio"
         ordering = ["nombre"]
 
     def __str__(self):
@@ -111,6 +121,7 @@ class Calle(models.Model):
 
     class Meta:
         db_table = "calles"
+        verbose_name = "calle"
         ordering = ["nombre"]
         constraints = [
             models.UniqueConstraint(
@@ -156,6 +167,7 @@ class Ruta(models.Model):
 
     class Meta:
         db_table = "rutas"
+        verbose_name = "ruta"
         constraints = [
             models.UniqueConstraint(
                 fields=["campana", "nombre"],
@@ -188,6 +200,7 @@ class Equipo(models.Model):
 
     class Meta:
         db_table = "equipos"
+        verbose_name = "equipo"
         constraints = [
             models.UniqueConstraint(
                 fields=["campana", "nombre"],
@@ -224,6 +237,7 @@ class Usuario(AbstractUser):
 
     class Meta:
         db_table = "usuarios"
+        verbose_name = "usuario"
 
 
 class Militante(models.Model):
@@ -254,6 +268,7 @@ class Militante(models.Model):
 
     class Meta:
         db_table = "militantes"
+        verbose_name = "militante"
         ordering = ["apellido", "nombre"]
 
     def __str__(self):
@@ -294,6 +309,7 @@ class Encuestado(models.Model):
 
     class Meta:
         db_table = "encuestados"
+        verbose_name = "encuestado"
         constraints = [
             models.CheckConstraint(
                 condition=Q(latitud__isnull=True, longitud__isnull=True)
@@ -323,6 +339,7 @@ class Categoria(models.Model):
 
     class Meta:
         db_table = "categorias"
+        verbose_name = "categoría"
         ordering = ["nombre"]
 
     def __str__(self):
@@ -358,6 +375,7 @@ class Cuestionario(models.Model):
 
     class Meta:
         db_table = "cuestionarios"
+        verbose_name = "cuestionario"
 
     def __str__(self):
         return self.titulo
@@ -378,6 +396,7 @@ class AsignacionCuestionario(models.Model):
 
     class Meta:
         db_table = "militantexcuestionarios"
+        verbose_name = "asignación de cuestionario"
         constraints = [
             models.UniqueConstraint(
                 fields=["militante", "cuestionario"],
@@ -412,6 +431,7 @@ class Pregunta(models.Model):
 
     class Meta:
         db_table = "preguntas"
+        verbose_name = "pregunta"
         ordering = ["orden"]
         constraints = [
             models.UniqueConstraint(
@@ -449,6 +469,7 @@ class Opcion(models.Model):
 
     class Meta:
         db_table = "opciones"
+        verbose_name = "opción"
         verbose_name_plural = "opciones"
         ordering = ["orden"]
         constraints = [
@@ -497,6 +518,7 @@ class Encuesta(models.Model):
 
     class Meta:
         db_table = "encuestas"
+        verbose_name = "encuesta"
         constraints = [
             # Una persona responde una sola vez cada cuestionario
             models.UniqueConstraint(

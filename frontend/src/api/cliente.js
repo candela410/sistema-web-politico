@@ -22,6 +22,9 @@ export async function pedir(url, opciones = {}) {
   if (!respuesta.ok) {
     const error = new Error(cuerpo.error || 'No se pudo conectar con el servidor.')
     error.status = respuesta.status
+    error.codigo = cuerpo.codigo
+    // La sesión no tiene campaña elegida: App.jsx lleva a la pantalla de elegir
+    if (cuerpo.codigo === 'sin_campana') window.dispatchEvent(new Event('sin-campana'))
     throw error
   }
   return cuerpo

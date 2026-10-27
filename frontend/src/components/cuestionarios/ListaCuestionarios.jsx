@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import * as api from '../../api/cuestionarios'
+import { tiene } from '../../permisos'
 import Modal from '../comunes/Modal'
 import './cuestionarios.css'
 
@@ -43,7 +44,7 @@ function ConfirmarBorrado({ cuestionario, onBorrado, onCerrar }) {
   )
 }
 
-function ListaCuestionarios() {
+function ListaCuestionarios({ usuario }) {
   const navegar = useNavigate()
   const { state } = useLocation()
   const [cuestionarios, setCuestionarios] = useState(null)
@@ -86,9 +87,11 @@ function ListaCuestionarios() {
             <i />
           </span>
         </div>
-        <Link to="/cuestionarios/nuevo" className="boton pagina__accion">
-          + Crear cuestionario
-        </Link>
+        {tiene(usuario, 'core.add_cuestionario') && (
+          <Link to="/cuestionarios/nuevo" className="boton pagina__accion">
+            + Crear cuestionario
+          </Link>
+        )}
       </header>
 
       <div className="buscador">
@@ -135,7 +138,7 @@ function ListaCuestionarios() {
               <button
                 type="button"
                 className="cuestionario-item__abrir"
-                onClick={() => navegar(`/cuestionarios/${c.id}/detalle`)}
+                onClick={() => navegar(`/cuestionarios/${c.id}`)}
               >
                 <span className="cuestionario-item__categoria">{c.categoria.nombre}</span>
                 <h3>{c.titulo}</h3>
@@ -147,15 +150,25 @@ function ListaCuestionarios() {
                 </span>
               </button>
               <div className="cuestionario-item__acciones">
-                <Link to={`/cuestionarios/${c.id}/detalle`} className="boton boton--chico">
-                  Ver detalle
-                </Link>
-                <Link to={`/cuestionarios/${c.id}`} className="boton boton--borde boton--chico">
-                  Editar
-                </Link>
-                <button type="button" className="boton boton--peligro boton--chico" onClick={() => setBorrando(c)}>
-                  Borrar
-                </button>
+                {/* Las estadísticas solo se abren desde este botón */}
+                {tiene(usuario, 'core.view_encuesta') && (
+                  <Link to={`/cuestionarios/${c.id}/estadisticas`} className="boton boton--chico boton--estadisticas">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M5 20V11M12 20V5M19 20v-6" />
+                    </svg>
+                    Estadísticas
+                  </Link>
+                )}
+                {tiene(usuario, 'core.change_cuestionario') && (
+                  <Link to={`/cuestionarios/${c.id}`} className="boton boton--borde boton--chico">
+                    Editar
+                  </Link>
+                )}
+                {tiene(usuario, 'core.delete_cuestionario') && (
+                  <button type="button" className="boton boton--peligro boton--chico" onClick={() => setBorrando(c)}>
+                    Borrar
+                  </button>
+                )}
               </div>
             </li>
           ))}

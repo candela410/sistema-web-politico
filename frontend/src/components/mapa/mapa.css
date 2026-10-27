@@ -356,6 +356,54 @@
   font-weight: 700;
 }
 
+/* Referencias de lo que se dibuja en el mapa */
+.mapa__leyenda {
+  position: absolute;
+  z-index: 1000;
+  right: 10px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  background: rgb(255 255 255 / 0.94);
+  border: 1px solid var(--lla-borde);
+  border-radius: 10px;
+  font-size: 0.78rem;
+  pointer-events: none;
+}
+
+.mapa__leyenda span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ref {
+  width: 22px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.ref--barrio {
+  border: 1.6px solid rgb(81 49 143 / 0.75);
+  background: rgb(81 49 143 / 0.08);
+}
+
+.ref--aproximado {
+  border: 1.6px dashed rgb(81 49 143 / 0.75);
+  background: rgb(81 49 143 / 0.05);
+}
+
+.ref--zona {
+  border: 2.5px dashed var(--lla-magenta);
+}
+
+.ref--ruta {
+  height: 4px;
+  background: var(--lla-magenta);
+}
+
 .mapa-tooltip {
   font-family: 'Montserrat', system-ui, sans-serif;
   font-weight: 600;
@@ -381,6 +429,10 @@
 /* --- Celular: mapa arriba, panel abajo --------------------------------- */
 
 @media (max-width: 800px) {
+  .mapa__leyenda {
+    display: none;
+  }
+
   .mapa {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(300px, 55%) 1fr;

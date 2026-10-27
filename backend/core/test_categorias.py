@@ -5,10 +5,12 @@ from .models import Campana, Categoria, Cuestionario, Usuario
 
 class CategoriasTests(TestCase):
     def setUp(self):
-        Usuario.objects.create_user(username="ana", email="ana@ejemplo.com", password="clave-segura-123", is_staff=True)
+        self.campana = Campana.objects.create(nombre="Campaña de prueba")
+        Usuario.objects.create_superuser(username="ana", email="ana@ejemplo.com", password="clave-segura-123")
         self.client = Client(enforce_csrf_checks=True)
         self.client.get("/api/auth/csrf/")
         self.enviar("post", "/api/auth/login/", {"email": "ana@ejemplo.com", "password": "clave-segura-123"})
+        self.enviar("post", "/api/campanas/activa/", {"campana": self.campana.pk})
 
     def enviar(self, metodo, url, datos=None):
         csrf = self.client.cookies["csrftoken"].value
@@ -45,7 +47,7 @@ class CategoriasTests(TestCase):
 
     def test_no_borra_categoria_en_uso(self):
         categoria = Categoria.objects.create(nombre="Educación")
-        Cuestionario.objects.create(titulo="Escuelas", categoria=categoria, campana=Campana.objects.create(nombre="C"))
+        Cuestionario.objects.create(titulo="Escuelas", categoria=categoria, campana=self.campana)
         r = self.enviar("delete", f"/api/categorias/{categoria.pk}/")
         self.assertEqual(r.status_code, 409)
         self.assertTrue(Categoria.objects.filter(pk=categoria.pk).exists())

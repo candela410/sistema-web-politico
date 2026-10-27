@@ -18,6 +18,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from core.geo import caja, centro, punto_en_poligono
+from core.management.commands.aproximar_barrios import aproximar_puntos
 from core.models import Barrio, Calle
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
@@ -164,8 +165,11 @@ class Command(BaseCommand):
                         otro.osm_id = None
                         actualizados.append(otro)
                 barrio.osm_id, barrio.nombre, barrio.geometria = b["osm_id"], b["nombre"], b["geometria"]
+                barrio.geometria_aproximada = False
                 actualizados.append(barrio)
-            Barrio.objects.bulk_update(actualizados, ["osm_id", "nombre", "geometria"], batch_size=200)
+            Barrio.objects.bulk_update(
+                actualizados, ["osm_id", "nombre", "geometria", "geometria_aproximada"], batch_size=200
+            )
             Barrio.objects.bulk_create(nuevos, batch_size=200)
             por_osm = dict(
                 Barrio.objects.filter(osm_id__in=[b["osm_id"] for b in barrios]).values_list("osm_id", "pk")
@@ -184,7 +188,10 @@ class Command(BaseCommand):
                 update_fields=["geometria"],
                 batch_size=500,
             )
+            aproximados = aproximar_puntos()
         self.stdout.write(self.style.SUCCESS("Barrios y calles guardados."))
+        if aproximados:
+            self.stdout.write(f"{aproximados} barrio(s) sin contorno en OpenStreetMap quedaron con un contorno aproximado.")
 
     def _buscar_ciudad(self, ciudad):
         resultados = _pedir_json(

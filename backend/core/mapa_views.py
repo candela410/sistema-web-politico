@@ -1,5 +1,6 @@
 """API del mapa: barrios y calles (solo lectura), zonas y rutas (crear,
-editar y borrar). Todo en GeoJSON. Las zonas y rutas son de la campaña activa."""
+editar y borrar). Todo en GeoJSON. Barrios, calles y zonas son territorio
+compartido por todas las campañas; las rutas son de la campaña activa."""
 
 import re
 
@@ -41,31 +42,22 @@ def _coleccion(features):
 # ---------------------------------------------------------------------------
 
 
-def _barrio_props(barrio, zona_de):
+def _barrio_props(barrio):
     return {
         "id": barrio.pk,
         "nombre": barrio.nombre,
-        # Zona del barrio en la campaña activa (en otra campaña puede ser otra)
-        "zona": zona_de.get(barrio.pk),
+        "zona": barrio.zona_id,
         "aproximado": barrio.geometria_aproximada,
         "calles": getattr(barrio, "cantidad_calles", None),
     }
-
-
-def _zonas_de_barrios(campana):
-    Intermedia = Zona.barrios.through
-    return dict(
-        Intermedia.objects.filter(zona__campana=campana).values_list("barrio_id", "zona_id")
-    )
 
 
 @require_http_methods(["GET"])
 @requiere_permiso("core.view_barrio")
 def barrios(request):
     lista = Barrio.objects.annotate(cantidad_calles=Count("calles")).order_by("nombre")
-    zona_de = _zonas_de_barrios(request.campana)
     return JsonResponse(
-        _coleccion([_feature(b.geometria, _barrio_props(b, zona_de)) for b in lista if b.geometria])
+        _coleccion([_feature(b.geometria, _barrio_props(b)) for b in lista if b.geometria])
         | {"sin_geometria": sum(1 for b in lista if not b.geometria)}
     )
 
@@ -77,7 +69,7 @@ def calles(request):
     if request.GET.get("barrio"):
         consulta = consulta.filter(barrio_id=request.GET["barrio"])
     elif request.GET.get("zona"):
-        consulta = consulta.filter(barrio__zonas=request.GET["zona"], barrio__zonas__campana=request.campana)
+        consulta = consulta.filter(barrio__zona_id=request.GET["zona"])
     else:
         return _error("Indicá ?barrio=ID o ?zona=ID.")
     return JsonResponse(
@@ -116,26 +108,24 @@ def _foto_zona(z):
 def _asignar_barrios(zona):
     """Asigna a la zona los barrios cuyo centro cae dentro de su polígono.
 
-    No le quita barrios a otras zonas de la misma campaña: si un barrio ya
-    tiene zona en esta campaña, se mantiene.
+    No le quita barrios a otras zonas: si un barrio ya tiene zona, se mantiene.
     """
-    zona.barrios.clear()
-    ocupados = Zona.barrios.through.objects.filter(zona__campana=zona.campana).values("barrio_id")
+    Barrio.objects.filter(zona=zona).update(zona=None)
     ids = []
-    for barrio in Barrio.objects.exclude(pk__in=ocupados).exclude(geometria=None):
+    for barrio in Barrio.objects.filter(zona__isnull=True).exclude(geometria=None):
         punto = centro(barrio.geometria)
         if punto and punto_en_poligono(punto[0], punto[1], zona.geometria):
             ids.append(barrio.pk)
-    zona.barrios.set(ids)
+    Barrio.objects.filter(pk__in=ids).update(zona=zona)
 
 
-def _validar_zona(datos, campana, zona=None):
+def _validar_zona(datos, zona=None):
     nombre = (datos.get("nombre") or "").strip()
     if not nombre:
         return "Poné un nombre a la zona."
     if len(nombre) > 100:
         return "El nombre es muy largo (máximo 100 caracteres)."
-    repetida = Zona.objects.filter(campana=campana, nombre__iexact=nombre)
+    repetida = Zona.objects.filter(nombre__iexact=nombre)
     if zona:
         repetida = repetida.exclude(pk=zona.pk)
     if repetida.exists():
@@ -151,7 +141,7 @@ def _validar_zona(datos, campana, zona=None):
 @requiere_permiso(crud("zona"))
 def zonas(request):
     if request.method == "GET":
-        lista = Zona.objects.filter(campana=request.campana).order_by("nombre")
+        lista = Zona.objects.order_by("nombre")
         return JsonResponse({"zonas": [_zona_json(z) for z in lista]})
 
     datos = _leer_json(request)
@@ -159,12 +149,11 @@ def zonas(request):
         return _error("JSON inválido.")
     if "geometria" not in datos:
         return _error("Dibujá la zona como un polígono en el mapa.")
-    error = _validar_zona(datos, request.campana)
+    error = _validar_zona(datos)
     if error:
         return _error(error)
     with transaction.atomic():
         zona = Zona.objects.create(
-            campana=request.campana,
             nombre=datos["nombre"].strip(),
             color=datos.get("color") or "#51318f",
             geometria=datos["geometria"],
@@ -177,12 +166,12 @@ def zonas(request):
 @require_http_methods(["PATCH", "DELETE"])
 @requiere_permiso(crud("zona"))
 def zona_detalle(request, pk):
-    zona = get_object_or_404(Zona, pk=pk, campana=request.campana)
+    zona = get_object_or_404(Zona, pk=pk)
     if request.method == "DELETE":
         if zona.rutas.exists():
             return _error("La zona tiene rutas asignadas. Borralas o movelas primero.", 409)
         with transaction.atomic():
-            zona.barrios.clear()
+            zona.barrios.update(zona=None)
             zona.delete()
         registrar(request, zona, "borrar", detalle=f"Borró la zona {zona.nombre}")
         return JsonResponse({"ok": True})
@@ -191,7 +180,7 @@ def zona_detalle(request, pk):
     if datos is None:
         return _error("JSON inválido.")
     datos.setdefault("nombre", zona.nombre)
-    error = _validar_zona(datos, request.campana, zona)
+    error = _validar_zona(datos, zona)
     if error:
         return _error(error)
     antes = _foto_zona(zona)
@@ -275,7 +264,7 @@ def _guardar_ruta(ruta, datos):
         return _error("Elegí cómo se recorre: a pie, en auto o en bicicleta.")
 
     zona_id = datos.get("zona", ruta.zona_id)
-    if zona_id and not Zona.objects.filter(pk=zona_id, campana=ruta.campana).exists():
+    if zona_id and not Zona.objects.filter(pk=zona_id).exists():
         return _error("La zona elegida no existe.")
 
     paradas = datos.get("paradas", ruta.paradas)

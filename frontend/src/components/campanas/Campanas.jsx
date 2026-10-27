@@ -134,7 +134,7 @@ function Campanas({ usuario }) {
       <header className="pagina__encabezado">
         <div>
           <h1>Campañas</h1>
-          <p>Cada campaña tiene sus propios usuarios, zonas, rutas y cuestionarios.</p>
+          <p>Cada campaña tiene sus propios usuarios, rutas y cuestionarios. Barrios y zonas son compartidos.</p>
           <span className="franja-corta" aria-hidden="true">
             <i />
             <i />
@@ -179,7 +179,7 @@ function Campanas({ usuario }) {
                 {c.descripcion && <p>{c.descripcion}</p>}
                 <span className="tarjeta-fila__datos">
                   {fecha(c.fecha_inicio)} – {fecha(c.fecha_fin)} · {c.usuarios} usuarios · {c.cuestionarios} cuestionarios ·{' '}
-                  {c.zonas} zonas
+                  {c.rutas} rutas
                 </span>
               </div>
               <div className="tarjeta-fila__acciones">

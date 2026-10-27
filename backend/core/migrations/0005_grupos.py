@@ -45,7 +45,7 @@ def borrar_grupos(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("core", "0004_campanas_y_zonas"),
+        ("core", "0004_campanas_y_barrios"),
         ("auth", "0012_alter_user_first_name_max_length"),
         ("admin", "0003_logentry_add_action_flag_choices"),
         ("contenttypes", "0002_remove_content_type_name"),

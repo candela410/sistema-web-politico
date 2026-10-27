@@ -54,10 +54,11 @@ class CampanasTests(Base):
         cat = Categoria.objects.create(nombre="General")
         Cuestionario.objects.create(titulo="Del norte", categoria=cat, campana=self.norte)
         Cuestionario.objects.create(titulo="Del sur", categoria=cat, campana=self.sur)
-        Zona.objects.create(nombre="Z sur", campana=self.sur)
+        Zona.objects.create(nombre="Zona compartida")
         self.entrar("jefe@ejemplo.com", self.sur)
         self.assertEqual([c["titulo"] for c in self.client.get("/api/cuestionarios/").json()["cuestionarios"]], ["Del sur"])
-        self.assertEqual([z["nombre"] for z in self.client.get("/api/mapa/zonas/").json()["zonas"]], ["Z sur"])
+        # Las zonas son territorio compartido: se ven desde cualquier campaña
+        self.assertEqual([z["nombre"] for z in self.client.get("/api/mapa/zonas/").json()["zonas"]], ["Zona compartida"])
         otro = Cuestionario.objects.get(titulo="Del norte")
         self.assertEqual(self.client.get(f"/api/cuestionarios/{otro.pk}/").status_code, 404)
 

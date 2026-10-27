@@ -94,7 +94,7 @@ function ElegirCampana({ usuario, onElegida, onSalir }) {
                     )}
                     <span>
                       {c.cuestionarios} cuestionario{c.cuestionarios === 1 ? '' : 's'} · {c.usuarios} usuario
-                      {c.usuarios === 1 ? '' : 's'} · {c.zonas} zona{c.zonas === 1 ? '' : 's'}
+                      {c.usuarios === 1 ? '' : 's'} · {c.rutas} ruta{c.rutas === 1 ? '' : 's'}
                     </span>
                   </span>
                   <span className="elegir__entrar" aria-hidden="true">

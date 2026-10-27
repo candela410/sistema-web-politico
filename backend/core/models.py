@@ -61,27 +61,17 @@ class Campana(models.Model):
 
 
 class Zona(models.Model):
+    # Las zonas son territorio: las mismas para todas las campañas
     id_zona = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
-    campana = models.ForeignKey(
-        Campana,
-        on_delete=models.PROTECT,
-        db_column="id_campana",
-        null=True,
-        related_name="zonas",
-    )
+    nombre = models.CharField(max_length=100, unique=True)
     # Polígono dibujado en el mapa (GeoJSON Polygon/MultiPolygon)
     geometria = models.JSONField(blank=True, null=True)
     color = models.CharField(max_length=7, blank=True, default="")  # "#RRGGBB"
-    barrios = models.ManyToManyField("Barrio", db_table="zonasxbarrios", related_name="zonas", blank=True)
 
     class Meta:
         db_table = "zonas"
         verbose_name = "zona"
         ordering = ["nombre"]
-        constraints = [
-            models.UniqueConstraint(fields=["campana", "nombre"], name="uq_zona_campana_nombre")
-        ]
 
     def __str__(self):
         return self.nombre
@@ -90,8 +80,16 @@ class Zona(models.Model):
 class Barrio(models.Model):
     id_barrio = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=120, unique=True)
-    # Los barrios se cargan primero (desde OpenStreetMap). Las zonas de cada
-    # campaña los agrupan después (Zona.barrios).
+    # Los barrios se cargan primero (desde OpenStreetMap); la zona se asigna
+    # después, al dibujar zonas en el mapa.
+    zona = models.ForeignKey(
+        Zona,
+        on_delete=models.SET_NULL,
+        db_column="id_zona",
+        null=True,
+        blank=True,
+        related_name="barrios",
+    )
     geometria = models.JSONField(blank=True, null=True)
     # True cuando OpenStreetMap solo tiene un punto para el barrio y el
     # contorno se estimó (ver importar_osm)

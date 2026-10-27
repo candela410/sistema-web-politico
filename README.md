@@ -155,8 +155,10 @@ ORS_API_KEY=el-token
 ## Campañas, usuarios y permisos
 
 - **Campañas:** el superusuario (o quien tenga el permiso "Puede elegir la campaña al
-  ingresar") elige la campaña después de iniciar sesión. Todo lo que ve (zonas, rutas,
-  cuestionarios, usuarios y actividad) es de esa campaña. El resto de los usuarios trabaja
+  ingresar") elige la campaña después de iniciar sesión. Todo lo que ve (rutas,
+  cuestionarios, usuarios y actividad) es de esa campaña. Barrios, calles y zonas son
+  territorio compartido por todas las campañas. Barrios, calles y zonas son
+  territorio compartido por todas las campañas. El resto de los usuarios trabaja
   siempre en la campaña de su usuario.
 - **Permisos:** se usan los permisos y grupos de Django. La migración `0005_grupos` crea
   "Administración de campaña" y "Militantes". En la app se consultan en Gestión → Permisos;

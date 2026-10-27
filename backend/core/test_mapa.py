@@ -61,7 +61,8 @@ class MapaTests(TestCase):
         self.assertEqual(r.status_code, 201)
         nombres = {b["nombre"] for b in r.json()["zona"]["barrios"]}
         self.assertEqual(nombres, {"Centro", "Norte"})
-        self.assertFalse(self.lejos.zonas.exists())
+        self.lejos.refresh_from_db()
+        self.assertIsNone(self.lejos.zona)
 
     def test_zona_no_roba_barrios_de_otra_zona(self):
         self.enviar("post", "/api/mapa/zonas/", {"nombre": "Zona 1", "geometria": cuadrado(0, 0, 1.2)})
@@ -79,11 +80,11 @@ class MapaTests(TestCase):
         r = self.enviar("patch", f"/api/mapa/zonas/{zona['id']}/", {"geometria": cuadrado(0, 0, 1.2)})
         self.assertEqual([b["nombre"] for b in r.json()["zona"]["barrios"]], ["Centro"])
         self.assertEqual(self.enviar("delete", f"/api/mapa/zonas/{zona['id']}/").status_code, 200)
-        self.assertFalse(Zona.barrios.through.objects.exists())
+        self.assertFalse(Barrio.objects.exclude(zona=None).exists())
 
     @mock.patch("core.mapa_views.calcular_ruta", return_value=RUTA_ORS)
     def test_crear_ruta_con_openrouteservice(self, calcular):
-        zona = Zona.objects.create(nombre="Z", geometria=cuadrado(0, 0, 3), campana=self.campana)
+        zona = Zona.objects.create(nombre="Z", geometria=cuadrado(0, 0, 3))
         paradas = [[-64.2, -31.4], [-64.19, -31.41]]
         r = self.enviar("post", "/api/mapa/rutas/", {"nombre": "Recorrido 1", "paradas": paradas, "zona": zona.pk})
         self.assertEqual(r.status_code, 201, r.content)

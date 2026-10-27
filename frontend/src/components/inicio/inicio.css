@@ -1,0 +1,392 @@
+/* Pantalla de inicio: tres columnas (perfil | centro | últimos) */
+
+.inicio {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 240px;
+  align-content: start;
+  gap: 24px;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 28px 48px;
+}
+
+.inicio__columna,
+.inicio__centro {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.inicio__caja {
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #ebeaf0;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgb(21 18 28 / 0.04);
+}
+
+.inicio__caja h3 {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.inicio__caja-encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.inicio__caja-encabezado span {
+  color: var(--lla-gris);
+  font-size: 0.8rem;
+}
+
+/* --- Perfil ------------------------------------------------------------ */
+
+.inicio__perfil {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.inicio__avatar {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  margin-bottom: 6px;
+  border: 4px solid transparent;
+  border-radius: 50%;
+  background:
+    linear-gradient(#f1edf8, #f1edf8) padding-box,
+    conic-gradient(var(--lla-violeta), var(--lla-celeste), var(--lla-magenta), var(--lla-naranja), var(--lla-violeta))
+      border-box;
+  color: var(--lla-violeta);
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.inicio__perfil h2 {
+  margin: 0;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.inicio__rol {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgb(81 49 143 / 0.1);
+  color: var(--lla-violeta);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.inicio__perfil p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+  color: var(--lla-gris);
+  max-width: 100%;
+  font-size: 0.78rem;
+}
+
+.inicio__perfil p span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inicio__perfil p svg {
+  flex: none;
+}
+
+.inicio__accesos {
+  display: grid;
+  gap: 8px;
+}
+
+.inicio__accesos a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #ebeaf0;
+  border-radius: 12px;
+  color: var(--lla-texto);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.inicio__accesos a svg {
+  color: var(--lla-violeta);
+}
+
+.inicio__accesos a:hover {
+  border-color: var(--lla-violeta);
+  background: rgb(81 49 143 / 0.05);
+}
+
+/* --- Saludo y números ------------------------------------------------- */
+
+.inicio__saludo h1 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3.4vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.inicio__saludo p {
+  margin: 6px 0 12px;
+  color: var(--lla-gris);
+}
+
+.inicio__numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  padding: 0;
+  overflow: hidden;
+}
+
+.inicio__numero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 12px;
+  text-align: center;
+}
+
+.inicio__numero + .inicio__numero {
+  border-left: 1px solid #ebeaf0;
+}
+
+.inicio__numero strong {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.inicio__numero span {
+  color: var(--lla-gris);
+  font-size: 0.82rem;
+}
+
+.inicio__numero--violeta strong { color: var(--lla-violeta); }
+.inicio__numero--celeste strong { color: var(--lla-celeste); }
+.inicio__numero--magenta strong { color: var(--lla-magenta); }
+.inicio__numero--naranja strong { color: #e08e12; }
+
+/* --- Tarjetas de secciones --------------------------------------------- */
+
+.inicio__tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.inicio__tarjeta {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+  min-height: 158px;
+  padding: 16px;
+  border-radius: 16px;
+  color: #fff;
+  text-decoration: none;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.inicio__tarjeta:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgb(21 18 28 / 0.15);
+}
+
+.inicio__tarjeta:focus-visible {
+  outline: 3px solid var(--lla-violeta);
+  outline-offset: 3px;
+}
+
+.inicio__tarjeta--celeste { background: var(--lla-celeste); }
+.inicio__tarjeta--violeta { background: var(--lla-violeta); }
+.inicio__tarjeta--naranja { background: var(--lla-naranja); }
+.inicio__tarjeta--magenta { background: var(--lla-magenta); }
+
+.inicio__tarjeta-icono {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.22);
+}
+
+.inicio__tarjeta-pie {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inicio__tarjeta-pie strong {
+  display: block;
+  font-size: 1.08rem;
+}
+
+.inicio__tarjeta-pie small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.76rem;
+  opacity: 0.9;
+}
+
+.inicio__tarjeta-flecha {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.25);
+}
+
+/* --- Semana ------------------------------------------------------------ */
+
+.inicio__semana {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: center;
+}
+
+.inicio__semana li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.inicio__semana span {
+  color: var(--lla-gris);
+  font-size: 0.75rem;
+}
+
+.inicio__semana strong {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 0.95rem;
+}
+
+.inicio__semana .hoy strong {
+  background: var(--lla-violeta);
+  color: #fff;
+}
+
+/* --- Últimos cuestionarios ------------------------------------------- */
+
+.inicio__vacio {
+  margin: 0;
+  color: var(--lla-gris);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.inicio__ultimos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inicio__ultimos a {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 10px;
+  color: var(--lla-texto);
+  text-decoration: none;
+}
+
+.inicio__ultimos a:hover {
+  background: rgb(81 49 143 / 0.06);
+}
+
+.inicio__ultimos strong {
+  font-size: 0.86rem;
+}
+
+.inicio__ultimos span {
+  color: var(--lla-gris);
+  font-size: 0.75rem;
+}
+
+/* --- Pantallas más chicas --------------------------------------------- */
+
+/* Sin lugar para tres columnas: "Últimos cuestionarios" pasa debajo del perfil */
+@media (max-width: 1440px) {
+  .inicio {
+    grid-template-columns: 230px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .inicio__centro {
+    grid-row: span 2;
+  }
+
+  .inicio__columna:last-child {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .inicio {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 20px 16px 32px;
+  }
+
+  .inicio__columna:last-child {
+    grid-column: auto;
+  }
+
+  .inicio__centro {
+    grid-row: auto;
+    order: -1;
+  }
+
+  .inicio__numero + .inicio__numero {
+    border-left: 0;
+  }
+
+  .inicio__numeros {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .inicio__tarjetas {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .inicio__tarjeta {
+    min-height: 130px;
+    gap: 24px;
+  }
+}

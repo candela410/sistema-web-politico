@@ -1,88 +1,105 @@
-import { useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { useEffect, useState } from 'react'
+import { Outlet, useLocation, useNavigate } from 'react-router'
+import { Menu as IconoMenu } from 'lucide-react'
 import { salirDeCampana } from '../../api/campanas'
 import logo from '../../assets/logo.png'
-import { GESTION, SECCIONES, tiene } from '../../permisos'
+import BuscadorSecciones from './BuscadorSecciones'
+import Lateral from './Lateral'
+import MenuUsuario from './MenuUsuario'
+import { opcionActual, seccionesPara } from './opciones'
 import './Menu.css'
 
-// Menú superior: secciones según los permisos de Django del usuario, menú
-// "Gestión" (usuarios, permisos, actividad, campañas) y la campaña activa.
+// En pantallas angostas el lateral se abre encima del contenido (como cajón)
+const ANGOSTA = '(max-width: 900px)'
+const CLAVE_COLAPSADO = 'menu-colapsado'
+
+function leerColapsado() {
+  try {
+    return localStorage.getItem(CLAVE_COLAPSADO) === '1'
+  } catch {
+    return false
+  }
+}
+
+// Estructura de la app: barra superior + menú lateral + la pantalla actual (Outlet).
+// Las opciones salen de los permisos de Django del usuario (ver opciones.js).
 function Menu({ usuario, onCambio, onSalir }) {
   const navegar = useNavigate()
-  const ubicacion = useLocation()
-  const [gestionAbierta, setGestionAbierta] = useState(false)
-  const refGestion = useRef(null)
+  const { pathname } = useLocation()
+  const secciones = seccionesPara(usuario)
+  const actual = opcionActual(secciones, pathname)
 
-  const conCampana = !!usuario.campana
-  const secciones = conCampana ? SECCIONES.filter((s) => tiene(usuario, s.permiso)) : []
-  const gestion = GESTION.filter((s) => tiene(usuario, s.permiso) && (conCampana || s.ruta === '/campanas'))
-  const enGestion = gestion.some((s) => ubicacion.pathname.startsWith(s.ruta))
+  const [colapsado, setColapsado] = useState(leerColapsado) // PC: lateral solo con íconos
+  // Celular: el cajón queda abierto solo en la pantalla donde se abrió,
+  // así al elegir una opción (cambia la dirección) se cierra solo
+  const [abiertoEn, setAbiertoEn] = useState(null)
+  const abierto = abiertoEn === pathname
+  const setAbierto = (valor) => setAbiertoEn(valor ? pathname : null)
 
   useEffect(() => {
-    if (!gestionAbierta) return
-    const cerrar = (e) => !refGestion.current?.contains(e.target) && setGestionAbierta(false)
-    document.addEventListener('pointerdown', cerrar)
-    return () => document.removeEventListener('pointerdown', cerrar)
-  }, [gestionAbierta])
+    if (!abierto) return
+    const alTeclear = (e) => e.key === 'Escape' && setAbiertoEn(null)
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
+  }, [abierto])
+
+  function alternarMenu() {
+    if (window.matchMedia(ANGOSTA).matches) {
+      setAbierto(!abierto)
+      return
+    }
+    setColapsado((c) => {
+      try {
+        localStorage.setItem(CLAVE_COLAPSADO, c ? '0' : '1')
+      } catch {
+        // sin localStorage no se recuerda, pero el menú funciona igual
+      }
+      return !c
+    })
+  }
 
   async function cambiarCampana() {
     onCambio(await salirDeCampana())
     navegar('/campana')
   }
 
+  const clases = ['panel', colapsado && 'panel--colapsado', abierto && 'panel--abierto'].filter(Boolean).join(' ')
+
   return (
-    <div className="panel">
+    <div className={clases}>
       <header className="panel__barra">
-        <img className="panel__logo" src={logo} alt="La Libertad Avanza" />
-        <nav className="panel__nav" aria-label="Secciones">
-          {secciones.map((s) => (
-            <NavLink key={s.ruta} to={s.ruta} className="panel__seccion">
-              {s.texto}
-            </NavLink>
-          ))}
-        </nav>
-        {gestion.length > 0 && (
-          <div className="menu-gestion" ref={refGestion}>
-            <button
-              type="button"
-              className={`panel__seccion menu-gestion__boton${enGestion ? ' active' : ''}`}
-              aria-expanded={gestionAbierta}
-              onClick={() => setGestionAbierta((a) => !a)}
-            >
-              Gestión <span aria-hidden="true">▾</span>
-            </button>
-            {gestionAbierta && (
-              <div className="menu-gestion__lista">
-                {gestion.map((s) => (
-                  <NavLink
-                    key={s.ruta}
-                    to={s.ruta}
-                    className="menu-gestion__item"
-                    onClick={() => setGestionAbierta(false)}
-                  >
-                    {s.texto}
-                  </NavLink>
-                ))}
-              </div>
-            )}
+        <div className="panel__inicio">
+          <button
+            type="button"
+            className="panel__hamburguesa"
+            onClick={alternarMenu}
+            aria-label="Mostrar u ocultar el menú"
+            aria-expanded={!colapsado || abierto}
+            aria-controls="menu-lateral"
+          >
+            <IconoMenu size={22} />
+          </button>
+          <div className="panel__marca">
+            <img className="panel__logo" src={logo} alt="La Libertad Avanza" />
+            <div className="panel__titulo">
+              <strong>Panel de gestión</strong>
+              <span>{actual?.texto ?? 'Inicio'}</span>
+            </div>
           </div>
-        )}
-        <div className="panel__usuario">
+        </div>
+        <BuscadorSecciones secciones={secciones} />
+        <div className="panel__derecha">
           {usuario.campana && (
             <span className="campana-activa" title="Campaña activa">
               <span className="campana-activa__punto" aria-hidden="true" />
               <span className="campana-activa__nombre">{usuario.campana.nombre}</span>
-              {usuario.puede_elegir_campana && (
-                <button type="button" className="enlace-boton" onClick={cambiarCampana}>
-                  Cambiar
-                </button>
-              )}
             </span>
           )}
-          <span className="panel__nombre">{usuario.nombre || usuario.email}</span>
-          <button type="button" className="boton boton--borde" onClick={onSalir}>
-            Salir
-          </button>
+          <MenuUsuario
+            usuario={usuario}
+            onCambiarCampana={usuario.puede_elegir_campana ? cambiarCampana : null}
+            onSalir={onSalir}
+          />
         </div>
       </header>
       <span className="franja-marca" aria-hidden="true">
@@ -91,7 +108,13 @@ function Menu({ usuario, onCambio, onSalir }) {
         <i />
         <i />
       </span>
-      <Outlet />
+      <div className="panel__cuerpo">
+        <Lateral secciones={secciones} />
+        <div className="panel__fondo" onClick={() => setAbierto(false)} aria-hidden="true" />
+        <div className="panel__contenido">
+          <Outlet />
+        </div>
+      </div>
     </div>
   )
 }

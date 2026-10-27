@@ -8,6 +8,7 @@ import Categorias from './components/categorias/Categorias'
 import Aviso from './components/comunes/Aviso'
 import DetalleCuestionario from './components/cuestionarios/DetalleCuestionario'
 import EditorCuestionario from './components/cuestionarios/EditorCuestionario'
+import Inicio from './components/inicio/Inicio'
 import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
 import Login from './components/login/Login'
 import Mapa from './components/mapa/Mapa'
@@ -18,8 +19,10 @@ import ResponderCuestionario from './components/responder/ResponderCuestionario'
 import Usuarios from './components/usuarios/Usuarios'
 import { inicioDe, tiene } from './permisos'
 
-// Rutas de la app. Cada sección pide un permiso de Django (ver permisos.js):
+// Rutas de la app. Cada sección pide un permiso de Django (el mismo que usa el
+// menú lateral en components/menu/opciones.js):
 //   /login        ingreso
+//   /inicio       panel de inicio (todos los que tienen campaña)
 //   /campana      elegir la campaña (superusuario o permiso "elegir_campana")
 //   /mapa, /cuestionarios(/nuevo|/:id|/:id/estadisticas), /categorias, /responder(/:id)
 //   /usuarios, /permisos, /actividad, /campanas
@@ -118,6 +121,7 @@ function Rutas() {
           </RequiereSesion>
         }
       >
+        <Route path="/inicio" element={s(null, <Inicio usuario={usuario} />)} />
         <Route path="/mapa" element={s('core.view_zona', <Mapa />)} />
         <Route path="/categorias" element={s('core.view_categoria', <Categorias usuario={usuario} />)} />
         <Route path="/cuestionarios" element={s('core.view_cuestionario', <ListaCuestionarios usuario={usuario} />)} />
@@ -135,14 +139,6 @@ function Rutas() {
           element={
             <Aviso titulo="Tu usuario no tiene una campaña asignada">
               Pedile a la administración que te asigne a una campaña para poder trabajar.
-            </Aviso>
-          }
-        />
-        <Route
-          path="/sin-permisos"
-          element={
-            <Aviso titulo="Todavía no tenés secciones habilitadas">
-              Pedile a la administración que te agregue a un grupo con permisos.
             </Aviso>
           }
         />

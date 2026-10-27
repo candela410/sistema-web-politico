@@ -1,4 +1,9 @@
+/* Estructura general: barra superior + franja + (lateral | contenido) */
+
 .panel {
+  --ancho-lateral: 272px;
+  --ancho-lateral-chico: 80px;
+  --curva-cajon: cubic-bezier(0.32, 0.72, 0, 1);
   height: 100vh;
   height: 100dvh;
   display: flex;
@@ -9,62 +14,98 @@
   font-family: 'Montserrat', system-ui, sans-serif;
 }
 
+/* --- Barra superior ---------------------------------------------------- */
+
+/* Tres columnas: [menú + marca] [buscador centrado] [usuario].
+   Con 18px de padding la hamburguesa (44px) queda centrada a 40px del borde,
+   igual que los íconos del lateral. */
 .panel__barra {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 480px) 1fr;
+  align-items: center;
+  gap: 20px;
+  height: 72px;
+  padding: 0 18px;
+  background: linear-gradient(90deg, var(--lla-violeta-oscuro), var(--lla-violeta) 55%, #6a3fa6);
+  color: #fff;
+  position: relative;
+  z-index: 30;
+}
+
+.panel__hamburguesa {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--lla-violeta);
+  cursor: pointer;
+  transition: transform 140ms ease-out, box-shadow 150ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .panel__hamburguesa:hover {
+    box-shadow: 0 0 0 4px rgb(255 255 255 / 0.25);
+  }
+}
+
+.panel__hamburguesa:active {
+  transform: scale(0.95);
+}
+
+.panel__hamburguesa:focus-visible,
+.usuario__boton:focus-visible,
+.lateral__opcion:focus-visible {
+  outline: 3px solid rgb(255 255 255 / 0.6);
+  outline-offset: 2px;
+}
+
+.panel__inicio {
   display: flex;
   align-items: center;
-  gap: 24px;
-  height: 64px;
-  padding: 0 20px;
-  background: #fff;
+  gap: 16px;
+  min-width: 0;
+}
+
+.panel__marca {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
 }
 
 .panel__logo {
-  height: 40px;
-  width: auto;
-}
-
-.panel__nav {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  gap: 8px;
-  /* En pantallas angostas el menú se desplaza de costado */
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.panel__nav::-webkit-scrollbar {
-  display: none;
-}
-
-.panel__seccion {
   flex: none;
-  padding: 8px 14px;
-  border-radius: 8px;
-  color: var(--lla-gris);
-  font-weight: 700;
-  font-size: 0.95rem;
-  text-decoration: none;
+  height: 46px;
+  width: auto;
+  padding: 5px 10px;
+  border-radius: 12px;
+  background: #fff;
 }
 
-.panel__seccion:hover {
-  color: var(--lla-violeta);
-}
-
-.panel__seccion.active {
-  background: rgb(81 49 143 / 0.1);
-  color: var(--lla-violeta);
-}
-
-.panel__usuario {
+.panel__titulo {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.9rem;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.2;
+  min-width: 0;
 }
 
-.panel__nombre {
-  font-weight: 600;
+.panel__titulo strong {
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.panel__titulo span {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .franja-marca {
@@ -81,96 +122,120 @@
 .franja-marca i:nth-child(3) { background: var(--lla-magenta); }
 .franja-marca i:nth-child(4) { background: var(--lla-naranja); }
 
-@media (max-width: 640px) {
-  .panel__barra {
-    gap: 12px;
-    padding: 0 12px;
-  }
-  .panel__logo {
-    height: 28px;
-  }
-  .panel__seccion {
-    padding: 8px 10px;
-    font-size: 0.85rem;
-  }
-  .panel__usuario .boton {
-    height: 36px;
-    padding: 0 12px;
-  }
-  .panel__nombre {
-    display: none;
-  }
-}
+/* --- Buscador de secciones ------------------------------------------- */
 
-/* Menú "Gestión" (fuera del nav para que la lista no quede recortada) */
-.menu-gestion {
+.buscador-secciones {
   position: relative;
-  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 12px 0 14px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.12);
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
-.menu-gestion__boton {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.buscador-secciones:focus-within {
+  background: rgb(255 255 255 / 0.2);
+  border-color: rgb(255 255 255 / 0.6);
+}
+
+.buscador-secciones input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
   border: 0;
+  outline: none;
   background: transparent;
+  color: #fff;
   font: inherit;
+  font-size: 0.95rem;
+}
+
+.buscador-secciones input::placeholder {
+  color: rgb(255 255 255 / 0.75);
+}
+
+.buscador-secciones input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.buscador-secciones kbd {
+  flex: none;
+  padding: 3px 7px;
+  border: 1px solid rgb(255 255 255 / 0.35);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.72rem;
   font-weight: 700;
+  opacity: 0.85;
+}
+
+.buscador-secciones__lista {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #fff;
+  color: var(--lla-texto);
+  border: 1px solid var(--lla-borde);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgb(21 18 28 / 0.16);
+}
+
+.buscador-secciones__lista li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.menu-gestion__lista {
-  position: absolute;
-  z-index: 1100;
-  top: calc(100% + 8px);
-  left: 0;
-  min-width: 190px;
-  display: flex;
-  flex-direction: column;
-  padding: 6px;
-  background: #fff;
-  border: 1px solid var(--lla-borde);
-  border-radius: 12px;
-  box-shadow: 0 12px 32px rgb(21 18 28 / 0.14);
-  transform-origin: top left;
-  animation: menu-aparece 140ms ease-out;
+.buscador-secciones__lista li svg {
+  color: var(--lla-violeta);
 }
 
-@keyframes menu-aparece {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(-4px);
-  }
-}
-
-.menu-gestion__item {
-  padding: 9px 12px;
-  border-radius: 8px;
-  color: var(--lla-texto);
-  font-weight: 600;
-  font-size: 0.92rem;
-  text-decoration: none;
-}
-
-.menu-gestion__item:hover {
-  background: #f4f2f9;
-}
-
-.menu-gestion__item.active {
+.buscador-secciones__lista li.marcado {
   background: rgb(81 49 143 / 0.1);
   color: var(--lla-violeta);
 }
 
-/* Campaña activa */
+.buscador-secciones__lista .buscador-secciones__vacio {
+  color: var(--lla-gris);
+  font-weight: 500;
+  cursor: default;
+}
+
+/* --- Usuario ----------------------------------------------------------- */
+
+.panel__derecha {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Campaña activa: en la barra en pantallas anchas, y siempre en el desplegable del usuario */
 .campana-activa {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  max-width: 260px;
-  padding: 6px 12px;
+  max-width: 220px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 0.25);
   border-radius: 999px;
-  background: #f4f2f9;
   font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .campana-activa__punto {
@@ -178,35 +243,374 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #1f9d6b;
+  background: #3ddc97;
 }
 
 .campana-activa__nombre {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.usuario {
+  position: relative;
+  flex: none;
+}
+
+.usuario__boton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 50px;
+  padding: 0 14px 0 5px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .usuario__boton:hover {
+    background: rgb(255 255 255 / 0.22);
+  }
+}
+
+.usuario__avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--lla-violeta);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.usuario__texto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1.15;
+  max-width: 180px;
+}
+
+.usuario__texto strong {
+  font-size: 0.95rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usuario__texto small {
+  font-size: 0.78rem;
+  opacity: 0.8;
+}
+
+.usuario__desplegable {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 264px;
+  padding: 6px;
+  background: #fff;
+  color: var(--lla-texto);
+  border: 1px solid var(--lla-borde);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgb(21 18 28 / 0.16);
+}
+
+.usuario__datos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 6px;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--lla-borde);
+  font-size: 0.92rem;
+}
+
+.usuario__datos span {
+  color: var(--lla-gris);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.usuario__campana {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 6px;
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--lla-borde);
+  font-size: 0.92rem;
+}
+
+.usuario__campana > span {
+  color: var(--lla-gris);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.usuario__campana strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.usuario__campana .campana-activa__punto {
+  background: #1f9d6b;
+}
+
+.usuario__accion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--lla-texto);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.usuario__accion svg {
+  color: var(--lla-violeta);
+}
+
+.usuario__accion:hover {
+  background: #f4f2f9;
+}
+
+.usuario__accion--salir,
+.usuario__accion--salir svg {
+  color: #c0182f;
+}
+
+.usuario__accion--salir:hover {
+  background: #fdf1f2;
+}
+
+/* --- Cuerpo: lateral + contenido -------------------------------------- */
+
+.panel__cuerpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  position: relative;
+}
+
+/* Las pantallas (.pagina, .mapa) usan flex: 1 para ocupar el espacio */
+.panel__contenido {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel__fondo {
+  display: none;
+}
+
+/* --- Menú lateral ------------------------------------------------------
+   Íconos de 22px centrados a 40px del borde: 14 (nav) + 15 (opción) + 11 */
+
+.lateral {
+  flex: none;
+  width: var(--ancho-lateral);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: linear-gradient(180deg, var(--lla-violeta) 0%, var(--lla-violeta-oscuro) 100%);
+  color: #fff;
+  transition: width 220ms var(--curva-cajon), transform 260ms var(--curva-cajon);
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.3) transparent;
+}
+
+.lateral__nav {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px 24px;
+}
+
+.lateral__grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0;
+}
+
+.lateral__grupo + .lateral__grupo {
+  border-top: 1px solid rgb(255 255 255 / 0.14);
+}
+
+.lateral__titulo {
+  margin: 6px 15px 8px;
+  font-size: 0.75rem;
   font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.65;
+  white-space: nowrap;
+}
+
+.lateral__opcion {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 50px;
+  padding: 0 15px;
+  border-radius: 12px;
+  color: rgb(255 255 255 / 0.88);
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 150ms ease, color 150ms ease, transform 140ms ease-out;
+}
+
+.lateral__opcion svg {
+  flex: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lateral__opcion:hover {
+    background: rgb(255 255 255 / 0.1);
+    color: #fff;
+  }
+}
+
+.lateral__opcion:active {
+  transform: scale(0.98);
+}
+
+.lateral__opcion.active {
+  background: rgb(255 255 255 / 0.18);
+  color: #fff;
+  box-shadow: inset 3px 0 0 var(--lla-naranja);
+}
+
+/* PC con el menú colapsado: solo íconos */
+.panel--colapsado .lateral {
+  width: var(--ancho-lateral-chico);
+}
+
+.panel--colapsado .lateral__opcion {
+  justify-content: center;
+  padding: 0;
+}
+
+.panel--colapsado .lateral__opcion span {
+  display: none;
+}
+
+.panel--colapsado .lateral__titulo {
+  height: 1px;
+  margin: 0 10px 6px;
+  overflow: hidden;
+  color: transparent;
+}
+
+/* --- Pantallas angostas: el lateral es un cajón ------------------------ */
+
+@media (max-width: 900px) {
+  .lateral,
+  .panel--colapsado .lateral {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 20;
+    width: var(--ancho-lateral);
+    transform: translateX(-100%);
+    box-shadow: 8px 0 32px rgb(21 18 28 / 0.25);
+  }
+
+  .panel--colapsado .lateral__opcion {
+    justify-content: flex-start;
+    padding: 0 15px;
+  }
+
+  .panel--colapsado .lateral__opcion span {
+    display: inline;
+  }
+
+  .panel--colapsado .lateral__titulo {
+    height: auto;
+    margin: 6px 15px 8px;
+    color: inherit;
+  }
+
+  .panel--abierto .lateral {
+    transform: none;
+  }
+
+  .panel--abierto .panel__fondo {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 15;
+    background: rgb(21 18 28 / 0.4);
+  }
+}
+
+@media (max-width: 1100px) {
+  .campana-activa {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .panel__barra {
+    grid-template-columns: 1fr auto;
+  }
+
+  .buscador-secciones {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .panel__barra {
+    gap: 12px;
+    height: 64px;
+    padding: 0 18px;
+  }
+
+  .panel__inicio {
+    gap: 12px;
+  }
+
+  .panel__logo {
+    height: 40px;
+  }
+
+  .panel__titulo {
+    display: none;
+  }
+
+  .usuario__boton {
+    height: 46px;
+    padding: 0 10px 0 4px;
+  }
+
+  .usuario__texto {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .menu-gestion__lista {
-    animation: none;
-  }
-}
-
-@media (max-width: 900px) {
-  .campana-activa__nombre {
-    max-width: 110px;
-  }
-}
-
-@media (max-width: 640px) {
-  .campana-activa {
-    padding: 4px 8px;
-  }
-
-  .campana-activa__punto,
-  .campana-activa__nombre {
-    display: none;
+  .lateral,
+  .lateral__opcion,
+  .panel__hamburguesa {
+    transition: none;
   }
 }

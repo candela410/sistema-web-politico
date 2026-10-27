@@ -19,7 +19,9 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / '.env')
+# override=True: al reiniciarse runserver por un cambio en .env, los valores nuevos
+# reemplazan a los que el proceso hereda del arranque anterior (ver core/apps.py)
+load_dotenv(BASE_DIR / '.env', override=True)
 
 
 # Quick-start development settings - unsuitable for production

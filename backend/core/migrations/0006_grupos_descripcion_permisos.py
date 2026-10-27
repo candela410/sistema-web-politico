@@ -21,6 +21,9 @@ class Migration(migrations.Migration):
     dependencies = [
         ("auth", "0012_alter_user_first_name_max_length"),
         ("core", "0004_grupo"),
+        # Después de la de campañas, que también agrega geometria_aproximada:
+        # así en una base nueva (tests) la columna se crea una sola vez
+        ("core", "0004_campanas_y_barrios"),
     ]
 
     operations = [

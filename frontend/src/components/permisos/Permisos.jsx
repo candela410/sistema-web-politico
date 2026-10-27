@@ -29,16 +29,30 @@ function Permisos() {
       </main>
     )
 
-  const permisosDe = (grupo, seccion) => grupo.permisos.find((p) => p.seccion === seccion)?.acciones ?? []
-  // Solo las secciones que tiene algún grupo, más las que ya existen en Django
-  const secciones = datos.secciones.filter((s) => datos.grupos.some((g) => permisosDe(g, s.seccion).length))
+  // Columnas: el permiso propio "Administrar la campaña" y cada grupo
+  const columnas = [
+    {
+      id: 'administrar',
+      nombre: 'Administrar la campaña',
+      detalle: `Permiso · ${datos.propios.find((p) => p.codigo === 'core.administrar_campana')?.usuarios ?? 0} usuario(s)`,
+      permisos: datos.administrar,
+    },
+    ...datos.grupos.map((g) => ({
+      id: g.id,
+      nombre: g.nombre,
+      detalle: `Grupo · ${g.usuarios} usuario${g.usuarios === 1 ? '' : 's'}`,
+      permisos: g.permisos,
+    })),
+  ]
+  const permisosDe = (columna, seccion) => columna.permisos.find((p) => p.seccion === seccion)?.acciones ?? []
+  const secciones = datos.secciones.filter((s) => columnas.some((c) => permisosDe(c, s.seccion).length))
 
   return (
     <main className="pagina pagina--ancha">
       <header className="pagina__encabezado">
         <div>
           <h1>Permisos</h1>
-          <p>Qué puede hacer cada grupo. Son los permisos de Django: acá solo se consultan.</p>
+          <p>Qué permite cada permiso y cada grupo. Son las tablas de Django (permisos, grupos y grupos por permisos): acá solo se consultan.</p>
           <span className="franja-corta" aria-hidden="true">
             <i />
             <i />
@@ -49,8 +63,8 @@ function Permisos() {
       </header>
 
       <p className="aviso-info">
-        {datos.superusuario} Para cambiar qué puede hacer un grupo se usa el admin de Django (/admin). Para darle permisos a
-        una persona, agregala a un grupo desde Gestión → Usuarios.
+        {datos.superusuario} Para darle permisos a una persona, marcalos en Gestión → Usuarios. Los grupos y sus permisos
+        se cambian desde el admin de Django (/admin).
       </p>
 
       <div className="tabla-envoltura-ancha">
@@ -59,12 +73,10 @@ function Permisos() {
           <thead>
             <tr>
               <th scope="col">Sección</th>
-              {datos.grupos.map((g) => (
-                <th key={g.id} scope="col">
-                  {g.nombre}
-                  <small>
-                    {g.usuarios} usuario{g.usuarios === 1 ? '' : 's'} en la campaña
-                  </small>
+              {columnas.map((c) => (
+                <th key={c.id} scope="col">
+                  {c.nombre}
+                  <small>{c.detalle} en la campaña</small>
                 </th>
               ))}
             </tr>
@@ -73,10 +85,10 @@ function Permisos() {
             {secciones.map((s) => (
               <tr key={s.seccion}>
                 <th scope="row">{s.seccion}</th>
-                {datos.grupos.map((g) => {
-                  const tiene = permisosDe(g, s.seccion)
+                {columnas.map((c) => {
+                  const tiene = permisosDe(c, s.seccion)
                   return (
-                    <td key={g.id}>
+                    <td key={c.id}>
                       {tiene.length === 0 ? (
                         <span className="matriz__nada" aria-label="Sin permisos">
                           —
@@ -101,7 +113,7 @@ function Permisos() {
         </table>
       </div>
 
-      <h2 className="permisos__titulo">Usuarios de la campaña y sus grupos</h2>
+      <h2 className="permisos__titulo">Usuarios de la campaña</h2>
       {datos.usuarios.length === 0 ? (
         <p className="vacio-tarjeta">No hay usuarios activos en esta campaña.</p>
       ) : (
@@ -111,16 +123,18 @@ function Permisos() {
               <b>{u.nombre}</b>
               <span className="texto-suave">{u.email}</span>
               <span className="permisos__grupos">
+                {u.directos.some((d) => d.acciones.includes('Puede administrar la campaña')) && (
+                  <span className="etiqueta etiqueta--violeta">Administra la campaña</span>
+                )}
                 {u.grupos.length ? (
                   u.grupos.map((g) => (
-                    <span key={g} className="etiqueta etiqueta--violeta">
+                    <span key={g} className="etiqueta etiqueta--magenta">
                       {g}
                     </span>
                   ))
                 ) : (
-                  <span className="etiqueta">Sin grupo</span>
+                  !u.directos.length && <span className="etiqueta">Sin permisos</span>
                 )}
-                {u.directos.length > 0 && <span className="etiqueta">+ permisos individuales</span>}
               </span>
             </li>
           ))}

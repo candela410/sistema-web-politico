@@ -4,6 +4,7 @@ Django y campaña activa."""
 import json
 from functools import wraps
 
+from django.contrib.auth.models import Permission
 from django.http import JsonResponse
 
 from .models import Campana
@@ -22,6 +23,37 @@ def leer_json(request):
     except json.JSONDecodeError:
         return None
     return datos if isinstance(datos, dict) else None
+
+
+# ---------------------------------------------------------------------------
+# Permisos
+# ---------------------------------------------------------------------------
+
+ADMINISTRAR = "core.administrar_campana"
+# Lo que NO incluye "administrar_campana": administrar campañas y elegir otra
+SOLO_SUPERUSUARIO = {"view_campana", "add_campana", "change_campana", "delete_campana", "elegir_campana"}
+
+
+def _incluidos_en_administrar():
+    """Permisos que vienen con "Puede administrar la campaña"."""
+    core = Permission.objects.filter(content_type__app_label="core").exclude(codename__in=SOLO_SUPERUSUARIO)
+    extra = Permission.objects.filter(
+        content_type__app_label__in=["auth", "admin"], codename__in=["view_group", "view_permission", "view_logentry"]
+    )
+    return {f"{p.content_type.app_label}.{p.codename}" for p in (core | extra).select_related("content_type")}
+
+
+def permisos_de(usuario):
+    """Permisos de Django del usuario (propios y de sus grupos) más los que
+    incluye "administrar_campana". El superusuario los tiene todos."""
+    if not usuario.is_authenticated or not usuario.is_active:
+        return set()
+    if usuario.is_superuser:
+        return {f"{p.content_type.app_label}.{p.codename}" for p in Permission.objects.select_related("content_type")}
+    permisos = set(usuario.get_all_permissions())
+    if ADMINISTRAR in permisos:
+        permisos |= _incluidos_en_administrar()
+    return permisos
 
 
 # ---------------------------------------------------------------------------
@@ -86,7 +118,7 @@ def requiere_permiso(*permisos, campana=True):
                     necesarios += [p[request.method]] if request.method in p else []
                 else:
                     necesarios.append(p)
-            if not usuario.has_perms(necesarios):
+            if not set(necesarios) <= permisos_de(usuario):
                 return error("No tenés permiso para hacer esto.", 403)
             request.campana = campana_activa(request)
             if campana and request.campana is None:

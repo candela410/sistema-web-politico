@@ -14,6 +14,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
     email: usuario?.email ?? '',
     password: '',
     grupos: usuario?.grupos.map((g) => g.id) ?? [],
+    administra: usuario?.administra ?? false,
     activo: usuario?.activo ?? true,
     documento: usuario?.militante?.documento ?? '',
     telefono: usuario?.militante?.telefono ?? '',
@@ -36,6 +37,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
       apellido: form.apellido,
       email: form.email,
       grupos: form.grupos,
+      administra: form.administra,
       activo: form.activo,
       militante: esMilitante ? { documento: form.documento, telefono: form.telefono } : null,
       ...(form.password && { password: form.password }),
@@ -80,19 +82,21 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
         </label>
 
         <fieldset>
-          <legend>Grupo (define qué puede hacer)</legend>
+          <legend>Qué puede hacer</legend>
+          <label className="casilla-texto">
+            <input type="checkbox" checked={form.administra} onChange={cambiar('administra')} />
+            <span>
+              Administrar la campaña <span className="opcional">(permiso)</span>
+              <small>Mapa, cuestionarios, categorías, usuarios, permisos y actividad de esta campaña.</small>
+            </span>
+          </label>
           {grupos.map((g) => (
             <label key={g.id} className="casilla-texto">
               <input type="checkbox" checked={form.grupos.includes(g.id)} onChange={() => alternarGrupo(g.id)} />
               <span>
                 {g.nombre}
-                <small>
-                  {g.nombre === GRUPO_MILITANTES
-                    ? 'Solo carga encuestas.'
-                    : g.nombre === 'Administración de campaña'
-                      ? 'Gestiona mapa, cuestionarios, categorías, usuarios y ve la actividad de la campaña.'
-                      : 'Permisos definidos en Django.'}
-                </small>
+                <span className="opcional"> (grupo)</span>
+                <small>{g.nombre === GRUPO_MILITANTES ? 'Solo carga encuestas.' : 'Permisos definidos en Django.'}</small>
               </span>
             </label>
           ))}
@@ -246,10 +250,11 @@ function Usuarios({ usuario: yo }) {
                 </h3>
                 <p>{u.email}</p>
                 <span className="tarjeta-fila__datos usuarios__grupos">
+                  {u.administra && <span className="etiqueta etiqueta--violeta">Administra la campaña</span>}
                   {u.grupos.map((g) => (
                     <span
                       key={g.id}
-                      className={`etiqueta ${g.nombre === GRUPO_MILITANTES ? 'etiqueta--magenta' : 'etiqueta--violeta'}`}
+                      className="etiqueta etiqueta--magenta"
                     >
                       {g.nombre}
                     </span>

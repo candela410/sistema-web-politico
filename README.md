@@ -159,10 +159,12 @@ ORS_API_KEY=el-token
   cuestionarios, usuarios y actividad) es de esa campaña. Barrios, calles y zonas son
   territorio compartido por todas las campañas. El resto de los usuarios trabaja
   siempre en la campaña de su usuario.
-- **Permisos:** se usan los permisos y grupos de Django. La migración `0005_grupos` crea
-  "Administración de campaña" y "Militantes". En la app se consultan en Gestión → Permisos;
-  se modifican desde el admin de Django (`/admin`).
-- **Usuarios:** Gestión → Usuarios. Al crear un usuario se le elige un grupo; los usuarios no se
+- **Permisos:** se usan las tablas de Django: permisos (`auth_permission`), grupos
+  (`auth_group`) y grupos por permisos (`auth_group_permissions`). Hay dos permisos propios:
+  "Puede administrar la campaña" (incluye mapa, cuestionarios, categorías, usuarios, ver
+  permisos y actividad) y "Puede elegir la campaña al ingresar". La migración `0005_grupos`
+  crea el grupo "Militantes" (cargar encuestas). En la app se consultan en Gestión → Permisos.
+- **Usuarios:** Gestión → Usuarios. Al crear un usuario se marca si administra la campaña y/o su grupo; los usuarios no se
   borran, se desactivan (así se conserva su historial).
 - **Actividad:** cada alta, cambio, baja e inicio de sesión queda en el log de Django
   (`django_admin_log`) con el valor anterior y el nuevo de cada campo.

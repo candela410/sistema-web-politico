@@ -39,7 +39,13 @@ class Campana(models.Model):
         verbose_name = "campaña"
         verbose_name_plural = "campañas"
         ordering = ["-activa", "nombre"]
-        permissions = [("elegir_campana", "Puede elegir la campaña al ingresar")]
+        # Permisos propios (tabla auth_permission). "administrar_campana" incluye
+        # todo lo de la campaña: mapa, cuestionarios, categorías, usuarios,
+        # permisos (ver) y actividad. Ver core/api.py.
+        permissions = [
+            ("elegir_campana", "Puede elegir la campaña al ingresar"),
+            ("administrar_campana", "Puede administrar la campaña"),
+        ]
         constraints = [
             models.CheckConstraint(
                 condition=(

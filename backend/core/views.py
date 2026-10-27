@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
-from .api import campana_activa, puede_elegir_campana
+from .api import campana_activa, permisos_de, puede_elegir_campana
 from .bitacora import registrar
 
 # API de autenticación con las sesiones de Django (tablas usuarios y
@@ -25,7 +25,7 @@ def usuario_json(request):
         "es_militante": hasattr(usuario, "militante"),
         "grupos": list(usuario.groups.values_list("name", flat=True)),
         # Permisos de Django ("core.add_cuestionario", …): el frontend arma el menú con esto
-        "permisos": sorted(usuario.get_all_permissions()),
+        "permisos": sorted(permisos_de(usuario)),
         "puede_elegir_campana": puede_elegir_campana(usuario),
         "campana": {"id": campana.pk, "nombre": campana.nombre} if campana else None,
     }

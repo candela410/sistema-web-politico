@@ -17,7 +17,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .api import crud, error, leer_json, requiere_permiso
+from .api import ADMINISTRAR, SOLO_SUPERUSUARIO, crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, leer, registrar
 from .models import Militante, Usuario
 
@@ -42,6 +42,7 @@ def _usuario_json(u):
         "activo": u.is_active,
         "es_superusuario": u.is_superuser,
         "grupos": [{"id": g.pk, "nombre": g.name} for g in u.groups.all()],
+        "administra": _administra(u),
         "militante": {"documento": militante.documento or "", "telefono": militante.telefono or ""}
         if militante
         else None,
@@ -50,9 +51,20 @@ def _usuario_json(u):
     }
 
 
+def _permiso_administrar():
+    app, codename = ADMINISTRAR.split(".")
+    return Permission.objects.get(content_type__app_label=app, codename=codename)
+
+
+def _administra(u):
+    """Tiene el permiso propio "administrar_campana" (directo, no por grupo)."""
+    return u.user_permissions.filter(codename="administrar_campana").exists()
+
+
 def _foto(u):
     militante = getattr(u, "militante", None)
     return {
+        "Administra la campaña": "Sí" if _administra(u) else "No",
         "Email": u.email,
         "Nombre": u.first_name,
         "Apellido": u.last_name,
@@ -108,8 +120,11 @@ def _limpiar(datos, usuario=None):
         grupos = list(Group.objects.filter(pk__in=grupos_ids))
         if len(grupos) != len(set(grupos_ids)):
             return None, "Alguno de los grupos no existe."
-    if not grupos:
-        return None, "Elegí al menos un grupo (por ejemplo, Militantes)."
+    administra = datos.get("administra", _administra(usuario) if usuario else False)
+    if not isinstance(administra, bool):
+        return None, "El permiso de administrar debe ser verdadero o falso."
+    if not grupos and not administra:
+        return None, "Elegí qué puede hacer: administrar la campaña o un grupo (por ejemplo, Militantes)."
 
     activo = datos.get("activo", usuario.is_active if usuario else True)
     if not isinstance(activo, bool):
@@ -128,6 +143,7 @@ def _limpiar(datos, usuario=None):
         "apellido": apellido,
         "password": password,
         "grupos": grupos,
+        "administra": administra,
         "activo": activo,
         "documento": documento or None,
         "telefono": str(militante.get("telefono") or "").strip()[:40] or None,
@@ -143,6 +159,11 @@ def _guardar(usuario, d):
         usuario.set_password(d["password"])
     usuario.save()
     usuario.groups.set(d["grupos"])
+    # El permiso propio va directo al usuario (tabla usuarios_user_permissions)
+    if d["administra"]:
+        usuario.user_permissions.add(_permiso_administrar())
+    else:
+        usuario.user_permissions.remove(_permiso_administrar())
     # Quien está en el grupo Militantes tiene su ficha de militante
     if any(g.name == GRUPO_MILITANTES for g in d["grupos"]) or hasattr(usuario, "militante"):
         militante, _ = Militante.objects.get_or_create(
@@ -180,7 +201,7 @@ def usuarios(request):
     with transaction.atomic():
         usuario = Usuario(username=_username_libre(limpios["email"]), campana=request.campana)
         _guardar(usuario, limpios)
-    registrar(request, usuario, "crear", detalle=f"Creó el usuario {usuario.email} ({_foto(usuario)['Grupos']})")
+    registrar(request, usuario, "crear", detalle=f"Creó el usuario {usuario.email}")
     return JsonResponse({"usuario": _usuario_json(usuario)}, status=201)
 
 
@@ -287,6 +308,20 @@ def permisos(request):
                 "directos": _agrupar(u.user_permissions.all()),
             }
             for u in usuarios
+        ],
+        # Qué incluye el permiso propio "Puede administrar la campaña"
+        "administrar": _agrupar(
+            Permission.objects.filter(
+                content_type__app_label="core"
+            ).exclude(codename__in=SOLO_SUPERUSUARIO | {"administrar_campana"}).select_related("content_type")
+            | Permission.objects.filter(
+                content_type__app_label__in=["auth", "admin"],
+                codename__in=["view_group", "view_permission", "view_logentry"],
+            ).select_related("content_type")
+        ),
+        "propios": [
+            {"codigo": f"core.{p.codename}", "nombre": p.name, "usuarios": p.user_set.filter(campana=request.campana).count()}
+            for p in Permission.objects.filter(content_type__app_label="core", codename__in=["administrar_campana", "elegir_campana"])
         ],
         "superusuario": "El superusuario tiene todos los permisos, sin importar sus grupos.",
     })

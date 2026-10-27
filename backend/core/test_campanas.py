@@ -1,4 +1,4 @@
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, Permission
 from django.test import Client, TestCase
 
 from .models import Campana, Categoria, Cuestionario, Militante, Usuario, Zona
@@ -14,7 +14,7 @@ class Base(TestCase):
         self.coordinadora = Usuario.objects.create_user(
             username="coord", email="coord@ejemplo.com", password=CLAVE, first_name="Coordinadora", campana=self.norte
         )
-        self.coordinadora.groups.add(Group.objects.get(name="Administración de campaña"))
+        self.coordinadora.user_permissions.add(Permission.objects.get(codename="administrar_campana"))
         self.client = Client(enforce_csrf_checks=True)
         self.client.get("/api/auth/csrf/")
 
@@ -104,7 +104,7 @@ class UsuariosTests(Base):
             ({"email": "malo", "nombre": "A", "password": "otra-clave-larga-9", "grupos": [self.militantes.pk]}, "email"),
             ({"email": "coord@ejemplo.com", "nombre": "A", "password": "otra-clave-larga-9", "grupos": [self.militantes.pk]}, "Ya existe"),
             ({"email": "x@ejemplo.com", "nombre": "A", "password": "123", "grupos": [self.militantes.pk]}, "contraseña"),
-            ({"email": "x@ejemplo.com", "nombre": "A", "password": "otra-clave-larga-9", "grupos": []}, "grupo"),
+            ({"email": "x@ejemplo.com", "nombre": "A", "password": "otra-clave-larga-9", "grupos": []}, "Elegí qué puede hacer"),
         ]
         for datos, texto in casos:
             r = self.enviar("post", "/api/usuarios/", datos)
@@ -118,8 +118,20 @@ class UsuariosTests(Base):
         self.assertEqual(self.enviar("delete", f"/api/usuarios/{otro.pk}/").status_code, 404)
         self.assertEqual(self.enviar("delete", f"/api/usuarios/{self.coordinadora.pk}/").status_code, 409)
 
+    def test_administrar_se_da_como_permiso(self):
+        r = self.enviar("post", "/api/usuarios/", {
+            "email": "jefa2@ejemplo.com", "nombre": "Sol", "password": "otra-clave-larga-9", "grupos": [], "administra": True,
+        })
+        self.assertEqual(r.status_code, 201, r.content)
+        u = Usuario.objects.get(email="jefa2@ejemplo.com")
+        self.assertTrue(u.has_perm("core.administrar_campana"))
+        self.assertFalse(u.groups.exists())
+        self.assertTrue(r.json()["usuario"]["administra"])
+
     def test_permisos_solo_lectura(self):
         datos = self.client.get("/api/permisos/").json()
+        self.assertEqual([g["nombre"] for g in datos["grupos"]], ["Militantes"])
+        self.assertIn("Puede administrar la campaña", [p["nombre"] for p in datos["propios"]])
         grupos = {g["nombre"]: g for g in datos["grupos"]}
         militantes = {p["seccion"]: p["acciones"] for p in grupos["Militantes"]["permisos"]}
         self.assertEqual(militantes, {"Encuestas": ["Crear"]})

@@ -773,3 +773,163 @@
     grid-column: 1 / -1;
   }
 }
+
+/* --- Estadísticas: elegir gráficos ------------------------------------- */
+
+.selector-graficos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-left: 40px;
+}
+
+.selector-graficos__titulo {
+  margin-right: 4px;
+  color: var(--lla-gris);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.chip-grafico {
+  padding: 5px 12px;
+  border: 1px solid var(--lla-borde);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--lla-gris);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.chip-grafico:hover {
+  border-color: var(--lla-violeta);
+  color: var(--lla-violeta);
+}
+
+.chip-grafico[aria-pressed='true'] {
+  border-color: var(--lla-violeta);
+  background: var(--lla-violeta);
+  color: #fff;
+}
+
+.chip-grafico[aria-pressed='true']::before {
+  content: '✓ ';
+}
+
+.chip-grafico:focus-visible {
+  outline: 2px solid var(--lla-violeta);
+  outline-offset: 2px;
+}
+
+.grafico {
+  margin: 0 0 0 40px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid #ecebf0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.grafico figcaption {
+  color: var(--lla-gris);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.grafico .barras,
+.grafico .distribucion,
+.grafico .tabla-envoltura {
+  padding-left: 0;
+}
+
+.grafico-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.linea__trazo {
+  fill: none;
+  stroke: var(--lla-violeta);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.linea__punto {
+  fill: var(--lla-violeta);
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.torta {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.torta__svg {
+  width: min(220px, 100%);
+  flex: none;
+}
+
+.torta__etiqueta {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.torta .leyenda {
+  flex: 1;
+  min-width: 180px;
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.tabla-frecuencias tfoot th,
+.tabla-frecuencias tfoot td {
+  border-bottom: 0;
+  font-weight: 700;
+}
+
+.pdf-lista {
+  max-height: 50vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pdf-lista__pregunta {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--lla-borde);
+  border-radius: 10px;
+}
+
+.pdf-lista__pregunta legend {
+  padding: 0 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.pdf-lista__atajos {
+  display: flex;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .selector-graficos,
+  .grafico {
+    padding-left: 0;
+    margin-left: 0;
+  }
+
+  .grafico {
+    padding: 10px;
+  }
+}

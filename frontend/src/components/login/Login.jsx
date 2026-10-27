@@ -1,175 +1,181 @@
+// useState: hook de React para guardar valores que cambian (lo que escribe el usuario, errores, etc.)
 import { useState } from 'react'
+// iniciarSesion: la función que ya tenés en src/api/auth.js para hablar con Django
 import { iniciarSesion } from '../../api/auth'
+// Logo del águila (src/assets/logo.png)
 import logo from '../../assets/logo.png'
+// Foto del lado izquierdo (guardala en src/assets/fondo.png)
+import fondo from '../../assets/fondo.png'
+// Estilos de esta pantalla
 import './Login.css'
 
-function IconoCorreo() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m3.5 6 8.5 7 8.5-7" />
-    </svg>
-  )
-}
+// Componente Login. Recibe "onIngreso", una función que se ejecuta cuando el login sale bien
+// (App.jsx ya la usa para guardar el usuario y redirigir)
+export default function Login({ onIngreso }) {
+  // ----- ESTADOS -----
+  const [email, setEmail] = useState('')                  // texto del campo correo
+  const [password, setPassword] = useState('')            // texto del campo contraseña
+  const [showPassword, setShowPassword] = useState(false) // true = se ve la contraseña (ojito)
+  const [remember, setRemember] = useState(false)         // checkbox "Recordar"
+  const [error, setError] = useState('')                  // mensaje de error a mostrar
+  const [loading, setLoading] = useState(false)           // true mientras se espera al servidor
 
-function IconoCandado() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="5" y="10" width="14" height="11" rx="2" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-      <path d="M12 14.5v2.5" />
-    </svg>
-  )
-}
+  // ----- FUNCIÓN QUE SE EJECUTA AL APRETAR "Iniciar sesión" -----
+  async function handleSubmit(e) {
+    e.preventDefault() // evita que el navegador recargue la página
+    setError('')       // borra errores anteriores
 
-function IconoOjo({ tachado }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
-      <circle cx="12" cy="12" r="3" />
-      {tachado && <path d="m4 4 16 16" />}
-    </svg>
-  )
-}
+    // Validación simple: si falta correo o contraseña, avisa y corta acá
+    if (!email.trim() || !password) {
+      setError('Ingresá tu correo y tu contraseña.')
+      return
+    }
 
-function Login({ onIngreso }) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [verPassword, setVerPassword] = useState(false)
-  const [recordar, setRecordar] = useState(false)
-  const [error, setError] = useState('')
-  const [enviando, setEnviando] = useState(false)
-
-  async function enviar(evento) {
-    evento.preventDefault()
-    setError('')
-    setEnviando(true)
+    setLoading(true) // el botón pasa a "Ingresando…"
     try {
-      onIngreso(await iniciarSesion(email, password, recordar))
+      // Django usa sesión (cookie), así que no hay token que guardar.
+      // "remember" se manda al backend: si es false, la sesión termina al cerrar el navegador.
+      const usuario = await iniciarSesion(email.trim(), password, remember)
+      onIngreso?.(usuario) // avisa a App.jsx que el login fue exitoso
     } catch (err) {
-      setError(err.message)
+      // Muestra el mensaje que devuelve Django (datos incorrectos, servidor caído, etc.)
+      setError(err.message || 'Correo o contraseña incorrectos.')
     } finally {
-      setEnviando(false)
+      setLoading(false) // pase lo que pase, vuelve a habilitar el botón
     }
   }
 
+  // ----- LO QUE SE DIBUJA EN PANTALLA -----
   return (
-    <div className="login">
-      <svg className="login__ola-superior" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <clipPath id="ola-superior-forma">
-            <path d="M0 0h400v140c-40 6-80-2-110-22C250 92 215 50 160 48 105 46 60 70 0 104Z" />
-          </clipPath>
-        </defs>
-        <path d="M0 0h400v140c-40 6-80-2-110-22C250 92 215 50 160 48 105 46 60 70 0 104Z" />
-        {/* Curvas de nivel suaves, como en el diseño */}
-        <g className="login__topografia" clipPath="url(#ola-superior-forma)">
-          <ellipse cx="80" cy="30" rx="60" ry="22" />
-          <ellipse cx="80" cy="30" rx="95" ry="38" />
-          <ellipse cx="80" cy="30" rx="130" ry="55" />
-          <ellipse cx="330" cy="60" rx="40" ry="18" />
-          <ellipse cx="330" cy="60" rx="75" ry="34" />
-          <ellipse cx="330" cy="60" rx="110" ry="52" />
-        </g>
+    <main className="login">
+
+      {/* OLA SUPERIOR violeta (solo decoración) */}
+      <svg
+        className="login__wave-top"
+        viewBox="0 0 1440 160"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M0 0 H1440 V70 C1180 150 900 20 620 80 C380 130 180 110 0 60 Z"
+          fill="#533693"
+        />
       </svg>
 
-      <svg className="login__ola-inferior" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="ola-magenta" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0" stopColor="var(--lla-violeta)" />
-            <stop offset="0.6" stopColor="var(--lla-magenta)" />
-            <stop offset="1" stopColor="var(--lla-naranja)" />
-          </linearGradient>
-        </defs>
-        <path className="login__ola-violeta" d="M0 30c60-30 130-20 190 10s130 30 210 0v80H0Z" />
-        <path fill="url(#ola-magenta)" d="M0 70c70-20 140 10 210 0s120-40 190-30v80H0Z" />
-        <path className="login__ola-naranja" d="M250 120c40-50 90-80 150-90v90Z" />
+      {/* OLAS INFERIORES de colores: naranja (atrás), rosa (medio) y violeta (adelante) */}
+      <svg
+        className="login__wave-bottom"
+        viewBox="0 0 1440 260"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M0 120 C300 40 700 220 1000 120 C1200 55 1340 70 1440 30 V260 H0 Z"
+          fill="#fdb03e"
+        />
+        <path
+          d="M0 170 C260 110 620 250 960 175 C1190 125 1330 150 1440 110 V260 H0 Z"
+          fill="#d8267e"
+        />
+        <path
+          d="M0 215 C300 170 640 270 980 220 C1200 190 1340 205 1440 180 V260 H0 Z"
+          fill="#533693"
+        />
       </svg>
 
-      <main className="login__contenido">
-        <img className="login__logo" src={logo} alt="La Libertad Avanza" />
+      {/* LADO IZQUIERDO: foto difuminada que se funde con el blanco hacia la derecha */}
+      <div className="login__photo" aria-hidden="true">
+        <img src={fondo} alt="" />
+      </div>
 
-        <header className="login__encabezado">
+      {/* LADO DERECHO: logo + formulario */}
+      <section className="login__panel">
+        <form className="login__form" onSubmit={handleSubmit} noValidate>
+
+          {/* Logo del águila */}
+          <img className="login__logo" src={logo} alt="Logo" />
+
+          {/* Título y subtítulo */}
           <h1>Iniciar sesión</h1>
-          <p>Accedé a tu cuenta para continuar</p>
-          <span className="login__franja" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-            <i />
-          </span>
-        </header>
+          <p className="login__subtitle">Accedé a tu cuenta para continuar</p>
 
-        <form className="login__form" onSubmit={enviar} noValidate>
+          {/* Barrita de 4 colores debajo del título */}
+          <div className="login__bar" aria-hidden="true">
+            <span /><span /><span /><span />
+          </div>
+
+          {/* ----- CAMPO CORREO ----- */}
           <label htmlFor="email">Correo electrónico</label>
-          <div className="campo">
-            <IconoCorreo />
+          <div className="login__field">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path d="m3 7 9 6 9-6" />
+            </svg>
             <input
               id="email"
               type="email"
+              autoComplete="username"
               placeholder="ejemplo@correo.com"
-              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
             />
           </div>
 
+          {/* ----- CAMPO CONTRASEÑA ----- */}
           <label htmlFor="password">Contraseña</label>
-          <div className="campo">
-            <IconoCandado />
+          <div className="login__field">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+            </svg>
             <input
               id="password"
-              type={verPassword ? 'text' : 'password'}
-              placeholder="••••••••"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
             />
+            {/* Botón del ojito: alterna mostrar/ocultar la contraseña */}
             <button
               type="button"
-              className="campo__ver"
-              onClick={() => setVerPassword((v) => !v)}
-              aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-              aria-pressed={verPassword}
+              className="login__eye"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             >
-              <IconoOjo tachado={verPassword} />
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                <circle cx="12" cy="12" r="3" />
+                {showPassword && <path d="M4 4l16 16" />}
+              </svg>
             </button>
           </div>
 
-          <div className="login__opciones">
-            <label className="casilla">
-              <input type="checkbox" checked={recordar} onChange={(e) => setRecordar(e.target.checked)} />
+          {/* ----- FILA: checkbox "Recordar" + link "¿Olvidaste tu contraseña?" ----- */}
+          <div className="login__row">
+            <label className="login__check">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+              />
               <span>Recordar</span>
             </label>
-            {/* Pendiente: recuperación de contraseña */}
-            <a href="#" className="enlace">
+            {/* Por ahora el link no hace nada. Después le ponés la ruta real */}
+            <a href="#" onClick={(e) => e.preventDefault()}>
               ¿Olvidaste tu contraseña?
             </a>
           </div>
 
-          {error && (
-            <p className="login__error" role="alert">
-              {error}
-            </p>
-          )}
+          {/* Mensaje de error: solo aparece si "error" tiene texto */}
+          {error && <p className="login__error" role="alert">{error}</p>}
 
-          <button type="submit" className="login__boton" disabled={enviando}>
-            {enviando ? 'Ingresando…' : 'Iniciar sesión'}
+          {/* Botón principal. Se deshabilita mientras carga para evitar doble clic */}
+          <button className="login__submit" type="submit" disabled={loading}>
+            {loading ? 'Ingresando…' : 'Iniciar sesión'}
           </button>
-
-          <p className="login__registro">
-            ¿No tenés cuenta?{' '}
-            {/* Pendiente: registro de usuarios */}
-            <a href="#" className="enlace enlace--fuerte">
-              Registrate.
-            </a>
-          </p>
         </form>
-      </main>
-    </div>
+      </section>
+    </main>
   )
 }
-
-export default Login

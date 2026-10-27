@@ -20,3 +20,7 @@ export const borrarGrupo = (id) =>
   pedir(`/api/grupos/${id}/`, {
     method: 'DELETE',
   })
+// Permisos que se pueden asignar, agrupados por sección:
+// [{ seccion, permisos: [{ id, codigo, accion }] }]
+export const obtenerPermisos = () =>
+  pedir('/api/permisos/').then((respuesta) => respuesta.secciones)

@@ -78,3 +78,13 @@
     justify-content: flex-end;
   }
 }
+.formulario-grupo textarea.entrada { resize: vertical; }
+.formulario-grupo__titulo { font-size: 0.9rem; font-weight: 600; }
+.grupo__descripcion { margin: 4px 0 0; font-size: 0.92rem; color: var(--lla-texto-suave, #5b566a); overflow-wrap: anywhere; }
+.grupo__permisos { margin: 4px 0 0; font-size: 0.82rem; font-weight: 600; color: var(--lla-violeta); }
+.permisos-selector { display: grid; gap: 8px; max-height: 260px; overflow-y: auto; padding: 4px 2px; margin-bottom: 8px; }
+.permisos-selector__seccion { margin: 0; padding: 8px 12px 10px; border: 1px solid var(--lla-borde); border-radius: 10px; }
+.permisos-selector__seccion legend { padding: 0 6px; }
+.permisos-selector__seccion label { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; }
+.permisos-selector__seccion legend label { font-weight: 600; }
+.permisos-selector__acciones { display: flex; flex-wrap: wrap; gap: 6px 16px; }

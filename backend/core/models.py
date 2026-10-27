@@ -1,7 +1,7 @@
 import re
 
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Permission
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
@@ -38,6 +38,14 @@ class Campana(models.Model):
         db_table = "campanas"
         verbose_name = "campaña"
         verbose_name_plural = "campañas"
+        ordering = ["-activa", "nombre"]
+        # Permisos propios (tabla auth_permission). "administrar_campana" incluye
+        # todo lo de la campaña: mapa, cuestionarios, categorías, usuarios,
+        # permisos (ver) y actividad. Ver core/api.py.
+        permissions = [
+            ("elegir_campana", "Puede elegir la campaña al ingresar"),
+            ("administrar_campana", "Puede administrar la campaña"),
+        ]
         constraints = [
             models.CheckConstraint(
                 condition=(
@@ -59,6 +67,7 @@ class Campana(models.Model):
 
 
 class Zona(models.Model):
+    # Las zonas son territorio: las mismas para todas las campañas
     id_zona = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
     # Polígono dibujado en el mapa (GeoJSON Polygon/MultiPolygon)
@@ -67,6 +76,7 @@ class Zona(models.Model):
 
     class Meta:
         db_table = "zonas"
+        verbose_name = "zona"
         ordering = ["nombre"]
 
     def __str__(self):
@@ -87,10 +97,14 @@ class Barrio(models.Model):
         related_name="barrios",
     )
     geometria = models.JSONField(blank=True, null=True)
+    # True cuando OpenStreetMap solo tiene un punto para el barrio y el
+    # contorno se estimó (ver importar_osm)
+    geometria_aproximada = models.BooleanField(default=False)
     osm_id = models.BigIntegerField(unique=True, null=True, blank=True)
 
     class Meta:
         db_table = "barrios"
+        verbose_name = "barrio"
         ordering = ["nombre"]
 
     def __str__(self):
@@ -111,6 +125,7 @@ class Calle(models.Model):
 
     class Meta:
         db_table = "calles"
+        verbose_name = "calle"
         ordering = ["nombre"]
         constraints = [
             models.UniqueConstraint(
@@ -156,6 +171,7 @@ class Ruta(models.Model):
 
     class Meta:
         db_table = "rutas"
+        verbose_name = "ruta"
         constraints = [
             models.UniqueConstraint(
                 fields=["campana", "nombre"],
@@ -188,6 +204,7 @@ class Equipo(models.Model):
 
     class Meta:
         db_table = "equipos"
+        verbose_name = "equipo"
         constraints = [
             models.UniqueConstraint(
                 fields=["campana", "nombre"],
@@ -224,6 +241,7 @@ class Usuario(AbstractUser):
 
     class Meta:
         db_table = "usuarios"
+        verbose_name = "usuario"
 
 
 class Militante(models.Model):
@@ -254,6 +272,7 @@ class Militante(models.Model):
 
     class Meta:
         db_table = "militantes"
+        verbose_name = "militante"
         ordering = ["apellido", "nombre"]
 
     def __str__(self):
@@ -294,6 +313,7 @@ class Encuestado(models.Model):
 
     class Meta:
         db_table = "encuestados"
+        verbose_name = "encuestado"
         constraints = [
             models.CheckConstraint(
                 condition=Q(latitud__isnull=True, longitud__isnull=True)
@@ -323,6 +343,7 @@ class Categoria(models.Model):
 
     class Meta:
         db_table = "categorias"
+        verbose_name = "categoría"
         ordering = ["nombre"]
 
     def __str__(self):
@@ -358,6 +379,7 @@ class Cuestionario(models.Model):
 
     class Meta:
         db_table = "cuestionarios"
+        verbose_name = "cuestionario"
 
     def __str__(self):
         return self.titulo
@@ -378,6 +400,7 @@ class AsignacionCuestionario(models.Model):
 
     class Meta:
         db_table = "militantexcuestionarios"
+        verbose_name = "asignación de cuestionario"
         constraints = [
             models.UniqueConstraint(
                 fields=["militante", "cuestionario"],
@@ -412,6 +435,7 @@ class Pregunta(models.Model):
 
     class Meta:
         db_table = "preguntas"
+        verbose_name = "pregunta"
         ordering = ["orden"]
         constraints = [
             models.UniqueConstraint(
@@ -449,6 +473,7 @@ class Opcion(models.Model):
 
     class Meta:
         db_table = "opciones"
+        verbose_name = "opción"
         verbose_name_plural = "opciones"
         ordering = ["orden"]
         constraints = [
@@ -497,6 +522,7 @@ class Encuesta(models.Model):
 
     class Meta:
         db_table = "encuestas"
+        verbose_name = "encuesta"
         constraints = [
             # Una persona responde una sola vez cada cuestionario
             models.UniqueConstraint(
@@ -555,13 +581,27 @@ class RespuestaCargada(models.Model):
                 raise ValidationError("La opción elegida no pertenece a esa pregunta.")
 
 
+# ---------------------------------------------------------------------------
+# Grupos
+# ---------------------------------------------------------------------------
+
+
 class Grupo(models.Model):
     id_grupo = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=120, unique=True)
+    descripcion = models.TextField(blank=True, default="")
+    # Permisos de Django (tabla auth_permission) que tiene el grupo
+    permisos = models.ManyToManyField(
+        Permission,
+        blank=True,
+        related_name="grupos_core",
+        db_table="grupos_permisos",
+    )
 
     class Meta:
         db_table = "grupos"
         ordering = ["nombre"]
+        verbose_name = "grupo"
 
     def __str__(self):
         return self.nombre

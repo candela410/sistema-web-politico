@@ -7,6 +7,7 @@ from . import (
     encuestas_views,
     grupos_views,
     mapa_views,
+    permisos_views,
     views,
 )
 
@@ -29,6 +30,7 @@ urlpatterns = [
         grupos_views.grupo_detalle,
         name="grupo",
     ),
+    path("permisos/", permisos_views.permisos, name="permisos"),
 
     path("cuestionarios/", cuestionarios_views.cuestionarios, name="cuestionarios"),
     path(
@@ -36,6 +38,7 @@ urlpatterns = [
         cuestionarios_views.cuestionario_detalle,
         name="cuestionario",
     ),
+    
     path(
         "cuestionarios/<int:pk>/estadisticas/",
         encuestas_views.estadisticas,

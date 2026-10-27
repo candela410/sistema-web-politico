@@ -1,0 +1,139 @@
+.pagina--ancha {
+  max-width: 1100px;
+}
+
+.tabla-envoltura-ancha {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid var(--lla-borde);
+  border-radius: 12px;
+}
+
+.matriz {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.matriz th,
+.matriz td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #ecebf0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.matriz thead th {
+  position: sticky;
+  top: 0;
+  background: #f7f6fa;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.matriz thead th small {
+  display: block;
+  color: var(--lla-gris);
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.matriz tbody th {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.matriz tbody tr:last-child th,
+.matriz tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.matriz tbody tr:hover {
+  background: #fbfaff;
+}
+
+.matriz__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.matriz__nada {
+  color: #b9b6c2;
+}
+
+/* Una intensidad por acción: ver es lo más leve, borrar lo más fuerte */
+.permiso {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.permiso--0 {
+  background: #eef6fb;
+  color: #136a8c;
+}
+
+.permiso--1 {
+  background: rgb(31 157 107 / 0.13);
+  color: #146b49;
+}
+
+.permiso--2 {
+  background: rgb(81 49 143 / 0.12);
+  color: var(--lla-violeta);
+}
+
+.permiso--3 {
+  background: #fdf1f2;
+  color: #a3172b;
+}
+
+.permiso--4,
+.permiso---1 {
+  background: rgb(247 168 50 / 0.18);
+  color: #8a5300;
+}
+
+.permisos__titulo {
+  margin: 12px 0 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.permisos__usuarios {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.permisos__usuarios li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--lla-borde);
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+
+.permisos__grupos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.sr-solo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

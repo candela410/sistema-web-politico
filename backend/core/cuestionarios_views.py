@@ -11,7 +11,7 @@ from .api import crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, registrar
 from .models import Categoria, Cuestionario, Opcion, Pregunta
 
-MAX_PREGUNTAS = 100
+MAX_PREGUNTAS = 15
 MAX_OPCIONES = 30
 
 

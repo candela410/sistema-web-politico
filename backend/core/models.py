@@ -6,6 +6,19 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
 
+def con_mayuscula(texto):
+    """Primera letra en mayúscula, el resto como se escribió ("barrio norte" → "Barrio norte")."""
+    if not isinstance(texto, str):
+        return texto
+    texto = texto.strip()
+    return texto[:1].upper() + texto[1:]
+
+
+# Campos que se guardan siempre con la primera letra en mayúscula: todo
+# "nombre" y, en usuarios, el nombre y el apellido. Ver CoreConfig.ready().
+CAMPOS_NOMBRE = ("nombre", "first_name", "last_name")
+
+
 NUMERO = re.compile(r"^\s*-?\d+([.,]\d+)?\s*$")
 
 

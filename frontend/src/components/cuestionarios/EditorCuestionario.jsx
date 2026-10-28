@@ -8,6 +8,9 @@ import { variableDe } from './variable'
 // Editor de cuestionarios al estilo Google Forms: una tarjeta para el título
 // y una tarjeta por pregunta, con sus opciones.
 
+// Máximo de preguntas por cuestionario (el backend controla lo mismo)
+const MAX_PREGUNTAS = 15
+
 const TIPOS = [
   ['una_opcion', 'Una sola opción'],
   ['opcion_multiple', 'Opción múltiple'],
@@ -256,6 +259,7 @@ function EditorCuestionario() {
   const cambiarPregunta = (p) => actualizar({ preguntas: form.preguntas.map((x) => (x.clave === p.clave ? p : x)) })
 
   function insertarPregunta(pregunta, despuesDe) {
+    if (form.preguntas.length >= MAX_PREGUNTAS) return
     const i = despuesDe ? form.preguntas.findIndex((p) => p.clave === despuesDe) + 1 : form.preguntas.length
     actualizar({ preguntas: [...form.preguntas.slice(0, i), pregunta, ...form.preguntas.slice(i)] })
     setActiva(pregunta.clave)
@@ -391,15 +395,18 @@ function EditorCuestionario() {
           </div>
         ))}
 
-        {!bloqueado && (
-          <button
-            type="button"
-            className="agregar-pregunta"
-            onClick={() => insertarPregunta(nuevaPregunta(), activa)}
-          >
-            + Agregar pregunta
-          </button>
-        )}
+        {!bloqueado &&
+          (form.preguntas.length < MAX_PREGUNTAS ? (
+            <button
+              type="button"
+              className="agregar-pregunta"
+              onClick={() => insertarPregunta(nuevaPregunta(), activa)}
+            >
+              + Agregar pregunta ({form.preguntas.length} de {MAX_PREGUNTAS})
+            </button>
+          ) : (
+            <p className="aviso-info">Llegaste al máximo de {MAX_PREGUNTAS} preguntas por cuestionario.</p>
+          ))}
       </div>
     </form>
   )

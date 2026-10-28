@@ -1,7 +1,7 @@
 from django.contrib.auth.models import Group, Permission
 from django.test import Client, TestCase
 
-from .models import Campana, Categoria, Cuestionario, Usuario, Zona
+from .models import Campana, Categoria, Cuestionario, Militante, Usuario, Zona
 
 CLAVE = "clave-segura-123"
 
@@ -85,12 +85,12 @@ class UsuariosTests(Base):
     def test_crear_militante_en_la_campana(self):
         r = self.enviar("post", "/api/usuarios/", {
             "email": "Nuevo@Ejemplo.com", "nombre": "Pedro", "apellido": "Gómez", "password": "otra-clave-larga-9",
-            "grupos": [self.militantes.pk], "documento": "30.111.222", "telefono": "387",
+            "grupos": [self.militantes.pk], "militante": {"documento": "30.111.222", "telefono": "387"},
         })
         self.assertEqual(r.status_code, 201, r.content)
         u = Usuario.objects.get(email="nuevo@ejemplo.com")
         self.assertEqual(u.campana, self.norte)
-        self.assertEqual((u.documento, u.telefono), ("30111222", "387"))
+        self.assertEqual(Militante.objects.get(usuario=u).documento, "30111222")
         # El nuevo usuario entra y solo puede cargar encuestas
         self.enviar("post", "/api/auth/logout/")
         r = self.enviar("post", "/api/auth/login/", {"email": "nuevo@ejemplo.com", "password": "otra-clave-larga-9"})

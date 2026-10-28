@@ -16,9 +16,8 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
     grupos: usuario?.grupos.map((g) => g.id) ?? [],
     administra: usuario?.administra ?? false,
     activo: usuario?.activo ?? true,
-    documento: usuario?.documento ?? '',
-    telefono: usuario?.telefono ?? '',
-    direccion: usuario?.direccion ?? '',
+    documento: usuario?.militante?.documento ?? '',
+    telefono: usuario?.militante?.telefono ?? '',
   })
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -26,6 +25,8 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
     setForm((f) => ({ ...f, [campo]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
   const alternarGrupo = (id) =>
     setForm((f) => ({ ...f, grupos: f.grupos.includes(id) ? f.grupos.filter((g) => g !== id) : [...f.grupos, id] }))
+  const idMilitantes = grupos.find((g) => g.nombre === GRUPO_MILITANTES)?.id
+  const esMilitante = form.grupos.includes(idMilitantes) || !!usuario?.militante
 
   async function guardar(e) {
     e.preventDefault()
@@ -38,9 +39,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
       grupos: form.grupos,
       administra: form.administra,
       activo: form.activo,
-      documento: form.documento,
-      telefono: form.telefono,
-      direccion: form.direccion,
+      militante: esMilitante ? { documento: form.documento, telefono: form.telefono } : null,
       ...(form.password && { password: form.password }),
     }
     try {
@@ -103,20 +102,18 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
           ))}
         </fieldset>
 
-        <div className="formulario-modal__fila">
-          <label>
-            Documento <span className="opcional">(opcional)</span>
-            <input className="entrada" inputMode="numeric" value={form.documento} onChange={cambiar('documento')} />
-          </label>
-          <label>
-            Teléfono <span className="opcional">(opcional)</span>
-            <input className="entrada" type="tel" value={form.telefono} onChange={cambiar('telefono')} />
-          </label>
-        </div>
-        <label>
-          Dirección <span className="opcional">(opcional)</span>
-          <input className="entrada" value={form.direccion} onChange={cambiar('direccion')} />
-        </label>
+        {esMilitante && (
+          <div className="formulario-modal__fila">
+            <label>
+              Documento <span className="opcional">(opcional)</span>
+              <input className="entrada" inputMode="numeric" value={form.documento} onChange={cambiar('documento')} />
+            </label>
+            <label>
+              Teléfono <span className="opcional">(opcional)</span>
+              <input className="entrada" type="tel" value={form.telefono} onChange={cambiar('telefono')} />
+            </label>
+          </div>
+        )}
 
         <label className="interruptor">
           <input type="checkbox" checked={form.activo} onChange={cambiar('activo')} />

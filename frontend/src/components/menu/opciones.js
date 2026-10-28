@@ -69,18 +69,18 @@ export const SECCIONES = [
   {
     titulo: 'Gestión',
     opciones: [
-      { ruta: '/usuarios', texto: 'Usuarios', descripcion: 'Cuentas y grupos', icono: Users, permiso: 'core.view_usuario' },
+      { ruta: '/usuarios', texto: 'Usuarios', descripcion: 'Cuentas y roles', icono: Users, permiso: 'core.view_usuario' },
       {
         ruta: '/grupos',
-        texto: 'Grupos',
-        descripcion: 'Grupos con sus permisos',
+        texto: 'Roles',
+        descripcion: 'Roles con sus permisos',
         icono: UsersRound,
         permiso: 'core.view_grupo',
       },
       {
         ruta: '/permisos',
         texto: 'Permisos',
-        descripcion: 'Qué puede hacer cada grupo',
+        descripcion: 'Qué puede hacer cada rol',
         icono: ShieldCheck,
         permiso: 'auth.view_group',
       },

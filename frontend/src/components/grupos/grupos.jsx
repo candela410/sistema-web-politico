@@ -3,6 +3,8 @@ import * as api from '../../api/grupos'
 import Modal from '../comunes/Modal'
 import './grupos.css'
 
+const GRUPO_MILITANTES = 'Militantes'
+
 const ordenar = (lista) =>
   [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
@@ -10,6 +12,17 @@ const ORDEN_ACCIONES = ['Ver', 'Crear', 'Editar', 'Borrar']
 const posicion = (accion) => {
   const i = ORDEN_ACCIONES.indexOf(accion)
   return i === -1 ? ORDEN_ACCIONES.length : i
+}
+
+// Devuelve por qué un rol no se puede borrar ('' si se puede)
+function motivoSinBorrar(grupo) {
+  if (grupo.nombre === GRUPO_MILITANTES) {
+    return 'Este rol lo usa el sistema y no se puede borrar.'
+  }
+  if (grupo.total_usuarios > 0) {
+    return `No se puede borrar: tiene ${grupo.total_usuarios} usuario${grupo.total_usuarios === 1 ? '' : 's'} asignado${grupo.total_usuarios === 1 ? '' : 's'}.`
+  }
+  return ''
 }
 
 function FormularioGrupo({ grupo, onGuardado, onCerrar }) {
@@ -71,18 +84,18 @@ function FormularioGrupo({ grupo, onGuardado, onCerrar }) {
 
   return (
     <Modal
-      titulo={grupo ? 'Editar grupo' : 'Nuevo grupo'}
+      titulo={grupo ? 'Editar rol' : 'Nuevo rol'}
       onCerrar={onCerrar}
     >
       <form className="formulario-grupo" onSubmit={guardar}>
-        <label htmlFor="grupo-nombre">Nombre del grupo</label>
+        <label htmlFor="grupo-nombre">Nombre del rol</label>
 
         <input
           id="grupo-nombre"
           className="entrada"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
-          placeholder="Ej.: Grupo Norte"
+          placeholder="Ej.: Coordinador de zona"
           maxLength={120}
           autoFocus
           required
@@ -95,7 +108,7 @@ function FormularioGrupo({ grupo, onGuardado, onCerrar }) {
           className="entrada"
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
-          placeholder="Para qué sirve este grupo (opcional)"
+          placeholder="Para qué sirve este rol (opcional)"
           maxLength={500}
           rows={3}
         />
@@ -191,10 +204,10 @@ function ConfirmarBorrado({ grupo, onBorrado, onCerrar }) {
   }
 
   return (
-    <Modal titulo="Borrar grupo" onCerrar={onCerrar}>
+    <Modal titulo="Borrar rol" onCerrar={onCerrar}>
       <p className="modal__texto">
-        ¿Seguro que querés borrar el grupo <b>{grupo.nombre}</b>?
-        Solo se puede borrar si no tiene usuarios. Esta acción no se puede deshacer.
+        ¿Seguro que querés borrar el rol <b>{grupo.nombre}</b>?
+        Esta acción no se puede deshacer.
       </p>
 
       {error && (
@@ -261,8 +274,8 @@ function Grupos() {
     <main className="pagina">
       <header className="pagina__encabezado">
         <div>
-          <h1>Grupos</h1>
-          <p>Los mismos grupos que se asignan en Usuarios, con sus permisos e integrantes.</p>
+          <h1>Roles</h1>
+          <p>Los mismos roles que se asignan en Usuarios, con sus permisos e integrantes.</p>
 
           <span className="franja-corta" aria-hidden="true">
             <i />
@@ -277,7 +290,7 @@ function Grupos() {
           className="boton pagina__accion"
           onClick={() => setEditando('nuevo')}
         >
-          + Nuevo grupo
+          + Nuevo rol
         </button>
       </header>
 
@@ -290,7 +303,7 @@ function Grupos() {
         <input
           type="search"
           placeholder="Buscar por nombre, descripción o usuario"
-          aria-label="Buscar grupos"
+          aria-label="Buscar roles"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
@@ -307,17 +320,17 @@ function Grupos() {
           {errorCarga}
         </p>
       ) : grupos === null ? (
-        <p className="vacio-tarjeta">Cargando grupos…</p>
+        <p className="vacio-tarjeta">Cargando roles…</p>
       ) : visibles.length === 0 ? (
         <div className="vacio-tarjeta">
           {grupos.length === 0 ? (
             <>
-              <b>Todavía no hay grupos.</b>
-              <span>Creá el primero con “+ Nuevo grupo”.</span>
+              <b>Todavía no hay roles.</b>
+              <span>Creá el primero con “+ Nuevo rol”.</span>
             </>
           ) : (
             <span>
-              No hay grupos que coincidan con “{busqueda}”.
+              No hay roles que coincidan con “{busqueda}”.
             </span>
           )}
         </div>
@@ -354,6 +367,10 @@ function Grupos() {
                     </>
                   )}
                 </p>
+
+                {motivoSinBorrar(grupo) && (
+                  <p className="grupo__aviso">{motivoSinBorrar(grupo)}</p>
+                )}
               </div>
 
               <div className="grupo__acciones">
@@ -369,6 +386,8 @@ function Grupos() {
                   type="button"
                   className="boton boton--peligro boton--chico"
                   onClick={() => setBorrando(grupo)}
+                  disabled={!!motivoSinBorrar(grupo)}
+                  title={motivoSinBorrar(grupo) || 'Borrar rol'}
                 >
                   Borrar
                 </button>
@@ -394,7 +413,7 @@ function Grupos() {
             setEditando(null)
             avisar(
               esNuevo
-                ? `Grupo "${grupo.nombre}" creado.`
+                ? `Rol "${grupo.nombre}" creado.`
                 : 'Cambios guardados.',
             )
           }}
@@ -410,7 +429,7 @@ function Grupos() {
               lista.filter((grupo) => grupo.id !== id),
             )
             setBorrando(null)
-            avisar('Grupo borrado.')
+            avisar('Rol borrado.')
           }}
         />
       )}

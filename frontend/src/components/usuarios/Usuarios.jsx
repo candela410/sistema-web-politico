@@ -82,15 +82,15 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
         </label>
 
         <fieldset>
-          <legend>Grupos</legend>
+          <legend>Roles</legend>
           {grupos.map((g) => (
             <label key={g.id} className="casilla-texto">
               <input type="checkbox" checked={form.grupos.includes(g.id)} onChange={() => alternarGrupo(g.id)} />
               <span>
                 {g.nombre}
-                <span className="opcional"> (grupo)</span>
+                <span className="opcional"> (rol)</span>
                 <small>
-                  {g.descripcion || (g.nombre === GRUPO_MILITANTES ? 'Solo carga encuestas.' : 'Permisos definidos en Gestión → Grupos.')}
+                  {g.descripcion || (g.nombre === GRUPO_MILITANTES ? 'Solo carga encuestas.' : 'Permisos definidos en Gestión → Roles.')}
                 </small>
               </span>
             </label>

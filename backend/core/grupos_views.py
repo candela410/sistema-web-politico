@@ -1,24 +1,59 @@
-"""API para listar, crear, editar y borrar grupos (con descripción y permisos)."""
+"""API para listar, crear, editar y borrar grupos (con descripción, permisos
+e integrantes).
 
-from django.contrib.auth.models import Permission
+Los grupos son los grupos de Django (auth.Group), los mismos que se asignan en
+Gestión → Usuarios: lo que se le asigna a un usuario allá se ve acá, y los
+permisos que se marcan acá son los que de verdad tiene ese usuario. La
+descripción (que auth.Group no tiene) se guarda en core.Grupo, enlazado a cada
+grupo de Django.
+"""
+
+from django.contrib.auth.models import Group, Permission
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
 from .api import crud, error, leer_json, requiere_permiso
-from .models import Grupo
+from .models import Grupo, Usuario
+
+# Grupo que el sistema usa por nombre (ver usuarios_views.GRUPO_MILITANTES)
+GRUPO_MILITANTES = "Militantes"
 
 
-def grupo_json(grupo):
+def _descripcion(group):
+    ficha = getattr(group, "ficha", None)
+    return ficha.descripcion if ficha else ""
+
+
+def _integrantes(group, campana):
+    """Usuarios del grupo. Los usuarios son de una campaña: se muestran los de la
+    campaña activa (o todos si no hay una elegida)."""
+    usuarios = group.user_set.all()
+    if campana is not None:
+        usuarios = usuarios.filter(campana=campana)
+    return [
+        {
+            "id": u.pk,
+            "nombre": f"{u.first_name} {u.last_name}".strip() or u.email,
+            "email": u.email,
+            "activo": u.is_active,
+        }
+        for u in usuarios.order_by("-is_active", "first_name", "last_name", "email")
+    ]
+
+
+def grupo_json(group, campana=None):
     return {
-        "id": grupo.id_grupo,
-        "nombre": grupo.nombre,
-        "descripcion": grupo.descripcion,
-        "permisos": sorted(grupo.permisos.values_list("id", flat=True)),
+        "id": group.pk,
+        "nombre": group.name,
+        "descripcion": _descripcion(group),
+        "permisos": sorted(p.pk for p in group.permissions.all() if p.content_type.app_label == "core"),
+        "usuarios": _integrantes(group, campana),
     }
 
 
-def validar_nombre(nombre, grupo=None):
+def validar_nombre(nombre, group=None):
     if not isinstance(nombre, str) or not nombre.strip():
         return "Ingresá el nombre del grupo."
 
@@ -27,10 +62,10 @@ def validar_nombre(nombre, grupo=None):
     if len(nombre) > 120:
         return "El nombre no puede superar los 120 caracteres."
 
-    repetido = Grupo.objects.filter(nombre__iexact=nombre)
+    repetido = Group.objects.filter(name__iexact=nombre)
 
-    if grupo:
-        repetido = repetido.exclude(pk=grupo.pk)
+    if group:
+        repetido = repetido.exclude(pk=group.pk)
 
     if repetido.exists():
         return "Ya existe un grupo con ese nombre."
@@ -66,13 +101,35 @@ def validar_permisos(ids):
     return list(permisos), None
 
 
+def _guardar_ficha(group, descripcion=None):
+    """Mantiene la ficha (descripción) enlazada al grupo de Django."""
+    ficha = getattr(group, "ficha", None)
+    if ficha is None:
+        ficha = Grupo(group=group)
+    ficha.nombre = group.name
+    if descripcion is not None:
+        ficha.descripcion = descripcion
+    ficha.save()
+
+
+def _asignar_permisos(group, permisos):
+    # Los permisos que no son de core (por ejemplo los de ver historial) no se
+    # editan desde esta pantalla: se conservan.
+    otros = list(group.permissions.exclude(content_type__app_label="core"))
+    group.permissions.set(permisos + otros)
+
+
 @require_http_methods(["GET", "POST"])
 # Los grupos son de todo el sistema, no de una campaña
 @requiere_permiso(crud("grupo"), campana=False)
 def grupos(request):
     if request.method == "GET":
-        lista = Grupo.objects.prefetch_related("permisos").order_by("nombre")
-        return JsonResponse({"grupos": [grupo_json(g) for g in lista]})
+        lista = (
+            Group.objects.select_related("ficha")
+            .prefetch_related("permissions__content_type")
+            .order_by("name")
+        )
+        return JsonResponse({"grupos": [grupo_json(g, request.campana) for g in lista]})
 
     datos = leer_json(request)
 
@@ -88,24 +145,30 @@ def grupos(request):
     if mensaje:
         return error(mensaje)
 
-    grupo = Grupo.objects.create(
-        nombre=datos["nombre"].strip(),
-        descripcion=(datos.get("descripcion") or "").strip(),
-    )
+    with transaction.atomic():
+        group = Group.objects.create(name=datos["nombre"].strip())
+        _guardar_ficha(group, (datos.get("descripcion") or "").strip())
+        if permisos:
+            _asignar_permisos(group, permisos)
 
-    if permisos:
-        grupo.permisos.set(permisos)
-
-    return JsonResponse({"grupo": grupo_json(grupo)}, status=201)
+    return JsonResponse({"grupo": grupo_json(group, request.campana)}, status=201)
 
 
 @require_http_methods(["PATCH", "DELETE"])
 @requiere_permiso(crud("grupo"), campana=False)
 def grupo_detalle(request, pk):
-    grupo = get_object_or_404(Grupo, pk=pk)
+    group = get_object_or_404(Group, pk=pk)
 
     if request.method == "DELETE":
-        grupo.delete()
+        if group.name == GRUPO_MILITANTES:
+            return error("El grupo Militantes lo usa el sistema y no se puede borrar.", 409)
+        cantidad = group.user_set.count()
+        if cantidad:
+            return error(
+                f"No se puede borrar: tiene {cantidad} usuario(s). Sacalos del grupo primero (Gestión → Usuarios).",
+                409,
+            )
+        group.delete()
         return JsonResponse({"ok": True})
 
     datos = leer_json(request)
@@ -113,7 +176,11 @@ def grupo_detalle(request, pk):
     if datos is None:
         return error("JSON inválido.")
 
-    mensaje = validar_nombre(datos.get("nombre", grupo.nombre), grupo)
+    nombre = datos.get("nombre", group.name)
+    if group.name == GRUPO_MILITANTES and isinstance(nombre, str) and nombre.strip() != group.name:
+        return error("El grupo Militantes lo usa el sistema y no se puede renombrar.", 409)
+
+    mensaje = validar_nombre(nombre, group)
     mensaje = mensaje or validar_descripcion(datos.get("descripcion"))
     permisos, mensaje_permisos = validar_permisos(datos.get("permisos"))
     mensaje = mensaje or mensaje_permisos
@@ -121,14 +188,13 @@ def grupo_detalle(request, pk):
     if mensaje:
         return error(mensaje)
 
-    grupo.nombre = datos.get("nombre", grupo.nombre).strip()
+    with transaction.atomic():
+        group.name = nombre.strip()
+        group.save()
+        descripcion = datos.get("descripcion")
+        _guardar_ficha(group, descripcion.strip() if descripcion is not None else None)
+        if permisos is not None:
+            _asignar_permisos(group, permisos)
 
-    if datos.get("descripcion") is not None:
-        grupo.descripcion = datos["descripcion"].strip()
-
-    grupo.save()
-
-    if permisos is not None:
-        grupo.permisos.set(permisos)
-
-    return JsonResponse({"grupo": grupo_json(grupo)})
+    group = Group.objects.select_related("ficha").prefetch_related("permissions__content_type").get(pk=group.pk)
+    return JsonResponse({"grupo": grupo_json(group, request.campana)})

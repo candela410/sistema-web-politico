@@ -82,21 +82,16 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
         </label>
 
         <fieldset>
-          <legend>Qué puede hacer</legend>
-          <label className="casilla-texto">
-            <input type="checkbox" checked={form.administra} onChange={cambiar('administra')} />
-            <span>
-              Administrar la campaña <span className="opcional">(permiso)</span>
-              <small>Mapa, cuestionarios, categorías, usuarios, permisos y actividad de esta campaña.</small>
-            </span>
-          </label>
+          <legend>Grupos</legend>
           {grupos.map((g) => (
             <label key={g.id} className="casilla-texto">
               <input type="checkbox" checked={form.grupos.includes(g.id)} onChange={() => alternarGrupo(g.id)} />
               <span>
                 {g.nombre}
                 <span className="opcional"> (grupo)</span>
-                <small>{g.nombre === GRUPO_MILITANTES ? 'Solo carga encuestas.' : 'Permisos definidos en Django.'}</small>
+                <small>
+                  {g.descripcion || (g.nombre === GRUPO_MILITANTES ? 'Solo carga encuestas.' : 'Permisos definidos en Gestión → Grupos.')}
+                </small>
               </span>
             </label>
           ))}

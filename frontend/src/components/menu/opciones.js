@@ -4,6 +4,7 @@ import {
   Flag,
   House,
   Map,
+  Network,
   ScrollText,
   ShieldCheck,
   Tags,
@@ -30,6 +31,13 @@ export const SECCIONES = [
     titulo: 'Territorio',
     opciones: [
       { ruta: '/mapa', texto: 'Mapa', descripcion: 'Barrios, zonas y rutas', icono: Map, permiso: 'core.view_zona' },
+      {
+        ruta: '/equipos',
+        texto: 'Equipos',
+        descripcion: 'Equipos y sus rutas',
+        icono: Network,
+        permiso: 'core.view_equipo',
+      },
     ],
   },
   {

@@ -194,7 +194,7 @@ function ConfirmarBorrado({ grupo, onBorrado, onCerrar }) {
     <Modal titulo="Borrar grupo" onCerrar={onCerrar}>
       <p className="modal__texto">
         ¿Seguro que querés borrar el grupo <b>{grupo.nombre}</b>?
-        Esta acción no se puede deshacer.
+        Solo se puede borrar si no tiene usuarios. Esta acción no se puede deshacer.
       </p>
 
       {error && (
@@ -246,7 +246,9 @@ function Grupos() {
     if (!grupos || !texto) return grupos ?? []
 
     return grupos.filter((grupo) =>
-      `${grupo.nombre} ${grupo.descripcion}`.toLowerCase().includes(texto),
+      `${grupo.nombre} ${grupo.descripcion} ${grupo.usuarios.map((u) => u.nombre).join(' ')}`
+        .toLowerCase()
+        .includes(texto),
     )
   }, [grupos, busqueda])
 
@@ -260,7 +262,7 @@ function Grupos() {
       <header className="pagina__encabezado">
         <div>
           <h1>Grupos</h1>
-          <p>Administrá los grupos del sistema.</p>
+          <p>Los mismos grupos que se asignan en Usuarios, con sus permisos e integrantes.</p>
 
           <span className="franja-corta" aria-hidden="true">
             <i />
@@ -287,7 +289,7 @@ function Grupos() {
 
         <input
           type="search"
-          placeholder="Buscar grupo por nombre o descripción"
+          placeholder="Buscar por nombre, descripción o usuario"
           aria-label="Buscar grupos"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -334,6 +336,23 @@ function Grupos() {
                   {grupo.permisos.length === 0
                     ? 'Sin permisos'
                     : `${grupo.permisos.length} permiso${grupo.permisos.length === 1 ? '' : 's'}`}
+                </p>
+
+                <p className="grupo__usuarios">
+                  {grupo.usuarios.length === 0 ? (
+                    'Sin usuarios'
+                  ) : (
+                    <>
+                      {grupo.usuarios.length === 1 ? 'Usuario' : 'Usuarios'} ({grupo.usuarios.length}):{' '}
+                      {grupo.usuarios.map((u, i) => (
+                        <span key={u.id} className={u.activo ? undefined : 'grupo__usuario--inactivo'}>
+                          {i > 0 && ', '}
+                          {u.nombre}
+                          {!u.activo && ' (inactivo)'}
+                        </span>
+                      ))}
+                    </>
+                  )}
                 </p>
               </div>
 

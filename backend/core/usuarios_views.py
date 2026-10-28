@@ -189,7 +189,10 @@ def usuarios(request):
         )
         return JsonResponse({
             "usuarios": [_usuario_json(u) for u in lista],
-            "grupos": [{"id": g.pk, "nombre": g.name} for g in Group.objects.order_by("name")],
+            "grupos": [
+                {"id": g.pk, "nombre": g.name, "descripcion": g.ficha.descripcion if hasattr(g, "ficha") else ""}
+                for g in Group.objects.select_related("ficha").order_by("name")
+            ],
         })
 
     datos = leer_json(request)

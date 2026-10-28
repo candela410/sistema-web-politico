@@ -201,6 +201,8 @@ class Equipo(models.Model):
         blank=True,
         related_name="equipos",
     )
+    # Un equipo con ruta no se borra: se desactiva
+    activo = models.BooleanField(default=True)
 
     class Meta:
         db_table = "equipos"
@@ -587,10 +589,23 @@ class RespuestaCargada(models.Model):
 
 
 class Grupo(models.Model):
+    # Ficha de un grupo de Django (auth.Group): guarda lo que auth.Group no
+    # tiene (la descripción). Los usuarios y los permisos de verdad viven en
+    # auth.Group (user.groups y group.permissions), los mismos que usa
+    # Gestión → Usuarios. Ver grupos_views.py.
     id_grupo = models.AutoField(primary_key=True)
+    group = models.OneToOneField(
+        "auth.Group",
+        on_delete=models.CASCADE,
+        db_column="id_group",
+        null=True,
+        blank=True,
+        related_name="ficha",
+    )
     nombre = models.CharField(max_length=120, unique=True)
     descripcion = models.TextField(blank=True, default="")
-    # Permisos de Django (tabla auth_permission) que tiene el grupo
+    # En desuso: los permisos del grupo son los de auth.Group.permissions.
+    # Se conserva para no perder lo cargado antes (lo copia la migración 0010).
     permisos = models.ManyToManyField(
         Permission,
         blank=True,

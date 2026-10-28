@@ -88,3 +88,15 @@
 .permisos-selector__seccion label { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; }
 .permisos-selector__seccion legend label { font-weight: 600; }
 .permisos-selector__acciones { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+
+.grupo__usuarios {
+  margin: 2px 0 0;
+  color: var(--lla-gris);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.grupo__usuario--inactivo {
+  opacity: 0.6;
+  text-decoration: line-through;
+}

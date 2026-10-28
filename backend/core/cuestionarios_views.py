@@ -92,9 +92,10 @@ def _limpiar_preguntas(preguntas):
         if not isinstance(p, dict):
             raise DatosInvalidos(f"La pregunta {n} no es válida.")
         enunciado = _texto(p.get("enunciado"), f"El texto de la pregunta {n}")
+        # Las preguntas se responden eligiendo una sola opción
         tipo = p.get("tipo", Pregunta.Tipo.UNA_OPCION)
-        if tipo not in Pregunta.Tipo.values:
-            raise DatosInvalidos(f"El tipo de la pregunta {n} no es válido: elegí una sola opción u opción múltiple.")
+        if tipo != Pregunta.Tipo.UNA_OPCION:
+            raise DatosInvalidos(f"El tipo de la pregunta {n} no es válido: las preguntas son de una sola opción.")
         crudas = p.get("opciones") or []
         if not isinstance(crudas, list):
             raise DatosInvalidos(f"Las opciones de la pregunta {n} no son válidas.")

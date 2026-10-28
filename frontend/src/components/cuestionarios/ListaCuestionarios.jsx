@@ -44,12 +44,16 @@ function ConfirmarBorrado({ cuestionario, onBorrado, onCerrar }) {
   )
 }
 
+const FILTROS_INICIALES = { categoria: '', estado: 'todos', encuestas: 'todas' }
+
 function ListaCuestionarios({ usuario }) {
   const navegar = useNavigate()
   const { state } = useLocation()
   const [cuestionarios, setCuestionarios] = useState(null)
   const [errorCarga, setErrorCarga] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [filtros, setFiltros] = useState(FILTROS_INICIALES)
+  const filtrando = busqueda.trim() || Object.entries(filtros).some(([k, v]) => v !== FILTROS_INICIALES[k])
   const [borrando, setBorrando] = useState(null)
   const [aviso, setAviso] = useState(state?.aviso ?? '')
 
@@ -66,13 +70,24 @@ function ListaCuestionarios({ usuario }) {
     return () => clearTimeout(t)
   }, [aviso])
 
+  // Categorías que aparecen en la lista, para el filtro
+  const categorias = useMemo(() => {
+    const unicas = new Map((cuestionarios ?? []).map((c) => [String(c.categoria.id), c.categoria.nombre]))
+    return [...unicas].sort((a, b) => a[1].localeCompare(b[1]))
+  }, [cuestionarios])
+
   const visibles = useMemo(() => {
     const texto = busqueda.trim().toLowerCase()
-    if (!cuestionarios || !texto) return cuestionarios ?? []
-    return cuestionarios.filter(
-      (c) => c.titulo.toLowerCase().includes(texto) || c.categoria.nombre.toLowerCase().includes(texto),
+    return (cuestionarios ?? []).filter(
+      (c) =>
+        (!texto || c.titulo.toLowerCase().includes(texto) || c.categoria.nombre.toLowerCase().includes(texto)) &&
+        (!filtros.categoria || String(c.categoria.id) === filtros.categoria) &&
+        (filtros.estado === 'todos' || c.activo === (filtros.estado === 'activos')) &&
+        (filtros.encuestas === 'todas' || (c.encuestas > 0) === (filtros.encuestas === 'con')),
     )
-  }, [cuestionarios, busqueda])
+  }, [cuestionarios, busqueda, filtros])
+
+  const filtrar = (campo) => (e) => setFiltros((f) => ({ ...f, [campo]: e.target.value }))
 
   return (
     <main className="pagina">
@@ -108,6 +123,48 @@ function ListaCuestionarios({ usuario }) {
         />
       </div>
 
+      <div className="filtros" role="group" aria-label="Filtros">
+        <label>
+          Categoría
+          <select className="entrada" value={filtros.categoria} onChange={filtrar('categoria')}>
+            <option value="">Todas</option>
+            {categorias.map(([id, nombre]) => (
+              <option key={id} value={id}>
+                {nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Estado
+          <select className="entrada" value={filtros.estado} onChange={filtrar('estado')}>
+            <option value="todos">Todos</option>
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+          </select>
+        </label>
+        <label>
+          Encuestas
+          <select className="entrada" value={filtros.encuestas} onChange={filtrar('encuestas')}>
+            <option value="todas">Todas</option>
+            <option value="con">Con encuestas</option>
+            <option value="sin">Sin encuestas</option>
+          </select>
+        </label>
+        {filtrando && (
+          <button
+            type="button"
+            className="enlace-boton filtros__limpiar"
+            onClick={() => {
+              setFiltros(FILTROS_INICIALES)
+              setBusqueda('')
+            }}
+          >
+            Limpiar filtros
+          </button>
+        )}
+      </div>
+
       {aviso && (
         <p className="aviso-ok" role="status">
           {aviso}
@@ -128,7 +185,7 @@ function ListaCuestionarios({ usuario }) {
               <span>Creá el primero con “+ Crear cuestionario”.</span>
             </>
           ) : (
-            <span>No hay cuestionarios que coincidan con “{busqueda}”.</span>
+            <span>No hay cuestionarios que coincidan con la búsqueda y los filtros.</span>
           )}
         </div>
       ) : (

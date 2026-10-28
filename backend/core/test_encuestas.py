@@ -120,3 +120,11 @@ class EncuestasTests(TestCase):
             "n": 3, "media": 3.33, "mediana": 4, "moda": [4.0], "desvio": 1.15,
             "minimo": 2.0, "maximo": 4.0, "rango": 2.0,
         })
+
+        # Gráficos: imágenes PNG hechas con pandas y matplotlib
+        for clave in ("barras", "columnas", "linea", "torta", "distribucion"):
+            r = self.client.get(f"/api/cuestionarios/{self.c.pk}/estadisticas/{una['id']}/{clave}.png")
+            self.assertEqual((r.status_code, r["Content-Type"]), (200, "image/png"), clave)
+            self.assertTrue(r.content.startswith(b"\x89PNG"), clave)
+        r = self.client.get(f"/api/cuestionarios/{self.c.pk}/estadisticas/{una['id']}/otro.png")
+        self.assertEqual(r.status_code, 404)

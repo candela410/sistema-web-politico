@@ -34,6 +34,11 @@ urlpatterns = [
     path("cuestionarios/", cuestionarios_views.cuestionarios, name="cuestionarios"),
     path("cuestionarios/<int:pk>/", cuestionarios_views.cuestionario_detalle, name="cuestionario"),
     path("cuestionarios/<int:pk>/estadisticas/", encuestas_views.estadisticas, name="cuestionario-estadisticas"),
+    path(
+        "cuestionarios/<int:pk>/estadisticas/<int:pregunta>/<str:clave>.png",
+        encuestas_views.grafico,
+        name="cuestionario-grafico",
+    ),
     path("responder/", encuestas_views.cuestionarios_para_responder, name="responder-lista"),
     path("responder/<int:pk>/", encuestas_views.responder, name="responder"),
     path("mapa/barrios/", mapa_views.barrios, name="mapa-barrios"),

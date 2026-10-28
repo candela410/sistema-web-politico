@@ -1,18 +1,17 @@
 """Carga de encuestas (vista del militante) y estadísticas por pregunta
 (vista de la administración)."""
 
-import statistics
-from collections import Counter
 from decimal import Decimal, InvalidOperation
 
 from django.db import IntegrityError, transaction
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
+from . import graficos
 from .api import error, leer_json, requiere_permiso
 from .bitacora import registrar
-from .models import Barrio, Cuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada, numero_de
+from .models import Barrio, Cuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada
 
 
 
@@ -173,50 +172,19 @@ def responder(request, pk):
 # ---------------------------------------------------------------------------
 
 
-def _medidas(valores):
-    """Medidas de una variable cuantitativa (una lista con un valor por respuesta)."""
-    if not valores:
-        return None
-    frecuencias = Counter(valores)
-    maximo = max(frecuencias.values())
-    return {
-        "n": len(valores),
-        "media": round(statistics.fmean(valores), 2),
-        "mediana": round(statistics.median(valores), 2),
-        # Puede haber más de una moda; si ningún valor se repite, no hay moda
-        "moda": [] if maximo == 1 and len(frecuencias) > 1 else sorted(v for v, f in frecuencias.items() if f == maximo),
-        "desvio": round(statistics.stdev(valores), 2) if len(valores) > 1 else 0,
-        "minimo": min(valores),
-        "maximo": max(valores),
-        "rango": max(valores) - min(valores),
-    }
-
-
 @require_http_methods(["GET"])
 @requiere_permiso("core.view_cuestionario", "core.view_encuesta")
 def estadisticas(request, pk):
     cuestionario = get_object_or_404(Cuestionario.objects.select_related("categoria"), pk=pk, campana=request.campana)
     total = cuestionario.encuestas.count()
     ultima = cuestionario.encuestas.order_by("-realizada_en").values_list("realizada_en", flat=True).first()
+    # Todas las respuestas en un DataFrame de pandas; de ahí salen las frecuencias
+    respuestas = graficos.respuestas_de(cuestionario)
 
     preguntas = []
     for p in cuestionario.preguntas.prefetch_related("opciones"):
-        opciones = list(p.opciones.all())
-        variable = Pregunta.variable_de(o.texto for o in opciones)
-        filas = RespuestaCargada.objects.filter(pregunta=p)
-        conteo = Counter(filas.values_list("opcion_id", flat=True))
-        # Personas que respondieron (en opción múltiple una persona elige varias)
-        respondidas = filas.values("encuesta").distinct().count()
-
-        lista = [
-            {
-                "id": o.pk,
-                "texto": o.texto,
-                "cantidad": conteo.get(o.pk, 0),
-                "porcentaje": round(100 * conteo.get(o.pk, 0) / respondidas, 1) if respondidas else 0,
-            }
-            for o in opciones
-        ]
+        tabla, variable, respondidas = graficos.tabla_de(p, respuestas)
+        tabla["porcentaje"] = (100 * tabla["cantidad"] / respondidas).round(1) if respondidas else 0
         dato = {
             "id": p.pk,
             "enunciado": p.enunciado,
@@ -225,14 +193,11 @@ def estadisticas(request, pk):
             "obligatoria": p.obligatoria,
             "respondidas": respondidas,
             "sin_responder": total - respondidas,
-            "elecciones": sum(conteo.values()),
+            "elecciones": int(tabla["cantidad"].sum()),
+            "opciones": tabla.to_dict("records"),
         }
         if variable == Pregunta.Variable.CUANTITATIVA:
-            for o in lista:
-                o["valor"] = numero_de(o["texto"])
-            lista.sort(key=lambda o: o["valor"])  # eje ordenado de menor a mayor
-            dato["medidas"] = _medidas([o["valor"] for o in lista for _ in range(o["cantidad"])])
-        dato["opciones"] = lista
+            dato["medidas"] = graficos.medidas(tabla)
         preguntas.append(dato)
 
     return JsonResponse({
@@ -242,3 +207,17 @@ def estadisticas(request, pk):
         "militantes": cuestionario.encuestas.exclude(usuario=None).values("usuario").distinct().count(),
         "preguntas": preguntas,
     })
+
+
+@require_http_methods(["GET"])
+@requiere_permiso("core.view_cuestionario", "core.view_encuesta")
+def grafico(request, pk, pregunta, clave):
+    """Imagen PNG de un gráfico de una pregunta, hecha con pandas y matplotlib."""
+    if clave not in graficos.GRAFICOS:
+        return error("Ese gráfico no existe.", 404)
+    cuestionario = get_object_or_404(Cuestionario, pk=pk, campana=request.campana)
+    p = get_object_or_404(cuestionario.preguntas.prefetch_related("opciones"), pk=pregunta)
+    tabla, _, respondidas = graficos.tabla_de(p, graficos.respuestas_de(cuestionario))
+    respuesta = HttpResponse(graficos.grafico_png(clave, tabla, respondidas), content_type="image/png")
+    respuesta["Cache-Control"] = "private, no-cache"
+    return respuesta

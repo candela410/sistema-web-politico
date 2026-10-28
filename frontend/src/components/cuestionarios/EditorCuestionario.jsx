@@ -11,12 +11,6 @@ import { variableDe } from './variable'
 // Máximo de preguntas por cuestionario (el backend controla lo mismo)
 const MAX_PREGUNTAS = 15
 
-const TIPOS = [
-  ['una_opcion', 'Una sola opción'],
-  ['opcion_multiple', 'Opción múltiple'],
-]
-
-
 let siguienteClave = 1
 const clave = () => `c${siguienteClave++}`
 
@@ -38,7 +32,7 @@ function desdeServidor(c) {
     preguntas: c.preguntas.map((p) => ({
       clave: clave(),
       enunciado: p.enunciado,
-      tipo: p.tipo,
+      tipo: 'una_opcion',
       obligatoria: p.obligatoria,
       opciones: p.opciones.map((o) => nuevaOpcion(o.texto)),
     })),
@@ -105,6 +99,10 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
       onClick={onActivar}
       aria-label={`Pregunta ${numero}`}
     >
+      {/* Arriba de la pregunta: qué tipo de variable es (se deduce de las opciones) */}
+      <span className={`variable variable--${variableDe(pregunta.opciones)} tarjeta-pregunta__variable`}>
+        {variableDe(pregunta.opciones) === 'cuantitativa' ? 'Cuantitativa' : 'Cualitativa'}
+      </span>
       <div className="tarjeta-pregunta__cabecera">
         <span className="tarjeta-pregunta__numero">{numero}</span>
         <textarea
@@ -116,22 +114,9 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
           aria-label={`Texto de la pregunta ${numero}`}
           disabled={bloqueado}
         />
-        <select
-          className="entrada tarjeta-pregunta__tipo"
-          value={pregunta.tipo}
-          onChange={(e) => cambiar({ tipo: e.target.value })}
-          aria-label={`Tipo de la pregunta ${numero}`}
-          disabled={bloqueado}
-        >
-          {TIPOS.map(([valor, texto]) => (
-            <option key={valor} value={valor}>
-              {texto}
-            </option>
-          ))}
-        </select>
       </div>
 
-      <ul className={`opciones${pregunta.tipo === 'opcion_multiple' ? ' opciones--multiple' : ''}`}>
+      <ul className="opciones">
         {pregunta.opciones.map((o, i) => (
           <li key={o.clave} className="opcion">
             <span className="opcion__circulo" aria-hidden="true" />
@@ -171,12 +156,6 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
           </li>
         )}
       </ul>
-
-      <p className={`variable variable--${variableDe(pregunta.opciones)}`}>
-        {variableDe(pregunta.opciones) === 'cuantitativa'
-          ? 'Variable cuantitativa: las opciones son números'
-          : 'Variable cualitativa: las opciones son texto'}
-      </p>
 
       <footer className="tarjeta-pregunta__pie">
         <label className="interruptor">

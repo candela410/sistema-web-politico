@@ -15,14 +15,37 @@ export async function usuarioActual() {
   }
 }
 
+// Marca de que en esta pestaña ya se inició sesión. Al abrir la página de
+// nuevo (pestaña nueva o navegador reabierto) no está, y se pide el login.
+const MARCA = 'sesion-iniciada'
+
+export function sesionDeEstaPestana() {
+  try {
+    return sessionStorage.getItem(MARCA) === '1'
+  } catch {
+    return false
+  }
+}
+
+function marcarSesion(valor) {
+  try {
+    if (valor) sessionStorage.setItem(MARCA, '1')
+    else sessionStorage.removeItem(MARCA)
+  } catch {
+    // Sin almacenamiento: se pedirá el login en cada recarga
+  }
+}
+
 export async function iniciarSesion(email, password, recordar = false) {
   const { usuario } = await pedir('/api/auth/login/', {
     method: 'POST',
     datos: { email, password, recordar },
   })
+  marcarSesion(true)
   return usuario
 }
 
 export async function cerrarSesion() {
+  marcarSesion(false)
   await pedir('/api/auth/logout/', { method: 'POST' })
 }

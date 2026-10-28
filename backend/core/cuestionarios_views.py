@@ -186,8 +186,8 @@ def cuestionario_detalle(request, pk):
     if request.method == "DELETE":
         if cuestionario.encuestas.exists():
             return error("No se puede borrar: ya tiene encuestas cargadas. Podés desactivarlo.", 409)
-        if cuestionario.militantes.exists():
-            return error("No se puede borrar: está asignado a militantes. Quitá las asignaciones primero.", 409)
+        if cuestionario.usuarios.exists():
+            return error("No se puede borrar: está asignado a usuarios. Quitá las asignaciones primero.", 409)
         cuestionario.delete()  # preguntas y opciones se borran en cascada
         registrar(request, cuestionario, "borrar", detalle=f"Borró el cuestionario {cuestionario.titulo}")
         return JsonResponse({"ok": True})

@@ -19,7 +19,7 @@ from django.views.decorators.http import require_http_methods
 
 from .api import ADMINISTRAR, SOLO_SUPERUSUARIO, crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, leer, registrar
-from .models import Militante, Usuario
+from .models import Usuario
 
 GRUPO_MILITANTES = "Militantes"
 ACCIONES = {"view": "Ver", "add": "Crear", "change": "Editar", "delete": "Borrar"}
@@ -33,7 +33,6 @@ POR_PAGINA = 50
 
 
 def _usuario_json(u):
-    militante = getattr(u, "militante", None)
     return {
         "id": u.pk,
         "email": u.email,
@@ -43,9 +42,9 @@ def _usuario_json(u):
         "es_superusuario": u.is_superuser,
         "grupos": [{"id": g.pk, "nombre": g.name} for g in u.groups.all()],
         "administra": _administra(u),
-        "militante": {"documento": militante.documento or "", "telefono": militante.telefono or ""}
-        if militante
-        else None,
+        "documento": u.documento or "",
+        "telefono": u.telefono or "",
+        "direccion": u.direccion or "",
         "ultimo_ingreso": u.last_login.isoformat() if u.last_login else None,
         "alta": u.date_joined.isoformat(),
     }
@@ -62,7 +61,6 @@ def _administra(u):
 
 
 def _foto(u):
-    militante = getattr(u, "militante", None)
     return {
         "Administra la campaña": "Sí" if _administra(u) else "No",
         "Email": u.email,
@@ -70,8 +68,9 @@ def _foto(u):
         "Apellido": u.last_name,
         "Activo": "Sí" if u.is_active else "No",
         "Grupos": ", ".join(sorted(u.groups.values_list("name", flat=True))),
-        "Documento": (militante.documento or "") if militante else "",
-        "Teléfono": (militante.telefono or "") if militante else "",
+        "Documento": u.documento or "",
+        "Teléfono": u.telefono or "",
+        "Dirección": u.direccion or "",
     }
 
 
@@ -130,12 +129,17 @@ def _limpiar(datos, usuario=None):
     if not isinstance(activo, bool):
         return None, "El estado debe ser verdadero o falso."
 
-    militante = datos.get("militante") or {}
-    if not isinstance(militante, dict):
-        return None, "Los datos de militante no son válidos."
-    documento = str(militante.get("documento") or "").replace(".", "").replace(" ", "").strip()[:30]
-    if documento and Militante.objects.filter(documento=documento).exclude(usuario=usuario).exists():
-        return None, "Ya hay un militante con ese documento."
+    # Datos de la persona: directo en el usuario (antes en la tabla militantes)
+    def dato(campo):
+        valor = datos.get(campo, getattr(usuario, campo) if usuario else "")
+        return str(valor or "").strip()
+
+    documento = dato("documento").replace(".", "").replace(" ", "")[:30]
+    repetido = Usuario.objects.filter(documento=documento)
+    if usuario:
+        repetido = repetido.exclude(pk=usuario.pk)
+    if documento and repetido.exists():
+        return None, "Ya hay un usuario con ese documento."
 
     return {
         "email": email,
@@ -146,7 +150,8 @@ def _limpiar(datos, usuario=None):
         "administra": administra,
         "activo": activo,
         "documento": documento or None,
-        "telefono": str(militante.get("telefono") or "").strip()[:40] or None,
+        "telefono": dato("telefono")[:40] or None,
+        "direccion": dato("direccion") or None,
     }, None
 
 
@@ -155,6 +160,9 @@ def _guardar(usuario, d):
     usuario.first_name = d["nombre"]
     usuario.last_name = d["apellido"]
     usuario.is_active = d["activo"]
+    usuario.documento = d["documento"]
+    usuario.telefono = d["telefono"]
+    usuario.direccion = d["direccion"]
     if d["password"]:
         usuario.set_password(d["password"])
     usuario.save()
@@ -164,17 +172,6 @@ def _guardar(usuario, d):
         usuario.user_permissions.add(_permiso_administrar())
     else:
         usuario.user_permissions.remove(_permiso_administrar())
-    # Quien está en el grupo Militantes tiene su ficha de militante
-    if any(g.name == GRUPO_MILITANTES for g in d["grupos"]) or hasattr(usuario, "militante"):
-        militante, _ = Militante.objects.get_or_create(
-            usuario=usuario, defaults={"nombre": d["nombre"], "apellido": d["apellido"] or "-"}
-        )
-        militante.nombre = d["nombre"]
-        militante.apellido = d["apellido"] or "-"
-        militante.documento = d["documento"]
-        militante.telefono = d["telefono"]
-        militante.activo = d["activo"]
-        militante.save()
 
 
 @require_http_methods(["GET", "POST"])
@@ -184,7 +181,6 @@ def usuarios(request):
         lista = (
             Usuario.objects.filter(campana=request.campana)
             .prefetch_related("groups")
-            .select_related("militante")
             .order_by("-is_active", "first_name", "last_name")
         )
         return JsonResponse({
@@ -219,7 +215,6 @@ def usuario_detalle(request, pk):
         antes = _foto(usuario)
         usuario.is_active = False
         usuario.save(update_fields=["is_active"])
-        Militante.objects.filter(usuario=usuario).update(activo=False)
         registrar(request, usuario, "editar", cambios=diferencias(antes, _foto(usuario)), detalle="Desactivó el usuario")
         return JsonResponse({"usuario": _usuario_json(usuario)})
 

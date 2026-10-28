@@ -249,47 +249,25 @@ class Usuario(AbstractUser):
         related_name="usuarios",
     )
 
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username"]
-
-    class Meta:
-        db_table = "usuarios"
-        verbose_name = "usuario"
-
-
-class Militante(models.Model):
-    id_militante = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
-    apellido = models.CharField(max_length=100)
+    # Datos de la persona (antes estaban en la tabla militantes)
     documento = models.CharField(max_length=30, unique=True, null=True, blank=True)
     telefono = models.CharField(max_length=40, blank=True, null=True)
     direccion = models.TextField(blank=True, null=True)
-    activo = models.BooleanField(default=True)
-
-    usuario = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        db_column="id_usuario",
-        null=True,
-        blank=True,
-        related_name="militante",
-    )
     equipo = models.ForeignKey(
         Equipo,
         on_delete=models.SET_NULL,
         db_column="id_equipo",
         null=True,
         blank=True,
-        related_name="militantes",
+        related_name="usuarios",
     )
 
-    class Meta:
-        db_table = "militantes"
-        verbose_name = "militante"
-        ordering = ["apellido", "nombre"]
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
 
-    def __str__(self):
-        return f"{self.nombre} {self.apellido}"
+    class Meta:
+        db_table = "usuarios"
+        verbose_name = "usuario"
 
 
 class Encuestado(models.Model):
@@ -384,10 +362,10 @@ class Cuestionario(models.Model):
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
 
-    militantes = models.ManyToManyField(
-        Militante,
+    usuarios = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
         through="AsignacionCuestionario",
-        related_name="cuestionarios",
+        related_name="cuestionarios_asignados",
     )
 
     class Meta:
@@ -399,10 +377,10 @@ class Cuestionario(models.Model):
 
 
 class AsignacionCuestionario(models.Model):
-    militante = models.ForeignKey(
-        Militante,
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        db_column="id_militante",
+        db_column="id_usuario",
     )
     cuestionario = models.ForeignKey(
         Cuestionario,
@@ -412,12 +390,12 @@ class AsignacionCuestionario(models.Model):
     asignado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "militantexcuestionarios"
+        db_table = "usuariosxcuestionarios"
         verbose_name = "asignación de cuestionario"
         constraints = [
             models.UniqueConstraint(
-                fields=["militante", "cuestionario"],
-                name="uq_militante_cuestionario",
+                fields=["usuario", "cuestionario"],
+                name="uq_usuario_cuestionario",
             )
         ]
 
@@ -505,7 +483,7 @@ class Opcion(models.Model):
 # ---------------------------------------------------------------------------
 
 
-# Una visita: un militante le toma un cuestionario a un encuestado.
+# Una visita: un usuario (militante) le toma un cuestionario a un encuestado.
 # Guarda quién cargó la encuesta, cuándo y dónde (para el mapa).
 class Encuesta(models.Model):
     id_encuesta = models.AutoField(primary_key=True)
@@ -521,13 +499,14 @@ class Encuesta(models.Model):
         db_column="id_cuestionario",
         related_name="encuestas",
     )
-    militante = models.ForeignKey(
-        Militante,
+    # Quién cargó la encuesta
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        db_column="id_militante",
+        db_column="id_usuario",
         null=True,
         blank=True,
-        related_name="encuestas",
+        related_name="encuestas_cargadas",
     )
     latitud = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitud = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)

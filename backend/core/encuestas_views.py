@@ -152,7 +152,7 @@ def responder(request, pk):
             encuesta = Encuesta.objects.create(
                 encuestado=encuestado,
                 cuestionario=cuestionario,
-                militante=getattr(request.user, "militante", None),
+                usuario=request.user,
                 latitud=latitud,
                 longitud=longitud,
             )
@@ -239,6 +239,6 @@ def estadisticas(request, pk):
         "cuestionario": {"id": cuestionario.pk, "titulo": cuestionario.titulo, "categoria": cuestionario.categoria.nombre},
         "total_encuestas": total,
         "ultima_encuesta": ultima.isoformat() if ultima else None,
-        "militantes": cuestionario.encuestas.exclude(militante=None).values("militante").distinct().count(),
+        "militantes": cuestionario.encuestas.exclude(usuario=None).values("usuario").distinct().count(),
         "preguntas": preguntas,
     })

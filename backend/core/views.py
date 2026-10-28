@@ -22,7 +22,7 @@ def usuario_json(request):
         "nombre": usuario.first_name,
         "apellido": usuario.last_name,
         "es_superusuario": usuario.is_superuser,
-        "es_militante": hasattr(usuario, "militante"),
+        "es_militante": usuario.groups.filter(name="Militantes").exists(),
         "grupos": list(usuario.groups.values_list("name", flat=True)),
         # Permisos de Django ("core.add_cuestionario", …): el frontend arma el menú con esto
         "permisos": sorted(permisos_de(usuario)),

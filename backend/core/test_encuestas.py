@@ -1,7 +1,7 @@
 from django.contrib.auth.models import Group
 from django.test import Client, TestCase
 
-from .models import Campana, Categoria, Cuestionario, Encuesta, Encuestado, Militante, Opcion, Pregunta, Usuario
+from .models import Campana, Categoria, Cuestionario, Encuesta, Encuestado, Opcion, Pregunta, Usuario
 
 
 class EncuestasTests(TestCase):
@@ -12,7 +12,7 @@ class EncuestasTests(TestCase):
             username="mili", email="mili@ejemplo.com", password="clave-segura-123", campana=self.campana
         )
         usuario.groups.add(Group.objects.get(name="Militantes"))
-        self.militante = Militante.objects.create(nombre="Juan", apellido="Pérez", usuario=usuario)
+        self.militante = usuario
         self.client = Client(enforce_csrf_checks=True)
         self.client.get("/api/auth/csrf/")
         self.login("mili@ejemplo.com")
@@ -69,7 +69,7 @@ class EncuestasTests(TestCase):
         r = self.responder("30.123.456", "Seguridad", ["Radio", "Redes"], "4", latitud=-24.79, longitud=-65.41)
         self.assertEqual(r.status_code, 201, r.content)
         encuesta = Encuesta.objects.get()
-        self.assertEqual(encuesta.militante, self.militante)
+        self.assertEqual(encuesta.usuario, self.militante)
         self.assertEqual(encuesta.encuestado.documento, "30123456")
         self.assertEqual(encuesta.respuestas.count(), 4)  # 1 + 2 + 1
         self.assertEqual(float(encuesta.latitud), -24.79)

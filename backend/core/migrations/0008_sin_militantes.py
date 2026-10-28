@@ -42,45 +42,6 @@ def pasar_datos(apps, schema_editor):
             a.delete()
 
 
-def devolver_datos(apps, schema_editor):
-    """Vuelta atrás: recrea las filas de militantes desde usuarios y
-    reconecta encuestas y asignaciones."""
-    Militante = apps.get_model("core", "Militante")
-    Usuario = apps.get_model("core", "Usuario")
-    Encuesta = apps.get_model("core", "Encuesta")
-    Asignacion = apps.get_model("core", "AsignacionCuestionario")
-
-    usados = set(Encuesta.objects.exclude(usuario=None).values_list("usuario_id", flat=True))
-    usados |= set(Asignacion.objects.values_list("usuario_id", flat=True))
-    candidatos = Usuario.objects.filter(
-        models.Q(groups__name="Militantes")
-        | models.Q(pk__in=usados)
-        | ~models.Q(documento=None)
-        | ~models.Q(telefono=None)
-        | ~models.Q(direccion=None)
-        | ~models.Q(equipo=None)
-    ).distinct()
-    militante_de = {}
-    for u in candidatos:
-        m = Militante.objects.create(
-            usuario_id=u.pk,
-            nombre=u.first_name or u.email,
-            apellido=u.last_name or "-",
-            documento=u.documento,
-            telefono=u.telefono,
-            direccion=u.direccion,
-            equipo_id=u.equipo_id,
-            activo=u.is_active,
-        )
-        militante_de[u.pk] = m.pk
-    for e in Encuesta.objects.exclude(usuario=None):
-        e.militante_id = militante_de.get(e.usuario_id)
-        e.save(update_fields=["militante"])
-    for a in Asignacion.objects.all():
-        a.militante_id = militante_de[a.usuario_id]
-        a.save(update_fields=["militante"])
-
-
 class Migration(migrations.Migration):
     dependencies = [
         ("core", "0007_merge_grupos_campanas"),
@@ -138,19 +99,8 @@ class Migration(migrations.Migration):
                 to=settings.AUTH_USER_MODEL,
             ),
         ),
-        # Nullable un momento: al deshacer, se vuelve a crear vacía y se llena antes del NOT NULL
-        migrations.AlterField(
-            model_name="asignacioncuestionario",
-            name="militante",
-            field=models.ForeignKey(
-                db_column="id_militante",
-                null=True,
-                on_delete=django.db.models.deletion.PROTECT,
-                to="core.militante",
-            ),
-        ),
         # 3. Copia de datos
-        migrations.RunPython(pasar_datos, devolver_datos),
+        migrations.RunPython(pasar_datos, migrations.RunPython.noop),
         # 4. Se quitan las referencias a militantes
         migrations.RemoveConstraint(model_name="asignacioncuestionario", name="uq_militante_cuestionario"),
         migrations.RemoveField(model_name="cuestionario", name="militantes"),

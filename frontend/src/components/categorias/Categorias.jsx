@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as api from '../../api/categorias'
 import Modal from '../comunes/Modal'
+import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './categorias.css'
 
 const ordenar = (lista) => [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
@@ -133,6 +134,7 @@ function Categorias() {
       (c) => c.nombre.toLowerCase().includes(texto) || c.descripcion.toLowerCase().includes(texto),
     )
   }, [categorias, busqueda])
+  const paginado = usePaginado(visibles)
 
   function avisar(texto) {
     setAviso(texto)
@@ -195,27 +197,30 @@ function Categorias() {
           )}
         </div>
       ) : (
-        <ul className="categorias-lista">
-          {visibles.map((c) => (
-            <li key={c.id} className="categoria">
-              <div className="categoria__texto">
-                <h3>{c.nombre}</h3>
-                {c.descripcion && <p>{c.descripcion}</p>}
-                <span className="categoria__uso">
-                  {c.cuestionarios === 1 ? '1 cuestionario' : `${c.cuestionarios} cuestionarios`}
-                </span>
-              </div>
-              <div className="categoria__acciones">
-                <button type="button" className="boton boton--borde boton--chico" onClick={() => setEditando(c)}>
-                  Editar
-                </button>
-                <button type="button" className="boton boton--peligro boton--chico" onClick={() => setBorrando(c)}>
-                  Borrar
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="categorias-lista">
+            {paginado.items.map((c) => (
+              <li key={c.id} className="categoria">
+                <div className="categoria__texto">
+                  <h3>{c.nombre}</h3>
+                  {c.descripcion && <p>{c.descripcion}</p>}
+                  <span className="categoria__uso">
+                    {c.cuestionarios === 1 ? '1 cuestionario' : `${c.cuestionarios} cuestionarios`}
+                  </span>
+                </div>
+                <div className="categoria__acciones">
+                  <button type="button" className="boton boton--borde boton--chico" onClick={() => setEditando(c)}>
+                    Editar
+                  </button>
+                  <button type="button" className="boton boton--peligro boton--chico" onClick={() => setBorrando(c)}>
+                    Borrar
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <Paginacion {...paginado} />
+        </>
       )}
 
       {editando && (

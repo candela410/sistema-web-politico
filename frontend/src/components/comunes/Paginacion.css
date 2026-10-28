@@ -1,0 +1,11 @@
+.paginacion {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin: 18px 0 8px;
+  color: var(--lla-gris);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}

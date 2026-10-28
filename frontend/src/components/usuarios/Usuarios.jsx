@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import * as api from '../../api/usuarios'
 import { tiene } from '../../permisos'
 import Modal from '../comunes/Modal'
+import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './usuarios.css'
 
 const GRUPO_MILITANTES = 'Militantes'
@@ -168,6 +169,7 @@ function Usuarios({ usuario: yo }) {
     if (!texto) return lista
     return lista.filter((u) => `${u.nombre} ${u.apellido} ${u.email}`.toLowerCase().includes(texto))
   }, [datos, busqueda])
+  const paginado = usePaginado(visibles)
 
   const reemplazar = (u, nuevo) =>
     setDatos((d) => ({ ...d, usuarios: nuevo ? [u, ...d.usuarios] : d.usuarios.map((x) => (x.id === u.id ? u : x)) }))
@@ -238,54 +240,57 @@ function Usuarios({ usuario: yo }) {
           <b>{datos.usuarios.length ? 'No hay usuarios que coincidan.' : 'Todavía no hay usuarios en esta campaña.'}</b>
         </div>
       ) : (
-        <ul className="tarjetas-lista">
-          {visibles.map((u) => (
-            <li key={u.id} className={`tarjeta-fila${u.activo ? '' : ' tarjeta-fila--apagada'}`}>
-              <span className="avatar" aria-hidden="true">
-                {(u.nombre[0] ?? u.email[0]).toUpperCase()}
-                {(u.apellido[0] ?? '').toUpperCase()}
-              </span>
-              <div className="tarjeta-fila__texto">
-                <h3>
-                  {`${u.nombre} ${u.apellido}`.trim() || u.email}
-                  {u.id === yo.id && <span className="etiqueta etiqueta--verde">Vos</span>}
-                  {!u.activo && <span className="etiqueta">Desactivado</span>}
-                </h3>
-                <p>{u.email}</p>
-                <span className="tarjeta-fila__datos usuarios__grupos">
-                  {u.administra && <span className="etiqueta etiqueta--violeta">Administra la campaña</span>}
-                  {u.grupos.map((g) => (
-                    <span
-                      key={g.id}
-                      className="etiqueta etiqueta--magenta"
-                    >
-                      {g.nombre}
-                    </span>
-                  ))}
-                  <span>
-                    {u.ultimo_ingreso ? `Último ingreso: ${formatoFecha.format(new Date(u.ultimo_ingreso))}` : 'Nunca ingresó'}
-                  </span>
+        <>
+          <ul className="tarjetas-lista">
+            {paginado.items.map((u) => (
+              <li key={u.id} className={`tarjeta-fila${u.activo ? '' : ' tarjeta-fila--apagada'}`}>
+                <span className="avatar" aria-hidden="true">
+                  {(u.nombre[0] ?? u.email[0]).toUpperCase()}
+                  {(u.apellido[0] ?? '').toUpperCase()}
                 </span>
-              </div>
-              {puedeEditar && (
-                <div className="tarjeta-fila__acciones">
-                  <button type="button" className="boton boton--borde boton--chico" onClick={() => setEditando(u)}>
-                    Editar
-                  </button>
-                  {u.id !== yo.id && (
-                    <button
-                      type="button"
-                      className={`boton boton--chico ${u.activo ? 'boton--peligro' : 'boton--borde'}`}
-                      onClick={() => cambiarEstado(u)}
-                    >
-                      {u.activo ? 'Desactivar' : 'Activar'}
-                    </button>
-                  )}
+                <div className="tarjeta-fila__texto">
+                  <h3>
+                    {`${u.nombre} ${u.apellido}`.trim() || u.email}
+                    {u.id === yo.id && <span className="etiqueta etiqueta--verde">Vos</span>}
+                    {!u.activo && <span className="etiqueta">Desactivado</span>}
+                  </h3>
+                  <p>{u.email}</p>
+                  <span className="tarjeta-fila__datos usuarios__grupos">
+                    {u.administra && <span className="etiqueta etiqueta--violeta">Administra la campaña</span>}
+                    {u.grupos.map((g) => (
+                      <span
+                        key={g.id}
+                        className="etiqueta etiqueta--magenta"
+                      >
+                        {g.nombre}
+                      </span>
+                    ))}
+                    <span>
+                      {u.ultimo_ingreso ? `Último ingreso: ${formatoFecha.format(new Date(u.ultimo_ingreso))}` : 'Nunca ingresó'}
+                    </span>
+                  </span>
                 </div>
-              )}
-            </li>
-          ))}
-        </ul>
+                {puedeEditar && (
+                  <div className="tarjeta-fila__acciones">
+                    <button type="button" className="boton boton--borde boton--chico" onClick={() => setEditando(u)}>
+                      Editar
+                    </button>
+                    {u.id !== yo.id && (
+                      <button
+                        type="button"
+                        className={`boton boton--chico ${u.activo ? 'boton--peligro' : 'boton--borde'}`}
+                        onClick={() => cambiarEstado(u)}
+                      >
+                        {u.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          <Paginacion {...paginado} />
+        </>
       )}
 
       {editando && (

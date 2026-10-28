@@ -7,7 +7,7 @@ import './responder.css'
 // Vista del militante: carga una encuesta (datos de la persona + respuestas),
 // con el mismo formato de tarjetas que el editor.
 
-const ENCUESTADO_VACIO = { documento: '', nombre: '', apellido: '', telefono: '', direccion: '' }
+const ENCUESTADO_VACIO = { documento: '', nombre: '', apellido: '' }
 
 function Pregunta({ pregunta, numero, elegidas, error, onCambio }) {
   const multiple = pregunta.tipo === 'opcion_multiple'
@@ -205,7 +205,7 @@ function ResponderCuestionario() {
         <fieldset className="tarjeta-form datos-encuestado">
           <legend className="respuesta__enunciado">Datos de la persona encuestada</legend>
           <div className="datos-encuestado__grilla">
-            <label>
+            <label className="datos-encuestado__ancho">
               <span>
                 Documento <span className="respuesta__obligatoria">*</span>
               </span>
@@ -220,20 +220,12 @@ function ResponderCuestionario() {
               />
             </label>
             <label>
-              Teléfono
-              <input className="entrada" type="tel" value={encuestado.telefono} onChange={cambiarEncuestado('telefono')} />
-            </label>
-            <label>
               Nombre
               <input className="entrada" value={encuestado.nombre} onChange={cambiarEncuestado('nombre')} />
             </label>
             <label>
               Apellido
               <input className="entrada" value={encuestado.apellido} onChange={cambiarEncuestado('apellido')} />
-            </label>
-            <label className="datos-encuestado__ancho">
-              Dirección
-              <input className="entrada" value={encuestado.direccion} onChange={cambiarEncuestado('direccion')} />
             </label>
           </div>
         </fieldset>

@@ -65,7 +65,8 @@ def _limpiar_encuestado(datos):
     if len(documento) > 30:
         raise RespuestaInvalida("El documento es muy largo.")
     limpio = {"documento": documento}
-    for campo, maximo in (("nombre", 100), ("apellido", 100), ("telefono", 40), ("direccion", 500)):
+    # A la persona encuestada solo se le pide documento, nombre y apellido
+    for campo, maximo in (("nombre", 100), ("apellido", 100)):
         valor = str(datos.get(campo) or "").strip()[:maximo]
         if valor:
             limpio[campo] = valor

@@ -16,7 +16,8 @@ from django.views.decorators.http import require_http_methods
 
 from .api import error, leer_json, requiere_permiso
 from .bitacora import registrar
-from .models import AsignacionCuestionario, Cuestionario, Equipo, Usuario
+from .equipos_views import equipos_de_campana
+from .models import AsignacionCuestionario, Cuestionario, Usuario
 from .usuarios_views import GRUPO_MILITANTES
 
 PERMISOS = {
@@ -105,7 +106,7 @@ def _respuesta(request, cuestionario):
         Usuario.objects.filter(pk__in=asignados - ids_militantes).order_by("first_name", "last_name", "email")
     )
 
-    equipos = list(Equipo.objects.filter(campana=request.campana).order_by("nombre"))
+    equipos = list(equipos_de_campana(request.campana).order_by("nombre"))
     por_equipo = {e.pk: [] for e in equipos}
     sin_equipo = []
     for u, elegible in [(u, True) for u in militantes] + [(u, False) for u in viejos]:

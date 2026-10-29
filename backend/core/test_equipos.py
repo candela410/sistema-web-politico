@@ -8,14 +8,18 @@ class EquiposTests(TestCase):
     def setUp(self):
         self.campana = Campana.objects.create(nombre="Campaña de prueba")
         self.otra = Campana.objects.create(nombre="Otra campaña")
-        self.ruta = Ruta.objects.create(nombre="Ruta centro", campana=self.campana, paradas=[])
-        self.ruta2 = Ruta.objects.create(nombre="Ruta norte", campana=self.campana, paradas=[])
-        self.ruta_ajena = Ruta.objects.create(nombre="Ruta ajena", campana=self.otra, paradas=[])
+        self.ruta = Ruta.objects.create(nombre="Ruta centro", paradas=[])
+        self.ruta2 = Ruta.objects.create(nombre="Ruta norte", paradas=[])
+        self.ruta_ajena = Ruta.objects.create(nombre="Ruta ajena", paradas=[])
         Usuario.objects.create_superuser(username="ana", email="ana@ejemplo.com", password="clave-segura-123")
         self.client = Client(enforce_csrf_checks=True)
         self.client.get("/api/auth/csrf/")
         self.enviar("post", "/api/auth/login/", {"email": "ana@ejemplo.com", "password": "clave-segura-123"})
         self.enviar("post", "/api/campanas/activa/", {"campana": self.campana.pk})
+        # La ruta ajena es de la otra campaña porque la recorre un equipo con usuarios de esa campaña
+        ajeno = Equipo.objects.create(nombre="Equipo ajeno", ruta=self.ruta_ajena)
+        self.militante("de-otra@x.com", campana=self.otra, equipo=ajeno)
+        self.ajeno = ajeno
 
     def enviar(self, metodo, url, datos=None):
         csrf = self.client.cookies["csrftoken"].value
@@ -60,28 +64,25 @@ class EquiposTests(TestCase):
             r = self.enviar("post", "/api/equipos/", datos)
             self.assertEqual(r.status_code, 400)
             self.assertIn("ruta", r.json()["error"])
-        self.assertFalse(Equipo.objects.exists())
+        self.assertFalse(Equipo.objects.exclude(pk=self.ajeno.pk).exists())
 
     def test_no_se_puede_quitar_la_ruta_al_editar(self):
         equipo = self.crear().json()["equipo"]
         r = self.enviar("patch", f"/api/equipos/{equipo['id']}/", {"nombre": "Norte", "ruta": None})
         self.assertEqual(r.status_code, 400)
-        self.assertEqual(Equipo.objects.get().ruta_id, self.ruta.pk)
+        self.assertEqual(Equipo.objects.get(pk=equipo["id"]).ruta_id, self.ruta.pk)
 
     def test_editar_sin_ruta_en_el_cuerpo_conserva_la_ruta(self):
-        equipo = Equipo.objects.create(nombre="Oeste", campana=self.campana, ruta=self.ruta)
+        equipo = Equipo.objects.create(nombre="Oeste", ruta=self.ruta)
         r = self.enviar("patch", f"/api/equipos/{equipo.pk}/", {"nombre": "Oeste 2"})
         self.assertEqual(r.json()["equipo"]["ruta"], self.ruta.pk)
 
-    def test_nombre_obligatorio_y_unico_por_campana(self):
+    def test_nombre_obligatorio_y_unico(self):
         self.assertEqual(self.enviar("post", "/api/equipos/", {"nombre": "  ", "ruta": self.ruta.pk}).status_code, 400)
         self.crear("Sur")
         r = self.crear("sur")
         self.assertEqual(r.status_code, 400)
         self.assertIn("Ya existe", r.json()["error"])
-        # En otra campaña el mismo nombre es válido
-        Equipo.objects.create(nombre="Este", campana=self.otra)
-        self.assertEqual(self.crear("Este").status_code, 201)
 
     def test_ruta_de_otra_campana_o_inexistente(self):
         for ruta in (self.ruta_ajena.pk, 9999, "abc"):
@@ -102,7 +103,7 @@ class EquiposTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertFalse(r.json()["equipo"]["activo"])
         self.assertEqual(r.json()["equipo"]["ruta"], self.ruta.pk)  # conserva la ruta
-        self.assertFalse(Equipo.objects.get().activo)
+        self.assertFalse(Equipo.objects.get(pk=equipo["id"]).activo)
 
         r = self.enviar("patch", url, {"activo": True})
         self.assertTrue(r.json()["equipo"]["activo"])
@@ -112,32 +113,17 @@ class EquiposTests(TestCase):
         r = self.enviar("patch", f"/api/equipos/{equipo['id']}/", {"activo": "no"})
         self.assertEqual(r.status_code, 400)
 
-    def test_no_se_activa_un_equipo_sin_ruta(self):
-        equipo = Equipo.objects.create(nombre="Viejo", campana=self.campana, activo=False)
-        url = f"/api/equipos/{equipo.pk}/"
-        self.assertEqual(self.enviar("patch", url, {"activo": True}).status_code, 400)
-        # Con ruta sí
-        r = self.enviar("patch", url, {"nombre": "Viejo", "ruta": self.ruta.pk, "activo": True})
-        self.assertEqual(r.status_code, 200)
-
-    def test_equipo_sin_ruta_si_se_puede_borrar(self):
-        # Pasa cuando se borra la ruta (SET_NULL) o con datos anteriores
-        equipo = Equipo.objects.create(nombre="Huérfano", campana=self.campana)
-        self.assertEqual(self.enviar("delete", f"/api/equipos/{equipo.pk}/").status_code, 200)
-        self.assertFalse(Equipo.objects.exists())
-
     def test_no_ve_ni_toca_equipos_de_otra_campana(self):
-        ajeno = Equipo.objects.create(nombre="Ajeno", campana=self.otra)
+        # El equipo ajeno tiene usuarios de la otra campaña
         self.assertEqual(self.client.get("/api/equipos/").json()["equipos"], [])
-        self.assertEqual(self.enviar("patch", f"/api/equipos/{ajeno.pk}/", {"activo": False}).status_code, 404)
-        self.assertEqual(self.enviar("delete", f"/api/equipos/{ajeno.pk}/").status_code, 404)
+        self.assertEqual(self.enviar("patch", f"/api/equipos/{self.ajeno.pk}/", {"activo": False}).status_code, 404)
+        self.assertEqual(self.enviar("delete", f"/api/equipos/{self.ajeno.pk}/").status_code, 404)
 
-    def test_borrar_equipo_deja_militantes_sin_equipo(self):
-        equipo = Equipo.objects.create(nombre="Centro", campana=self.campana)
-        militante = self.militante("juan@x.com", equipo=equipo)
-        self.assertEqual(self.enviar("delete", f"/api/equipos/{equipo.pk}/").status_code, 200)
-        militante.refresh_from_db()
-        self.assertIsNone(militante.equipo)
+    def test_equipo_sin_ruta_no_se_puede_guardar(self):
+        from django.db import IntegrityError, transaction
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Equipo.objects.create(nombre="Sin ruta")
 
     # --- Usuarios del equipo -------------------------------------------------
 
@@ -149,7 +135,7 @@ class EquiposTests(TestCase):
         self.militante("inactivo@x.com", activo=False)
         self.militante("ajeno@x.com", campana=self.otra)
         self.militante("sinficha@x.com", con_ficha=False)
-        equipo = Equipo.objects.create(nombre="Otro", campana=self.campana, ruta=self.ruta)
+        equipo = Equipo.objects.create(nombre="Otro", ruta=self.ruta)
         self.militante("ocupado@x.com", equipo=equipo)
         self.assertEqual(self.disponibles(), ["libre@x.com"])
 
@@ -189,7 +175,7 @@ class EquiposTests(TestCase):
             self.assertEqual(r.status_code, 400, usuarios)
         r = self.enviar("post", "/api/equipos/", {"nombre": "X", "ruta": self.ruta.pk, "usuarios": [inactivo.pk]})
         self.assertEqual(r.status_code, 400)
-        self.assertFalse(Equipo.objects.exists())
+        self.assertFalse(Equipo.objects.exclude(pk=self.ajeno.pk).exists())
 
     def test_editar_reemplaza_usuarios(self):
         a, b, c = self.militante("a@x.com"), self.militante("b@x.com"), self.militante("c@x.com")

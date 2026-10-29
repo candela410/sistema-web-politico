@@ -1,7 +1,7 @@
 from django.contrib.auth.models import Group
 from django.test import Client, TestCase
 
-from .models import AsignacionCuestionario, Campana, Categoria, Cuestionario, Encuesta, Equipo, Usuario
+from .models import AsignacionCuestionario, Campana, Categoria, Cuestionario, Encuesta, Equipo, Ruta, Usuario
 
 
 class AsignacionesTests(TestCase):
@@ -18,7 +18,8 @@ class AsignacionesTests(TestCase):
             titulo="Barrial", categoria=Categoria.objects.create(nombre="G"), campana=self.campana
         )
         self.url = f"/api/cuestionarios/{self.c.pk}/asignaciones/"
-        self.norte = Equipo.objects.create(nombre="Norte", campana=self.campana)
+        self.ruta = Ruta.objects.create(nombre="R", paradas=[])
+        self.norte = Equipo.objects.create(nombre="Norte", ruta=self.ruta)
 
     def enviar(self, metodo, url, datos=None):
         csrf = self.client.cookies["csrftoken"].value
@@ -45,7 +46,7 @@ class AsignacionesTests(TestCase):
         self.militante("inactivo@x.com", activo=False)
         self.militante("ajeno@x.com", campana=self.otra)
         self.militante("coordinador@x.com", rol=False)
-        Equipo.objects.create(nombre="Vacío", campana=self.campana)
+        Equipo.objects.create(nombre="Vacío", ruta=self.ruta)
         datos = self.client.get(self.url).json()
         self.assertEqual(datos["cuestionario"]["titulo"], "Barrial")
         self.assertEqual([e["nombre"] for e in datos["equipos"]], ["Norte"])

@@ -2,24 +2,26 @@
 
 Un equipo tiene id, nombre, la ruta que recorre y sus usuarios. Reglas:
 - No se puede crear (ni editar) un equipo sin ruta.
-- Un equipo con ruta no se borra: se desactiva (y se puede volver a activar).
-- Solo se pueden borrar equipos sin ruta (los que quedaron así, por ejemplo,
-  al borrar su ruta).
+- Todo equipo tiene ruta, así que no se borra: se desactiva (y se puede
+  volver a activar).
 - Un usuario pertenece a un equipo por su campo equipo (usuarios.id_equipo).
   Solo se pueden asignar usuarios de la campaña, activos, con el rol
   Militantes y que no estén en otro equipo.
-Los equipos y las rutas pertenecen a una campaña: solo se ven y se usan los de
-la campaña activa.
+Los equipos no guardan campaña (como en el DER): la campaña de un equipo sale
+de sus usuarios. Una campaña ve los equipos que tienen usuarios suyos y los que
+todavía no tienen usuarios.
 """
 
 from django.db import transaction
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
 from .api import crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, registrar
-from .models import Equipo, Ruta, Usuario
+from .mapa_views import rutas_de_campana
+from .models import Equipo, Usuario
 from .usuarios_views import GRUPO_MILITANTES
 
 ORDEN_USUARIOS = ("first_name", "last_name", "email")
@@ -31,6 +33,18 @@ def _nombre(usuario):
 
 def _usuario_json(usuario):
     return {"id": usuario.pk, "nombre": _nombre(usuario), "email": usuario.email}
+
+
+def equipos_de_campana(campana):
+    """Equipos que ve una campaña: los que tienen usuarios de esa campaña y los
+    que todavía no tienen usuarios.
+
+    SQL equivalente:
+        SELECT DISTINCT e.* FROM equipos e
+        LEFT JOIN usuarios u ON u.id_equipo = e.id_equipo
+        WHERE u.id_campana = %s OR u.id IS NULL
+    """
+    return Equipo.objects.filter(Q(usuarios__campana=campana) | Q(usuarios__isnull=True)).distinct()
 
 
 def _miembros(ids_equipos):
@@ -84,7 +98,7 @@ def _validar(request, datos, equipo=None):
     if len(nombre) > 120:
         return None, None, "El nombre es muy largo (máximo 120 caracteres)."
 
-    repetido = Equipo.objects.filter(campana=request.campana, nombre__iexact=nombre)
+    repetido = Equipo.objects.filter(nombre__iexact=nombre)
     if equipo:
         repetido = repetido.exclude(pk=equipo.pk)
     if repetido.exists():
@@ -96,7 +110,7 @@ def _validar(request, datos, equipo=None):
         return None, None, "Elegí la ruta del equipo."
     if isinstance(id_ruta, bool) or not isinstance(id_ruta, int):
         return None, None, "La ruta no es válida."
-    ruta = Ruta.objects.filter(pk=id_ruta, campana=request.campana).first()
+    ruta = rutas_de_campana(request.campana).filter(pk=id_ruta).first()
     if ruta is None:
         return None, None, "La ruta elegida no existe."
     return nombre, ruta, None
@@ -137,11 +151,11 @@ def _asignar_usuarios(equipo, ids):
 @requiere_permiso(crud("equipo"))
 def equipos(request):
     if request.method == "GET":
-        lista = list(Equipo.objects.filter(campana=request.campana).select_related("ruta").order_by("nombre"))
+        lista = list(equipos_de_campana(request.campana).select_related("ruta").order_by("nombre"))
         miembros = _miembros([e.pk for e in lista])
         # Se mandan también las rutas de la campaña y los usuarios sin equipo
         # para los selectores del formulario.
-        rutas = Ruta.objects.filter(campana=request.campana).order_by("nombre")
+        rutas = rutas_de_campana(request.campana).order_by("nombre")
         return JsonResponse(
             {
                 "equipos": [_equipo_json(e, miembros.get(e.pk, [])) for e in lista],
@@ -160,7 +174,7 @@ def equipos(request):
     if mensaje:
         return error(mensaje)
     with transaction.atomic():
-        equipo = Equipo.objects.create(campana=request.campana, nombre=nombre, ruta=ruta)
+        equipo = Equipo.objects.create(nombre=nombre, ruta=ruta)
         if ids:
             _asignar_usuarios(equipo, ids)
     registrar(request, equipo, "crear", detalle=f"Creó el equipo {equipo.nombre}")
@@ -170,18 +184,11 @@ def equipos(request):
 @require_http_methods(["PATCH", "DELETE"])
 @requiere_permiso(crud("equipo"))
 def equipo_detalle(request, pk):
-    equipo = get_object_or_404(Equipo.objects.select_related("ruta"), pk=pk, campana=request.campana)
+    equipo = get_object_or_404(equipos_de_campana(request.campana).select_related("ruta"), pk=pk)
 
     if request.method == "DELETE":
-        if equipo.ruta_id:
-            return error(
-                "No se puede borrar un equipo que tiene una ruta asignada. Desactivalo.",
-                409,
-            )
-        # Los usuarios del equipo quedan sin equipo (SET_NULL)
-        equipo.delete()
-        registrar(request, equipo, "borrar", detalle=f"Borró el equipo {equipo.nombre}")
-        return JsonResponse({"ok": True})
+        # La ruta es obligatoria, así que ningún equipo se borra: se desactiva
+        return error("No se puede borrar un equipo que tiene una ruta asignada. Desactivalo.", 409)
 
     datos = leer_json(request)
     if datos is None:

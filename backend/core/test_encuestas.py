@@ -2,7 +2,7 @@ from django.contrib.auth.models import Group
 from django.test import Client, TestCase
 
 from .models import (
-    AsignacionCuestionario, Campana, Categoria, Cuestionario, Encuesta, Encuestado, Opcion, Pregunta, Usuario,
+    AsignacionCuestionario, Campana, Categoria, Cuestionario, Encuesta, Encuestado, Opcion, Pregunta, RespuestaCargada, Usuario,
 )
 
 
@@ -26,8 +26,8 @@ class EncuestasTests(TestCase):
         AsignacionCuestionario.objects.create(usuario=usuario, cuestionario=self.c)
         # Una sola opción, cualitativa
         self.p_una = self.pregunta(1, "Problema", "una_opcion", ["Seguridad", "Salud"], obligatoria=True)
-        # Opción múltiple, cualitativa
-        self.p_mult = self.pregunta(2, "Medios", "opcion_multiple", ["Radio", "TV", "Redes"])
+        # Una sola opción, cualitativa y no obligatoria
+        self.p_mult = self.pregunta(2, "Medios", "una_opcion", ["Radio", "TV", "Redes"])
         # Una sola opción, cuantitativa
         self.p_num = self.pregunta(3, "Personas en la casa", "una_opcion", ["1", "2", "3", "4"])
 
@@ -67,7 +67,7 @@ class EncuestasTests(TestCase):
         lista = self.client.get("/api/responder/").json()["cuestionarios"]
         self.assertEqual([c["titulo"] for c in lista], ["Barrial"])
         detalle = self.client.get(f"/api/responder/{self.c.pk}/").json()["cuestionario"]
-        self.assertEqual([p["tipo"] for p in detalle["preguntas"]], ["una_opcion", "opcion_multiple", "una_opcion"])
+        self.assertEqual([p["tipo"] for p in detalle["preguntas"]], ["una_opcion", "una_opcion", "una_opcion"])
 
     def test_no_ve_ni_responde_cuestionarios_sin_asignar(self):
         otro = Cuestionario.objects.create(titulo="Sin asignar", categoria=self.c.categoria, campana=self.campana)
@@ -76,12 +76,12 @@ class EncuestasTests(TestCase):
         self.assertEqual(self.client.get(f"/api/responder/{otro.pk}/").status_code, 404)
 
     def test_responder_guarda_encuesta_con_militante(self):
-        r = self.responder("30.123.456", "Seguridad", ["Radio", "Redes"], "4", latitud=-24.79, longitud=-65.41)
+        r = self.responder("30.123.456", "Seguridad", ["Radio"], "4", latitud=-24.79, longitud=-65.41)
         self.assertEqual(r.status_code, 201, r.content)
         encuesta = Encuesta.objects.get()
         self.assertEqual(encuesta.usuario, self.militante)
         self.assertEqual(encuesta.encuestado.documento, "30123456")
-        self.assertEqual(encuesta.respuestas.count(), 4)  # 1 + 2 + 1
+        self.assertEqual(RespuestaCargada.objects.count(), 3)  # una por pregunta
         self.assertEqual(float(encuesta.latitud), -24.79)
 
     def test_no_responde_dos_veces(self):
@@ -107,7 +107,7 @@ class EncuestasTests(TestCase):
         self.assertFalse(Encuestado.objects.exists())
 
     def test_estadisticas(self):
-        self.responder("1", "Seguridad", ["Radio", "TV"], "2")
+        self.responder("1", "Seguridad", ["Radio"], "2")
         self.responder("2", "Seguridad", ["Radio"], "4")
         self.responder("3", "Salud", [], "4")
         self.enviar("post", "/api/auth/logout/")
@@ -119,10 +119,10 @@ class EncuestasTests(TestCase):
         self.assertEqual(una["variable"], "cualitativa")
         self.assertEqual([(o["texto"], o["cantidad"], o["porcentaje"]) for o in una["opciones"]],
                          [("Seguridad", 2, 66.7), ("Salud", 1, 33.3)])
-        # Opción múltiple: porcentaje sobre las personas que respondieron (2)
-        self.assertEqual((mult["respondidas"], mult["sin_responder"], mult["elecciones"]), (2, 1, 3))
+        # Pregunta no obligatoria: porcentaje sobre las personas que respondieron (2)
+        self.assertEqual((mult["respondidas"], mult["sin_responder"], mult["elecciones"]), (2, 1, 2))
         self.assertEqual([(o["texto"], o["porcentaje"]) for o in mult["opciones"]],
-                         [("Radio", 100.0), ("TV", 50.0), ("Redes", 0)])
+                         [("Radio", 100.0), ("TV", 0.0), ("Redes", 0.0)])
 
         self.assertEqual(num["variable"], "cuantitativa")
         self.assertEqual([o["valor"] for o in num["opciones"]], [1, 2, 3, 4])

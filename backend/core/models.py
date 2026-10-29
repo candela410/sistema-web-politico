@@ -522,49 +522,21 @@ class Encuesta(models.Model):
 
 
 class RespuestaCargada(models.Model):
+    # Como en el DER: solo id_respuesta e id_opcion. La pregunta y el
+    # cuestionario salen de la opción (opciones → preguntas → cuestionarios).
     id_respuesta = models.AutoField(primary_key=True)
-
-    # PROTECT: borrar datos relacionados nunca elimina respuestas cargadas
-    encuesta = models.ForeignKey(
-        Encuesta,
-        on_delete=models.PROTECT,
-        db_column="id_encuesta",
-        related_name="respuestas",
-    )
-    pregunta = models.ForeignKey(
-        Pregunta,
-        on_delete=models.PROTECT,
-        db_column="id_pregunta",
-        related_name="respuestas",
-    )
-    # En "opción múltiple" una pregunta tiene una fila por cada opción elegida
+    # PROTECT: borrar una opción nunca elimina respuestas cargadas
     opcion = models.ForeignKey(
         Opcion,
         on_delete=models.PROTECT,
         db_column="id_opcion",
         related_name="respuestas",
     )
-    cargada_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "respuesta_cargada"
         verbose_name = "respuesta cargada"
         verbose_name_plural = "respuestas cargadas"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["encuesta", "opcion"],
-                name="uq_respuesta_encuesta_opcion",
-            ),
-        ]
-
-    def clean(self):
-        # Reglas que cruzan tablas y no se pueden expresar como CheckConstraint
-        if self.pregunta_id and self.encuesta_id:
-            if self.pregunta.cuestionario_id != self.encuesta.cuestionario_id:
-                raise ValidationError("La pregunta no pertenece al cuestionario de la encuesta.")
-        if self.opcion_id and self.pregunta_id:
-            if self.opcion.pregunta_id != self.pregunta_id:
-                raise ValidationError("La opción elegida no pertenece a esa pregunta.")
 
 
 # ---------------------------------------------------------------------------

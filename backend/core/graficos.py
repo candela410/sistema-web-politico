@@ -28,11 +28,12 @@ GRAFICOS = ("barras", "columnas", "linea", "torta", "distribucion")
 
 
 def respuestas_de(cuestionario):
-    """DataFrame con una fila por opción elegida: encuesta, pregunta y opción."""
-    filas = RespuestaCargada.objects.filter(pregunta__cuestionario=cuestionario).values_list(
-        "encuesta_id", "pregunta_id", "opcion_id"
+    """DataFrame con una fila por respuesta: pregunta y opción elegida. La
+    pregunta sale de la opción (respuesta_cargada solo guarda id_opcion)."""
+    filas = RespuestaCargada.objects.filter(opcion__pregunta__cuestionario=cuestionario).values_list(
+        "opcion__pregunta_id", "opcion_id"
     )
-    return pd.DataFrame(list(filas), columns=["encuesta", "pregunta", "opcion"])
+    return pd.DataFrame(list(filas), columns=["pregunta", "opcion"])
 
 
 def tabla_de(pregunta, respuestas):
@@ -48,7 +49,8 @@ def tabla_de(pregunta, respuestas):
     if variable == Pregunta.Variable.CUANTITATIVA:
         tabla["valor"] = tabla["texto"].map(numero_de).astype(float)
         tabla = tabla.sort_values("valor", kind="stable").reset_index(drop=True)
-    return tabla, variable, int(propias["encuesta"].nunique())
+    # Cada respuesta es de una persona (las preguntas son de una sola opción)
+    return tabla, variable, int(len(propias))
 
 
 def medidas(tabla):

@@ -112,7 +112,7 @@ def _limpiar_respuestas(cuestionario, respuestas):
         validas = {o.pk for o in pregunta.opciones.all()}
         if not all(o in validas for o in elegidas):
             raise RespuestaInvalida(f"La opción elegida en la pregunta {n} no es válida.")
-        limpias += [RespuestaCargada(pregunta=pregunta, opcion_id=o) for o in elegidas]
+        limpias += [RespuestaCargada(opcion_id=o) for o in elegidas]
     return limpias
 
 
@@ -163,8 +163,6 @@ def responder(request, pk):
                 latitud=latitud,
                 longitud=longitud,
             )
-            for r in respuestas:
-                r.encuesta = encuesta
             RespuestaCargada.objects.bulk_create(respuestas)
     except IntegrityError:
         return error("Esta persona ya respondió este cuestionario.", 409)

@@ -566,7 +566,7 @@ class Grupo(models.Model):
         Permission,
         blank=True,
         related_name="grupos_core",
-        db_table="grupos_permisos",
+        through="GrupoPermiso",
     )
 
     class Meta:
@@ -576,3 +576,17 @@ class Grupo(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class GrupoPermiso(models.Model):
+    # Tabla intermedia grupos ↔ permisos (permisosxgrupos en el DER): sin id
+    # propio; la clave primaria es la pareja (id_grupo, id_permiso), y cada
+    # una es a la vez clave foránea.
+    pk = models.CompositePrimaryKey("grupo", "permiso")
+    grupo = models.ForeignKey(Grupo, on_delete=models.CASCADE, db_column="id_grupo")
+    permiso = models.ForeignKey(Permission, on_delete=models.CASCADE, db_column="id_permiso")
+
+    class Meta:
+        db_table = "grupos_permisos"
+        verbose_name = "permiso del grupo"
+        verbose_name_plural = "permisos de los grupos"

@@ -8,11 +8,8 @@ import { variableDe } from './variable'
 // Editor de cuestionarios al estilo Google Forms: una tarjeta para el título
 // y una tarjeta por pregunta, con sus opciones.
 
-const TIPOS = [
-  ['una_opcion', 'Una sola opción'],
-  ['opcion_multiple', 'Opción múltiple'],
-]
-
+// Máximo de preguntas por cuestionario (el backend controla lo mismo)
+const MAX_PREGUNTAS = 15
 
 let siguienteClave = 1
 const clave = () => `c${siguienteClave++}`
@@ -35,7 +32,7 @@ function desdeServidor(c) {
     preguntas: c.preguntas.map((p) => ({
       clave: clave(),
       enunciado: p.enunciado,
-      tipo: p.tipo,
+      tipo: 'una_opcion',
       obligatoria: p.obligatoria,
       opciones: p.opciones.map((o) => nuevaOpcion(o.texto)),
     })),
@@ -102,6 +99,10 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
       onClick={onActivar}
       aria-label={`Pregunta ${numero}`}
     >
+      {/* Arriba de la pregunta: qué tipo de variable es (se deduce de las opciones) */}
+      <span className={`variable variable--${variableDe(pregunta.opciones)} tarjeta-pregunta__variable`}>
+        {variableDe(pregunta.opciones) === 'cuantitativa' ? 'Cuantitativa' : 'Cualitativa'}
+      </span>
       <div className="tarjeta-pregunta__cabecera">
         <span className="tarjeta-pregunta__numero">{numero}</span>
         <textarea
@@ -113,22 +114,9 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
           aria-label={`Texto de la pregunta ${numero}`}
           disabled={bloqueado}
         />
-        <select
-          className="entrada tarjeta-pregunta__tipo"
-          value={pregunta.tipo}
-          onChange={(e) => cambiar({ tipo: e.target.value })}
-          aria-label={`Tipo de la pregunta ${numero}`}
-          disabled={bloqueado}
-        >
-          {TIPOS.map(([valor, texto]) => (
-            <option key={valor} value={valor}>
-              {texto}
-            </option>
-          ))}
-        </select>
       </div>
 
-      <ul className={`opciones${pregunta.tipo === 'opcion_multiple' ? ' opciones--multiple' : ''}`}>
+      <ul className="opciones">
         {pregunta.opciones.map((o, i) => (
           <li key={o.clave} className="opcion">
             <span className="opcion__circulo" aria-hidden="true" />
@@ -168,12 +156,6 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
           </li>
         )}
       </ul>
-
-      <p className={`variable variable--${variableDe(pregunta.opciones)}`}>
-        {variableDe(pregunta.opciones) === 'cuantitativa'
-          ? 'Variable cuantitativa: las opciones son números'
-          : 'Variable cualitativa: las opciones son texto'}
-      </p>
 
       <footer className="tarjeta-pregunta__pie">
         <label className="interruptor">
@@ -256,6 +238,7 @@ function EditorCuestionario() {
   const cambiarPregunta = (p) => actualizar({ preguntas: form.preguntas.map((x) => (x.clave === p.clave ? p : x)) })
 
   function insertarPregunta(pregunta, despuesDe) {
+    if (form.preguntas.length >= MAX_PREGUNTAS) return
     const i = despuesDe ? form.preguntas.findIndex((p) => p.clave === despuesDe) + 1 : form.preguntas.length
     actualizar({ preguntas: [...form.preguntas.slice(0, i), pregunta, ...form.preguntas.slice(i)] })
     setActiva(pregunta.clave)
@@ -391,15 +374,18 @@ function EditorCuestionario() {
           </div>
         ))}
 
-        {!bloqueado && (
-          <button
-            type="button"
-            className="agregar-pregunta"
-            onClick={() => insertarPregunta(nuevaPregunta(), activa)}
-          >
-            + Agregar pregunta
-          </button>
-        )}
+        {!bloqueado &&
+          (form.preguntas.length < MAX_PREGUNTAS ? (
+            <button
+              type="button"
+              className="agregar-pregunta"
+              onClick={() => insertarPregunta(nuevaPregunta(), activa)}
+            >
+              + Agregar pregunta ({form.preguntas.length} de {MAX_PREGUNTAS})
+            </button>
+          ) : (
+            <p className="aviso-info">Llegaste al máximo de {MAX_PREGUNTAS} preguntas por cuestionario.</p>
+          ))}
       </div>
     </form>
   )

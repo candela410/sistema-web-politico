@@ -9,7 +9,7 @@ FORMULARIO = {
     "preguntas": [
         {"enunciado": "¿Qué problema es más urgente?", "tipo": "una_opcion", "obligatoria": True,
          "opciones": [{"texto": "Seguridad"}, {"texto": "Salud"}, {"texto": "Trabajo"}]},
-        {"enunciado": "¿Qué medios usa para informarse?", "tipo": "opcion_multiple",
+        {"enunciado": "¿Qué medio usa para informarse?", "tipo": "una_opcion",
          "opciones": [{"texto": "Radio"}, {"texto": "TV"}, {"texto": "Redes"}]},
         {"enunciado": "¿Cuántas personas viven en la casa?", "tipo": "una_opcion",
          "opciones": [{"texto": "1"}, {"texto": "2"}, {"texto": "3"}, {"texto": "4,5"}]},
@@ -44,7 +44,7 @@ class CuestionariosTests(TestCase):
         r = self.crear()
         self.assertEqual(r.status_code, 201, r.content)
         c = r.json()["cuestionario"]
-        self.assertEqual([p["tipo"] for p in c["preguntas"]], ["una_opcion", "opcion_multiple", "una_opcion"])
+        self.assertEqual([p["tipo"] for p in c["preguntas"]], ["una_opcion", "una_opcion", "una_opcion"])
         # Opciones con texto: cualitativa. Todas números: cuantitativa
         self.assertEqual([p["variable"] for p in c["preguntas"]], ["cualitativa", "cualitativa", "cuantitativa"])
         self.assertEqual([o["texto"] for o in c["preguntas"][0]["opciones"]], ["Seguridad", "Salud", "Trabajo"])
@@ -62,8 +62,9 @@ class CuestionariosTests(TestCase):
             ({"preguntas": [{"enunciado": "", "tipo": "una_opcion"}]}, "pregunta 1"),
             ({"preguntas": [{"enunciado": "A", "tipo": "texto", "opciones": ["x", "y"]}]}, "tipo"),
             ({"preguntas": [{"enunciado": "A", "tipo": "una_opcion", "opciones": []}]}, "2 opciones"),
-            ({"preguntas": [{"enunciado": "A", "tipo": "opcion_multiple", "opciones": [{"texto": "Uno"}]}]}, "2 opciones"),
-            ({"preguntas": [{"enunciado": "A", "tipo": "opcion_multiple", "opciones": ["Sí", "sí"]}]}, "repetidas"),
+            ({"preguntas": [{"enunciado": "A", "tipo": "una_opcion", "opciones": [{"texto": "Uno"}]}]}, "2 opciones"),
+            ({"preguntas": [{"enunciado": "A", "tipo": "opcion_multiple", "opciones": ["x", "y"]}]}, "una sola opción"),
+            ({"preguntas": [{"enunciado": "A", "tipo": "una_opcion", "opciones": ["Sí", "sí"]}]}, "repetidas"),
         ]
         for cambios, texto in casos:
             r = self.crear(**cambios)

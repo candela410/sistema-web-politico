@@ -1,6 +1,7 @@
+from django.contrib.auth.models import Group
 from django.test import Client, TestCase
 
-from .models import Campana, Equipo, Militante, Ruta, Usuario
+from .models import Campana, Equipo, Ruta, Usuario
 
 
 class EquiposTests(TestCase):
@@ -25,10 +26,11 @@ class EquiposTests(TestCase):
     def militante(self, email, campana=None, activo=True, equipo=None, nombre="Juan", con_ficha=True):
         usuario = Usuario.objects.create_user(
             username=email, email=email, password="clave-segura-123", first_name=nombre,
-            last_name="Pérez", campana=campana or self.campana, is_active=activo,
+            last_name="Pérez", campana=campana or self.campana, is_active=activo, equipo=equipo,
         )
+        # "con_ficha": tiene el rol Militantes
         if con_ficha:
-            Militante.objects.create(nombre=nombre, apellido="Pérez", usuario=usuario, equipo=equipo, activo=activo)
+            usuario.groups.add(Group.objects.get_or_create(name="Militantes")[0])
         return usuario
 
     def crear(self, nombre="Norte", ruta=None):
@@ -132,7 +134,7 @@ class EquiposTests(TestCase):
 
     def test_borrar_equipo_deja_militantes_sin_equipo(self):
         equipo = Equipo.objects.create(nombre="Centro", campana=self.campana)
-        militante = Militante.objects.create(nombre="Juan", apellido="Pérez", equipo=equipo)
+        militante = self.militante("juan@x.com", equipo=equipo)
         self.assertEqual(self.enviar("delete", f"/api/equipos/{equipo.pk}/").status_code, 200)
         militante.refresh_from_db()
         self.assertIsNone(militante.equipo)
@@ -156,7 +158,8 @@ class EquiposTests(TestCase):
         r = self.enviar("post", "/api/equipos/", {"nombre": "Norte", "ruta": self.ruta.pk, "usuarios": [a.pk, b.pk]})
         self.assertEqual(r.status_code, 201)
         self.assertEqual(sorted(u["email"] for u in r.json()["equipo"]["usuarios"]), ["a@x.com", "b@x.com"])
-        self.assertEqual(Militante.objects.get(usuario=a).equipo_id, r.json()["equipo"]["id"])
+        a.refresh_from_db()
+        self.assertEqual(a.equipo_id, r.json()["equipo"]["id"])
         # Ya no aparecen como disponibles
         self.assertEqual(self.disponibles(), [])
         # Y el listado devuelve los integrantes
@@ -197,7 +200,8 @@ class EquiposTests(TestCase):
         r = self.enviar("patch", url, {"nombre": "Norte", "ruta": self.ruta.pk, "usuarios": [b.pk, c.pk]})
         self.assertEqual(r.status_code, 200)
         self.assertEqual(sorted(u["email"] for u in r.json()["equipo"]["usuarios"]), ["b@x.com", "c@x.com"])
-        self.assertIsNone(Militante.objects.get(usuario=a).equipo)
+        a.refresh_from_db()
+        self.assertIsNone(a.equipo)
         # El que se sacó vuelve a estar disponible
         self.assertEqual(self.disponibles(), ["a@x.com"])
         # Se puede dejar sin usuarios
@@ -211,7 +215,8 @@ class EquiposTests(TestCase):
         ).json()["equipo"]
         r = self.enviar("patch", f"/api/equipos/{equipo['id']}/", {"activo": False})
         self.assertEqual([x["email"] for x in r.json()["equipo"]["usuarios"]], ["a@x.com"])
-        self.assertEqual(Militante.objects.get(usuario=u).equipo_id, equipo["id"])
+        u.refresh_from_db()
+        self.assertEqual(u.equipo_id, equipo["id"])
 
     def test_editar_el_nombre_sin_usuarios_en_el_cuerpo_los_conserva(self):
         u = self.militante("a@x.com")
@@ -220,13 +225,6 @@ class EquiposTests(TestCase):
         ).json()["equipo"]
         r = self.enviar("patch", f"/api/equipos/{equipo['id']}/", {"nombre": "Norte 2", "ruta": self.ruta.pk})
         self.assertEqual(len(r.json()["equipo"]["usuarios"]), 1)
-
-    def test_editar_no_toca_militantes_sin_usuario(self):
-        equipo = Equipo.objects.create(nombre="Norte", campana=self.campana, ruta=self.ruta)
-        suelto = Militante.objects.create(nombre="Sin", apellido="Cuenta", equipo=equipo)
-        self.enviar("patch", f"/api/equipos/{equipo.pk}/", {"usuarios": []})
-        suelto.refresh_from_db()
-        self.assertEqual(suelto.equipo_id, equipo.pk)
 
     def test_un_equipo_desactivado_sigue_teniendo_a_sus_usuarios(self):
         u = self.militante("a@x.com")

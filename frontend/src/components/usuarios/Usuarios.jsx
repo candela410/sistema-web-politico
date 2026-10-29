@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import * as api from '../../api/usuarios'
 import { tiene } from '../../permisos'
 import Modal from '../comunes/Modal'
+import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './usuarios.css'
 
 const GRUPO_MILITANTES = 'Militantes'
@@ -16,8 +17,9 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
     grupos: usuario?.grupos.map((g) => g.id) ?? [],
     administra: usuario?.administra ?? false,
     activo: usuario?.activo ?? true,
-    documento: usuario?.militante?.documento ?? '',
-    telefono: usuario?.militante?.telefono ?? '',
+    documento: usuario?.documento ?? '',
+    telefono: usuario?.telefono ?? '',
+    direccion: usuario?.direccion ?? '',
   })
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -25,8 +27,6 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
     setForm((f) => ({ ...f, [campo]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
   const alternarGrupo = (id) =>
     setForm((f) => ({ ...f, grupos: f.grupos.includes(id) ? f.grupos.filter((g) => g !== id) : [...f.grupos, id] }))
-  const idMilitantes = grupos.find((g) => g.nombre === GRUPO_MILITANTES)?.id
-  const esMilitante = form.grupos.includes(idMilitantes) || !!usuario?.militante
 
   async function guardar(e) {
     e.preventDefault()
@@ -39,7 +39,9 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
       grupos: form.grupos,
       administra: form.administra,
       activo: form.activo,
-      militante: esMilitante ? { documento: form.documento, telefono: form.telefono } : null,
+      documento: form.documento,
+      telefono: form.telefono,
+      direccion: form.direccion,
       ...(form.password && { password: form.password }),
     }
     try {
@@ -97,18 +99,20 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
           ))}
         </fieldset>
 
-        {esMilitante && (
-          <div className="formulario-modal__fila">
-            <label>
-              Documento <span className="opcional">(opcional)</span>
-              <input className="entrada" inputMode="numeric" value={form.documento} onChange={cambiar('documento')} />
-            </label>
-            <label>
-              Teléfono <span className="opcional">(opcional)</span>
-              <input className="entrada" type="tel" value={form.telefono} onChange={cambiar('telefono')} />
-            </label>
-          </div>
-        )}
+        <div className="formulario-modal__fila">
+          <label>
+            Documento <span className="opcional">(opcional)</span>
+            <input className="entrada" inputMode="numeric" value={form.documento} onChange={cambiar('documento')} />
+          </label>
+          <label>
+            Teléfono <span className="opcional">(opcional)</span>
+            <input className="entrada" type="tel" value={form.telefono} onChange={cambiar('telefono')} />
+          </label>
+        </div>
+        <label>
+          Dirección <span className="opcional">(opcional)</span>
+          <input className="entrada" value={form.direccion} onChange={cambiar('direccion')} />
+        </label>
 
         <label className="interruptor">
           <input type="checkbox" checked={form.activo} onChange={cambiar('activo')} />
@@ -160,6 +164,7 @@ function Usuarios({ usuario: yo }) {
     if (!texto) return lista
     return lista.filter((u) => `${u.nombre} ${u.apellido} ${u.email}`.toLowerCase().includes(texto))
   }, [datos, busqueda])
+  const paginado = usePaginado(visibles)
 
   const reemplazar = (u, nuevo) =>
     setDatos((d) => ({ ...d, usuarios: nuevo ? [u, ...d.usuarios] : d.usuarios.map((x) => (x.id === u.id ? u : x)) }))
@@ -230,54 +235,57 @@ function Usuarios({ usuario: yo }) {
           <b>{datos.usuarios.length ? 'No hay usuarios que coincidan.' : 'Todavía no hay usuarios en esta campaña.'}</b>
         </div>
       ) : (
-        <ul className="tarjetas-lista">
-          {visibles.map((u) => (
-            <li key={u.id} className={`tarjeta-fila${u.activo ? '' : ' tarjeta-fila--apagada'}`}>
-              <span className="avatar" aria-hidden="true">
-                {(u.nombre[0] ?? u.email[0]).toUpperCase()}
-                {(u.apellido[0] ?? '').toUpperCase()}
-              </span>
-              <div className="tarjeta-fila__texto">
-                <h3>
-                  {`${u.nombre} ${u.apellido}`.trim() || u.email}
-                  {u.id === yo.id && <span className="etiqueta etiqueta--verde">Vos</span>}
-                  {!u.activo && <span className="etiqueta">Desactivado</span>}
-                </h3>
-                <p>{u.email}</p>
-                <span className="tarjeta-fila__datos usuarios__grupos">
-                  {u.administra && <span className="etiqueta etiqueta--violeta">Administra la campaña</span>}
-                  {u.grupos.map((g) => (
-                    <span
-                      key={g.id}
-                      className="etiqueta etiqueta--magenta"
-                    >
-                      {g.nombre}
-                    </span>
-                  ))}
-                  <span>
-                    {u.ultimo_ingreso ? `Último ingreso: ${formatoFecha.format(new Date(u.ultimo_ingreso))}` : 'Nunca ingresó'}
-                  </span>
+        <>
+          <ul className="tarjetas-lista">
+            {paginado.items.map((u) => (
+              <li key={u.id} className={`tarjeta-fila${u.activo ? '' : ' tarjeta-fila--apagada'}`}>
+                <span className="avatar" aria-hidden="true">
+                  {(u.nombre[0] ?? u.email[0]).toUpperCase()}
+                  {(u.apellido[0] ?? '').toUpperCase()}
                 </span>
-              </div>
-              {puedeEditar && (
-                <div className="tarjeta-fila__acciones">
-                  <button type="button" className="boton boton--borde boton--chico" onClick={() => setEditando(u)}>
-                    Editar
-                  </button>
-                  {u.id !== yo.id && (
-                    <button
-                      type="button"
-                      className={`boton boton--chico ${u.activo ? 'boton--peligro' : 'boton--borde'}`}
-                      onClick={() => cambiarEstado(u)}
-                    >
-                      {u.activo ? 'Desactivar' : 'Activar'}
-                    </button>
-                  )}
+                <div className="tarjeta-fila__texto">
+                  <h3>
+                    {`${u.nombre} ${u.apellido}`.trim() || u.email}
+                    {u.id === yo.id && <span className="etiqueta etiqueta--verde">Vos</span>}
+                    {!u.activo && <span className="etiqueta">Desactivado</span>}
+                  </h3>
+                  <p>{u.email}</p>
+                  <span className="tarjeta-fila__datos usuarios__grupos">
+                    {u.administra && <span className="etiqueta etiqueta--violeta">Administra la campaña</span>}
+                    {u.grupos.map((g) => (
+                      <span
+                        key={g.id}
+                        className="etiqueta etiqueta--magenta"
+                      >
+                        {g.nombre}
+                      </span>
+                    ))}
+                    <span>
+                      {u.ultimo_ingreso ? `Último ingreso: ${formatoFecha.format(new Date(u.ultimo_ingreso))}` : 'Nunca ingresó'}
+                    </span>
+                  </span>
                 </div>
-              )}
-            </li>
-          ))}
-        </ul>
+                {puedeEditar && (
+                  <div className="tarjeta-fila__acciones">
+                    <button type="button" className="boton boton--borde boton--chico" onClick={() => setEditando(u)}>
+                      Editar
+                    </button>
+                    {u.id !== yo.id && (
+                      <button
+                        type="button"
+                        className={`boton boton--chico ${u.activo ? 'boton--peligro' : 'boton--borde'}`}
+                        onClick={() => cambiarEstado(u)}
+                      >
+                        {u.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          <Paginacion {...paginado} />
+        </>
       )}
 
       {editando && (

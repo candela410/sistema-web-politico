@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import * as api from '../../api/cuestionarios'
 import { tiene } from '../../permisos'
 import Modal from '../comunes/Modal'
+import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './cuestionarios.css'
 
 function ConfirmarBorrado({ cuestionario, onBorrado, onCerrar }) {
@@ -44,12 +45,16 @@ function ConfirmarBorrado({ cuestionario, onBorrado, onCerrar }) {
   )
 }
 
+const FILTROS_INICIALES = { categoria: '', estado: 'todos', encuestas: 'todas' }
+
 function ListaCuestionarios({ usuario }) {
   const navegar = useNavigate()
   const { state } = useLocation()
   const [cuestionarios, setCuestionarios] = useState(null)
   const [errorCarga, setErrorCarga] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [filtros, setFiltros] = useState(FILTROS_INICIALES)
+  const filtrando = busqueda.trim() || Object.entries(filtros).some(([k, v]) => v !== FILTROS_INICIALES[k])
   const [borrando, setBorrando] = useState(null)
   const [aviso, setAviso] = useState(state?.aviso ?? '')
 
@@ -66,13 +71,25 @@ function ListaCuestionarios({ usuario }) {
     return () => clearTimeout(t)
   }, [aviso])
 
+  // Categorías que aparecen en la lista, para el filtro
+  const categorias = useMemo(() => {
+    const unicas = new Map((cuestionarios ?? []).map((c) => [String(c.categoria.id), c.categoria.nombre]))
+    return [...unicas].sort((a, b) => a[1].localeCompare(b[1]))
+  }, [cuestionarios])
+
   const visibles = useMemo(() => {
     const texto = busqueda.trim().toLowerCase()
-    if (!cuestionarios || !texto) return cuestionarios ?? []
-    return cuestionarios.filter(
-      (c) => c.titulo.toLowerCase().includes(texto) || c.categoria.nombre.toLowerCase().includes(texto),
+    return (cuestionarios ?? []).filter(
+      (c) =>
+        (!texto || c.titulo.toLowerCase().includes(texto) || c.categoria.nombre.toLowerCase().includes(texto)) &&
+        (!filtros.categoria || String(c.categoria.id) === filtros.categoria) &&
+        (filtros.estado === 'todos' || c.activo === (filtros.estado === 'activos')) &&
+        (filtros.encuestas === 'todas' || (c.encuestas > 0) === (filtros.encuestas === 'con')),
     )
-  }, [cuestionarios, busqueda])
+  }, [cuestionarios, busqueda, filtros])
+  const paginado = usePaginado(visibles)
+
+  const filtrar = (campo) => (e) => setFiltros((f) => ({ ...f, [campo]: e.target.value }))
 
   return (
     <main className="pagina">
@@ -108,6 +125,48 @@ function ListaCuestionarios({ usuario }) {
         />
       </div>
 
+      <div className="filtros" role="group" aria-label="Filtros">
+        <label>
+          Categoría
+          <select className="entrada" value={filtros.categoria} onChange={filtrar('categoria')}>
+            <option value="">Todas</option>
+            {categorias.map(([id, nombre]) => (
+              <option key={id} value={id}>
+                {nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Estado
+          <select className="entrada" value={filtros.estado} onChange={filtrar('estado')}>
+            <option value="todos">Todos</option>
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+          </select>
+        </label>
+        <label>
+          Encuestas
+          <select className="entrada" value={filtros.encuestas} onChange={filtrar('encuestas')}>
+            <option value="todas">Todas</option>
+            <option value="con">Con encuestas</option>
+            <option value="sin">Sin encuestas</option>
+          </select>
+        </label>
+        {filtrando && (
+          <button
+            type="button"
+            className="enlace-boton filtros__limpiar"
+            onClick={() => {
+              setFiltros(FILTROS_INICIALES)
+              setBusqueda('')
+            }}
+          >
+            Limpiar filtros
+          </button>
+        )}
+      </div>
+
       {aviso && (
         <p className="aviso-ok" role="status">
           {aviso}
@@ -128,51 +187,54 @@ function ListaCuestionarios({ usuario }) {
               <span>Creá el primero con “+ Crear cuestionario”.</span>
             </>
           ) : (
-            <span>No hay cuestionarios que coincidan con “{busqueda}”.</span>
+            <span>No hay cuestionarios que coincidan con la búsqueda y los filtros.</span>
           )}
         </div>
       ) : (
-        <ul className="cuestionarios-lista">
-          {visibles.map((c) => (
-            <li key={c.id} className="cuestionario-item">
-              <button
-                type="button"
-                className="cuestionario-item__abrir"
-                onClick={() => navegar(`/cuestionarios/${c.id}`)}
-              >
-                <span className="cuestionario-item__categoria">{c.categoria.nombre}</span>
-                <h3>{c.titulo}</h3>
-                {c.descripcion && <p>{c.descripcion}</p>}
-                <span className="cuestionario-item__datos">
-                  {c.preguntas === 1 ? '1 pregunta' : `${c.preguntas} preguntas`} ·{' '}
-                  {c.encuestas === 1 ? '1 encuesta' : `${c.encuestas} encuestas`}
-                  {!c.activo && <span className="etiqueta-inactivo">Inactivo</span>}
-                </span>
-              </button>
-              <div className="cuestionario-item__acciones">
-                {/* Las estadísticas solo se abren desde este botón */}
-                {tiene(usuario, 'core.view_encuesta') && (
-                  <Link to={`/cuestionarios/${c.id}/estadisticas`} className="boton boton--chico boton--estadisticas">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M5 20V11M12 20V5M19 20v-6" />
-                    </svg>
-                    Estadísticas
-                  </Link>
-                )}
-                {tiene(usuario, 'core.change_cuestionario') && (
-                  <Link to={`/cuestionarios/${c.id}`} className="boton boton--borde boton--chico">
-                    Editar
-                  </Link>
-                )}
-                {tiene(usuario, 'core.delete_cuestionario') && (
-                  <button type="button" className="boton boton--peligro boton--chico" onClick={() => setBorrando(c)}>
-                    Borrar
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="cuestionarios-lista">
+            {paginado.items.map((c) => (
+              <li key={c.id} className="cuestionario-item">
+                <button
+                  type="button"
+                  className="cuestionario-item__abrir"
+                  onClick={() => navegar(`/cuestionarios/${c.id}`)}
+                >
+                  <span className="cuestionario-item__categoria">{c.categoria.nombre}</span>
+                  <h3>{c.titulo}</h3>
+                  {c.descripcion && <p>{c.descripcion}</p>}
+                  <span className="cuestionario-item__datos">
+                    {c.preguntas === 1 ? '1 pregunta' : `${c.preguntas} preguntas`} ·{' '}
+                    {c.encuestas === 1 ? '1 encuesta' : `${c.encuestas} encuestas`}
+                    {!c.activo && <span className="etiqueta-inactivo">Inactivo</span>}
+                  </span>
+                </button>
+                <div className="cuestionario-item__acciones">
+                  {/* Las estadísticas solo se abren desde este botón */}
+                  {tiene(usuario, 'core.view_encuesta') && (
+                    <Link to={`/cuestionarios/${c.id}/estadisticas`} className="boton boton--chico boton--estadisticas">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 20V11M12 20V5M19 20v-6" />
+                      </svg>
+                      Estadísticas
+                    </Link>
+                  )}
+                  {tiene(usuario, 'core.change_cuestionario') && (
+                    <Link to={`/cuestionarios/${c.id}`} className="boton boton--borde boton--chico">
+                      Editar
+                    </Link>
+                  )}
+                  {tiene(usuario, 'core.delete_cuestionario') && (
+                    <button type="button" className="boton boton--peligro boton--chico" onClick={() => setBorrando(c)}>
+                      Borrar
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <Paginacion {...paginado} />
+        </>
       )}
 
       {borrando && (

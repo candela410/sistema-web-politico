@@ -5,9 +5,9 @@ Un equipo tiene id, nombre, la ruta que recorre y sus usuarios. Reglas:
 - Un equipo con ruta no se borra: se desactiva (y se puede volver a activar).
 - Solo se pueden borrar equipos sin ruta (los que quedaron así, por ejemplo,
   al borrar su ruta).
-- Un usuario pertenece a un equipo a través de su ficha de militante
-  (Militante.usuario → Militante.equipo). Solo se pueden asignar usuarios de la
-  campaña, activos, con ficha de militante y que no estén en otro equipo.
+- Un usuario pertenece a un equipo por su campo equipo (usuarios.id_equipo).
+  Solo se pueden asignar usuarios de la campaña, activos, con el rol
+  Militantes y que no estén en otro equipo.
 Los equipos y las rutas pertenecen a una campaña: solo se ven y se usan los de
 la campaña activa.
 """
@@ -19,9 +19,10 @@ from django.views.decorators.http import require_http_methods
 
 from .api import crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, registrar
-from .models import Equipo, Militante, Ruta, Usuario
+from .models import Equipo, Ruta, Usuario
+from .usuarios_views import GRUPO_MILITANTES
 
-ORDEN_USUARIOS = ("usuario__first_name", "usuario__last_name", "usuario__email")
+ORDEN_USUARIOS = ("first_name", "last_name", "email")
 
 
 def _nombre(usuario):
@@ -33,28 +34,23 @@ def _usuario_json(usuario):
 
 
 def _miembros(ids_equipos):
-    """{id_equipo: [usuarios]} de los militantes con usuario de esos equipos."""
-    militantes = (
-        Militante.objects.filter(equipo_id__in=ids_equipos, usuario__isnull=False)
-        .select_related("usuario")
-        .order_by(*ORDEN_USUARIOS)
-    )
+    """{id_equipo: [usuarios]} de los usuarios de esos equipos."""
+    usuarios = Usuario.objects.filter(equipo_id__in=ids_equipos).order_by(*ORDEN_USUARIOS)
     por_equipo = {}
-    for m in militantes:
-        por_equipo.setdefault(m.equipo_id, []).append(_usuario_json(m.usuario))
+    for u in usuarios:
+        por_equipo.setdefault(u.equipo_id, []).append(_usuario_json(u))
     return por_equipo
 
 
 def _disponibles(request):
-    """Usuarios que se pueden asignar: de la campaña, activos, con ficha de
-    militante activa y sin equipo."""
+    """Usuarios que se pueden asignar: de la campaña, activos, con el rol
+    Militantes y sin equipo."""
     lista = Usuario.objects.filter(
         campana=request.campana,
         is_active=True,
-        militante__isnull=False,
-        militante__activo=True,
-        militante__equipo__isnull=True,
-    ).order_by("first_name", "last_name", "email")
+        groups__name=GRUPO_MILITANTES,
+        equipo__isnull=True,
+    ).distinct().order_by(*ORDEN_USUARIOS)
     return [_usuario_json(u) for u in lista]
 
 
@@ -116,27 +112,25 @@ def _validar_usuarios(request, datos, equipo=None):
         return None, "La lista de usuarios no es válida."
     ids = set(ids)
 
-    militantes = Militante.objects.filter(usuario_id__in=ids, usuario__campana=request.campana).select_related(
-        "usuario"
+    usuarios = list(
+        Usuario.objects.filter(pk__in=ids, campana=request.campana, groups__name=GRUPO_MILITANTES).distinct()
     )
-    militantes = list(militantes)
-    if len(militantes) != len(ids):
+    if len(usuarios) != len(ids):
         return None, "Alguno de los usuarios no existe o no es militante."
 
-    for m in militantes:
-        ya_es_del_equipo = equipo is not None and m.equipo_id == equipo.pk
-        if m.equipo_id and not ya_es_del_equipo:
-            return None, f"{_nombre(m.usuario)} ya está en otro equipo."
-        if not ya_es_del_equipo and not (m.usuario.is_active and m.activo):
-            return None, f"{_nombre(m.usuario)} no está activo."
+    for u in usuarios:
+        ya_es_del_equipo = equipo is not None and u.equipo_id == equipo.pk
+        if u.equipo_id and not ya_es_del_equipo:
+            return None, f"{_nombre(u)} ya está en otro equipo."
+        if not ya_es_del_equipo and not u.is_active:
+            return None, f"{_nombre(u)} no está activo."
     return ids, None
 
 
 def _asignar_usuarios(equipo, ids):
-    """Deja en el equipo exactamente a esos usuarios. Los militantes del equipo
-    que no tienen usuario no se tocan."""
-    Militante.objects.filter(equipo=equipo, usuario__isnull=False).exclude(usuario_id__in=ids).update(equipo=None)
-    Militante.objects.filter(usuario_id__in=ids).update(equipo=equipo)
+    """Deja en el equipo exactamente a esos usuarios."""
+    Usuario.objects.filter(equipo=equipo).exclude(pk__in=ids).update(equipo=None)
+    Usuario.objects.filter(pk__in=ids).update(equipo=equipo)
 
 
 @require_http_methods(["GET", "POST"])
@@ -184,7 +178,7 @@ def equipo_detalle(request, pk):
                 "No se puede borrar un equipo que tiene una ruta asignada. Desactivalo.",
                 409,
             )
-        # Los militantes del equipo quedan sin equipo (SET_NULL)
+        # Los usuarios del equipo quedan sin equipo (SET_NULL)
         equipo.delete()
         registrar(request, equipo, "borrar", detalle=f"Borró el equipo {equipo.nombre}")
         return JsonResponse({"ok": True})

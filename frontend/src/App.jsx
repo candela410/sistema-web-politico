@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
-import { cerrarSesion, prepararCsrf, usuarioActual } from './api/auth'
+import { cerrarSesion, prepararCsrf, sesionDeEstaPestana, usuarioActual } from './api/auth'
 import Actividad from './components/actividad/Actividad'
 import Campanas from './components/campanas/Campanas'
 import ElegirCampana from './components/campanas/ElegirCampana'
@@ -63,7 +63,14 @@ function Rutas() {
 
   useEffect(() => {
     prepararCsrf()
-      .then(usuarioActual)
+      // Al entrar a la página siempre se pide el login: una sesión que quedó
+      // abierta de antes se cierra. Recargar la misma pestaña no la cierra.
+      .then(async () => {
+        if (sesionDeEstaPestana()) return usuarioActual()
+        await cerrarSesion().catch(() => {})
+        await prepararCsrf()
+        return null
+      })
       .then(setUsuario)
       .catch(() => setUsuario(null))
       .finally(() => setCargando(false))

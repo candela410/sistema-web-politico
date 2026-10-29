@@ -10,7 +10,6 @@ import { Dato, Grafico } from './graficos'
 // lista). En cada pregunta la persona elige qué gráficos ver, y puede
 // descargar un PDF eligiendo cuáles incluir.
 
-const TIPOS = { una_opcion: 'Una sola opción', opcion_multiple: 'Opción múltiple' }
 const formatoFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
 
 const nombreDe = (pregunta, clave) => disponibles(pregunta).find((g) => g.clave === clave)?.nombre ?? clave
@@ -31,9 +30,8 @@ function guardarEleccion(id, eleccion) {
   }
 }
 
-function EstadisticaPregunta({ pregunta, numero, elegidos, onCambio, registrar }) {
+function EstadisticaPregunta({ cuestionario, pregunta, numero, elegidos, onCambio, registrar }) {
   const cuantitativa = pregunta.variable === 'cuantitativa'
-  const multiple = pregunta.tipo === 'opcion_multiple'
   const opciones = disponibles(pregunta)
   const alternar = (clave) =>
     onCambio(
@@ -49,7 +47,7 @@ function EstadisticaPregunta({ pregunta, numero, elegidos, onCambio, registrar }
         <div>
           <h3>{pregunta.enunciado}</h3>
           <p className="texto-suave">
-            {TIPOS[pregunta.tipo]} · {plural(pregunta.respondidas, 'persona respondió', 'personas respondieron')}
+            {plural(pregunta.respondidas, 'persona respondió', 'personas respondieron')}
             {pregunta.sin_responder > 0 && ` · ${f(pregunta.sin_responder)} sin responder`}
           </p>
         </div>
@@ -81,17 +79,9 @@ function EstadisticaPregunta({ pregunta, numero, elegidos, onCambio, registrar }
           {elegidos.map((clave) => (
             <figure key={clave} className="grafico" ref={(nodo) => registrar(pregunta.id, clave, nodo)}>
               <figcaption>{nombreDe(pregunta, clave)}</figcaption>
-              <Grafico clave={clave} pregunta={pregunta} />
+              <Grafico clave={clave} pregunta={pregunta} cuestionario={cuestionario} />
             </figure>
           ))}
-
-          {multiple && (
-            <p className="texto-suave">
-              Cada persona pudo elegir varias opciones: los porcentajes de las barras son sobre{' '}
-              {plural(pregunta.respondidas, 'persona', 'personas')} y pueden sumar más de 100 %. La torta y la tabla
-              reparten el total de elecciones ({f(pregunta.elecciones)}).
-            </p>
-          )}
         </>
       )}
     </section>
@@ -128,7 +118,7 @@ function DescargarPdf({ datos, eleccion, nodos, onCerrar }) {
         if (graficos.length) {
           secciones.push({
             titulo: `${i + 1}. ${p.enunciado}`,
-            detalle: `${TIPOS[p.tipo]} · Variable ${p.variable} · ${plural(p.respondidas, 'persona respondió', 'personas respondieron')}`,
+            detalle: `Variable ${p.variable} · ${plural(p.respondidas, 'persona respondió', 'personas respondieron')}`,
             graficos,
           })
         }
@@ -270,6 +260,7 @@ function DetalleCuestionario() {
             {datos.preguntas.map((p, i) => (
               <EstadisticaPregunta
                 key={p.id}
+                cuestionario={id}
                 pregunta={p}
                 numero={i + 1}
                 elegidos={elegidosDe(p)}

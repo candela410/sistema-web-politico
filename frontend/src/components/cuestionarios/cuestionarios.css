@@ -275,11 +275,6 @@
   font-weight: 700;
 }
 
-.tarjeta-pregunta .tarjeta-pregunta__tipo {
-  flex: none;
-  width: 210px;
-}
-
 .opciones {
   list-style: none;
   margin: 0;
@@ -302,11 +297,6 @@
   height: 18px;
   border: 2px solid #b9b5c7;
   border-radius: 50%;
-}
-
-/* Opción múltiple: casillas cuadradas, como en Google Forms */
-.opciones--multiple .opcion__circulo {
-  border-radius: 4px;
 }
 
 .variable {
@@ -679,6 +669,27 @@
   font-weight: 700;
 }
 
+/* Gráficos hechos en el servidor (pandas + matplotlib) */
+.grafico-imagen {
+  padding-left: 40px;
+}
+
+.grafico-imagen img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.grafico-imagen--cargando img {
+  min-height: 160px;
+  border-radius: 8px;
+  background: #f4f3f7;
+}
+
+.grafico-imagen--error img {
+  display: none;
+}
+
 /* Tabla de frecuencias */
 .tabla-envoltura {
   padding-left: 40px;
@@ -751,12 +762,9 @@
     flex-wrap: wrap;
   }
 
-  .tarjeta-pregunta .tarjeta-pregunta__tipo {
-    width: 100%;
-  }
-
   .opciones,
   .variable,
+  .grafico-imagen,
   .barras,
   .distribucion,
   .histograma,
@@ -931,5 +939,35 @@
 
   .grafico {
     padding: 10px;
+  }
+}
+
+/* Filtros de la lista de cuestionarios */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 12px 0 4px;
+}
+
+.filtros label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  color: var(--lla-gris);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.filtros__limpiar {
+  padding-bottom: 10px;
+}
+
+@media (max-width: 640px) {
+  .filtros label {
+    flex: 1 1 140px;
+    min-width: 0;
   }
 }

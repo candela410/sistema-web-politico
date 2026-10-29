@@ -11,7 +11,7 @@ from .api import crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, registrar
 from .models import Categoria, Cuestionario, Opcion, Pregunta
 
-MAX_PREGUNTAS = 100
+MAX_PREGUNTAS = 15
 MAX_OPCIONES = 30
 
 
@@ -92,9 +92,10 @@ def _limpiar_preguntas(preguntas):
         if not isinstance(p, dict):
             raise DatosInvalidos(f"La pregunta {n} no es válida.")
         enunciado = _texto(p.get("enunciado"), f"El texto de la pregunta {n}")
+        # Las preguntas se responden eligiendo una sola opción
         tipo = p.get("tipo", Pregunta.Tipo.UNA_OPCION)
-        if tipo not in Pregunta.Tipo.values:
-            raise DatosInvalidos(f"El tipo de la pregunta {n} no es válido: elegí una sola opción u opción múltiple.")
+        if tipo != Pregunta.Tipo.UNA_OPCION:
+            raise DatosInvalidos(f"El tipo de la pregunta {n} no es válido: las preguntas son de una sola opción.")
         crudas = p.get("opciones") or []
         if not isinstance(crudas, list):
             raise DatosInvalidos(f"Las opciones de la pregunta {n} no son válidas.")
@@ -186,8 +187,8 @@ def cuestionario_detalle(request, pk):
     if request.method == "DELETE":
         if cuestionario.encuestas.exists():
             return error("No se puede borrar: ya tiene encuestas cargadas. Podés desactivarlo.", 409)
-        if cuestionario.militantes.exists():
-            return error("No se puede borrar: está asignado a militantes. Quitá las asignaciones primero.", 409)
+        if cuestionario.usuarios.exists():
+            return error("No se puede borrar: está asignado a usuarios. Quitá las asignaciones primero.", 409)
         cuestionario.delete()  # preguntas y opciones se borran en cascada
         registrar(request, cuestionario, "borrar", detalle=f"Borró el cuestionario {cuestionario.titulo}")
         return JsonResponse({"ok": True})

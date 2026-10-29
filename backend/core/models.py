@@ -231,6 +231,17 @@ class Usuario(AbstractUser):
         blank=True,
         related_name="usuarios",
     )
+    # Rol del usuario (tabla grupos, como en el DER): un usuario tiene un solo
+    # grupo y un grupo muchos usuarios. Los permisos se siguen tomando del
+    # auth.Group de ese grupo (usuarios_groups), que se mantiene igual a este.
+    grupo = models.ForeignKey(
+        "Grupo",
+        on_delete=models.SET_NULL,
+        db_column="id_grupo",
+        null=True,
+        blank=True,
+        related_name="usuarios",
+    )
 
     # Datos de la persona (antes estaban en la tabla militantes)
     documento = models.CharField(max_length=30, unique=True, null=True, blank=True)

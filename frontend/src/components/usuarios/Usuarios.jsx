@@ -29,8 +29,8 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
   const [guardando, setGuardando] = useState(false)
   const cambiar = (campo) => (e) =>
     setForm((f) => ({ ...f, [campo]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
-  const alternarGrupo = (id) =>
-    setForm((f) => ({ ...f, grupos: f.grupos.includes(id) ? f.grupos.filter((g) => g !== id) : [...f.grupos, id] }))
+  // Un usuario tiene un solo rol (usuarios.id_grupo): tocar otro lo reemplaza, tocar el mismo lo quita
+  const alternarGrupo = (id) => setForm((f) => ({ ...f, grupos: f.grupos.includes(id) ? [] : [id] }))
 
   async function guardar(e) {
     e.preventDefault()
@@ -88,7 +88,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
         </label>
 
         <fieldset>
-          <legend>Roles</legend>
+          <legend>Rol</legend>
           {grupos.map((g) => (
             <label key={g.id} className="casilla-texto">
               <input type="checkbox" checked={form.grupos.includes(g.id)} onChange={() => alternarGrupo(g.id)} />

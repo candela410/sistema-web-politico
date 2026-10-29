@@ -19,7 +19,7 @@ from django.views.decorators.http import require_http_methods
 
 from .api import ADMINISTRAR, SOLO_SUPERUSUARIO, crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, leer, registrar
-from .models import Usuario
+from .models import Grupo, Usuario
 
 GRUPO_MILITANTES = "Militantes"
 ACCIONES = {"view": "Ver", "add": "Crear", "change": "Editar", "delete": "Borrar"}
@@ -41,6 +41,7 @@ def _usuario_json(u):
         "activo": u.is_active,
         "es_superusuario": u.is_superuser,
         "grupos": [{"id": g.pk, "nombre": g.name} for g in u.groups.all()],
+        "grupo": u.grupo_id,
         "administra": _administra(u),
         "documento": u.documento or "",
         "telefono": u.telefono or "",
@@ -119,6 +120,9 @@ def _limpiar(datos, usuario=None):
         grupos = list(Group.objects.filter(pk__in=grupos_ids))
         if len(grupos) != len(set(grupos_ids)):
             return None, "Alguno de los grupos no existe."
+    # Un usuario tiene un solo grupo (usuarios.id_grupo)
+    if len(grupos) > 1:
+        return None, "Elegí un solo rol."
     administra = datos.get("administra", _administra(usuario) if usuario else False)
     if not isinstance(administra, bool):
         return None, "El permiso de administrar debe ser verdadero o falso."
@@ -165,6 +169,8 @@ def _guardar(usuario, d):
     usuario.direccion = d["direccion"]
     if d["password"]:
         usuario.set_password(d["password"])
+    # usuarios.id_grupo apunta a la ficha (tabla grupos) del auth.Group elegido
+    usuario.grupo = Grupo.objects.filter(group__in=d["grupos"]).first()
     usuario.save()
     usuario.groups.set(d["grupos"])
     # El permiso propio va directo al usuario (tabla usuarios_user_permissions)

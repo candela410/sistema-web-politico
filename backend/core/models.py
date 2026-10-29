@@ -271,8 +271,6 @@ class Encuestado(models.Model):
     # Único: identifica a la persona. Que responda una sola vez cada
     # cuestionario lo controla Encuesta (uq_encuesta_encuestado_cuestionario).
     documento = models.CharField(max_length=30, unique=True)
-    telefono = models.CharField(max_length=40, blank=True, null=True)
-    direccion = models.TextField(blank=True, null=True)
 
     # FK como en el DER: el grupo (rol) del militante que lo encuestó y la
     # asignación (usuario + cuestionario) con la que se lo registró. Se

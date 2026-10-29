@@ -30,7 +30,6 @@ function motivoSinBorrar(grupo) {
 
 function FormularioGrupo({ grupo, onGuardado, onCerrar }) {
   const [nombre, setNombre] = useState(grupo?.nombre ?? '')
-  const [descripcion, setDescripcion] = useState(grupo?.descripcion ?? '')
   const [seleccion, setSeleccion] = useState(new Set(grupo?.permisos ?? []))
   const [secciones, setSecciones] = useState(null)
   const [error, setError] = useState('')
@@ -70,7 +69,6 @@ function FormularioGrupo({ grupo, onGuardado, onCerrar }) {
     try {
       const datos = {
         nombre: nombre.trim(),
-        descripcion: descripcion.trim(),
         permisos: [...seleccion],
       }
 
@@ -102,18 +100,6 @@ function FormularioGrupo({ grupo, onGuardado, onCerrar }) {
           maxLength={120}
           autoFocus
           required
-        />
-
-        <label htmlFor="grupo-descripcion">Descripción</label>
-
-        <textarea
-          id="grupo-descripcion"
-          className="entrada"
-          value={descripcion}
-          onChange={(e) => setDescripcion(e.target.value)}
-          placeholder="Para qué sirve este rol (opcional)"
-          maxLength={500}
-          rows={3}
         />
 
         <span className="formulario-grupo__titulo">
@@ -262,7 +248,7 @@ function Grupos() {
     if (!grupos || !texto) return grupos ?? []
 
     return grupos.filter((grupo) =>
-      `${grupo.nombre} ${grupo.descripcion} ${grupo.usuarios.map((u) => u.nombre).join(' ')}`
+      `${grupo.nombre} ${grupo.usuarios.map((u) => u.nombre).join(' ')}`
         .toLowerCase()
         .includes(texto),
     )
@@ -343,10 +329,6 @@ function Grupos() {
             <li key={grupo.id} className="grupo">
               <div className="grupo__texto">
                 <h3>{grupo.nombre}</h3>
-
-                {grupo.descripcion && (
-                  <p className="grupo__descripcion">{grupo.descripcion}</p>
-                )}
 
                 <p className="grupo__permisos">
                   {grupo.permisos.length === 0

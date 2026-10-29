@@ -1,7 +1,7 @@
 from django.contrib.auth.models import Group, Permission
 from django.test import Client, TestCase
 
-from .models import Campana, Grupo, Usuario
+from .models import Campana, Usuario
 
 
 class GruposTests(TestCase):
@@ -58,15 +58,14 @@ class GruposTests(TestCase):
     def test_crear_grupo_aparece_en_usuarios(self):
         r = self.enviar(
             "post", "/api/grupos/",
-            {"nombre": " Norte ", "descripcion": "Zona norte", "permisos": [self.permiso("view_zona").pk]},
+            {"nombre": " Norte ", "permisos": [self.permiso("view_zona").pk]},
         )
         self.assertEqual(r.status_code, 201)
         grupo = r.json()["grupo"]
-        self.assertEqual((grupo["nombre"], grupo["descripcion"], grupo["usuarios"]), ("Norte", "Zona norte", []))
+        self.assertEqual((grupo["nombre"], grupo["usuarios"]), ("Norte", []))
         # Es un grupo de Django: Gestión → Usuarios lo ofrece
         ofrecidos = {g["nombre"]: g for g in self.client.get("/api/usuarios/").json()["grupos"]}
         self.assertIn("Norte", ofrecidos)
-        self.assertEqual(ofrecidos["Norte"]["descripcion"], "Zona norte")
         # Y sus permisos son los de verdad
         self.assertEqual(
             list(Group.objects.get(name="Norte").permissions.values_list("codename", flat=True)), ["view_zona"]
@@ -82,19 +81,19 @@ class GruposTests(TestCase):
         self.assertTrue(u.has_perm("core.view_zona"))
         self.assertFalse(u.has_perm("core.delete_zona"))
 
-    def test_editar_nombre_descripcion_y_permisos(self):
-        grupo = self.enviar("post", "/api/grupos/", {"nombre": "Norte", "descripcion": "a"}).json()["grupo"]
+    def test_editar_nombre_y_permisos(self):
+        grupo = self.enviar("post", "/api/grupos/", {"nombre": "Norte"}).json()["grupo"]
         url = f"/api/grupos/{grupo['id']}/"
         r = self.enviar(
-            "patch", url, {"nombre": "Norte 2", "descripcion": "b", "permisos": [self.permiso("view_ruta").pk]}
+            "patch", url, {"nombre": "Norte 2", "permisos": [self.permiso("view_ruta").pk]}
         )
         self.assertEqual(r.status_code, 200)
         g = r.json()["grupo"]
-        self.assertEqual((g["nombre"], g["descripcion"], len(g["permisos"])), ("Norte 2", "b", 1))
+        self.assertEqual((g["nombre"], len(g["permisos"])), ("Norte 2", 1))
         self.assertEqual(Group.objects.get(pk=grupo["id"]).name, "Norte 2")
-        # Sin "permisos" ni "descripcion" en el cuerpo se conservan
+        # Sin "permisos" en el cuerpo se conservan
         r = self.enviar("patch", url, {"nombre": "Norte 3"})
-        self.assertEqual((r.json()["grupo"]["descripcion"], len(r.json()["grupo"]["permisos"])), ("b", 1))
+        self.assertEqual(len(r.json()["grupo"]["permisos"]), 1)
 
     def test_editar_conserva_permisos_que_no_son_de_core(self):
         group = Group.objects.create(name="Historial")
@@ -127,15 +126,11 @@ class GruposTests(TestCase):
         grupo = self.enviar("post", "/api/grupos/", {"nombre": "Norte"}).json()["grupo"]
         self.assertEqual(self.enviar("delete", f"/api/grupos/{grupo['id']}/").status_code, 200)
         self.assertFalse(Group.objects.filter(name="Norte").exists())
-        self.assertFalse(Grupo.objects.filter(nombre="Norte").exists())
 
     def test_militantes_no_se_borra_ni_se_renombra(self):
         g = Group.objects.get(name="Militantes")
         self.assertEqual(self.enviar("delete", f"/api/grupos/{g.pk}/").status_code, 409)
         self.assertEqual(self.enviar("patch", f"/api/grupos/{g.pk}/", {"nombre": "Otros"}).status_code, 409)
-        # Pero sí se puede cambiar la descripción
-        r = self.enviar("patch", f"/api/grupos/{g.pk}/", {"nombre": "Militantes", "descripcion": "Salen a campo"})
-        self.assertEqual(r.json()["grupo"]["descripcion"], "Salen a campo")
 
     def test_inexistente(self):
         self.assertEqual(self.enviar("delete", "/api/grupos/99999/").status_code, 404)

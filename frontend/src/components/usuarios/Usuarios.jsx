@@ -96,7 +96,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
                 {g.nombre}
                 <span className="opcional"> (rol)</span>
                 <small>
-                  {g.descripcion || (g.nombre === GRUPO_MILITANTES ? 'Solo carga encuestas.' : 'Permisos definidos en Gestión → Roles.')}
+                  {g.nombre === GRUPO_MILITANTES ? 'Solo carga encuestas.' : 'Permisos definidos en Gestión → Roles.'}
                 </small>
               </span>
             </label>

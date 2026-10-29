@@ -231,11 +231,11 @@ class Usuario(AbstractUser):
         blank=True,
         related_name="usuarios",
     )
-    # Rol del usuario (tabla grupos, como en el DER): un usuario tiene un solo
-    # grupo y un grupo muchos usuarios. Los permisos se siguen tomando del
-    # auth.Group de ese grupo (usuarios_groups), que se mantiene igual a este.
+    # Rol del usuario: FK a la tabla de grupos de Django (auth_group). Un
+    # usuario tiene un solo grupo y un grupo muchos usuarios. Los permisos se
+    # toman de ese grupo (usuarios_groups se mantiene igual a este campo).
     grupo = models.ForeignKey(
-        "Grupo",
+        "auth.Group",
         on_delete=models.SET_NULL,
         db_column="id_grupo",
         null=True,
@@ -276,7 +276,7 @@ class Encuestado(models.Model):
     # completa solo al cargar la primera encuesta de la persona. Quién lo
     # encuestó y con qué cuestionario queda en la tabla encuestas.
     grupo = models.ForeignKey(
-        "Grupo",
+        "auth.Group",
         on_delete=models.SET_NULL,
         db_column="id_grupo",
         null=True,
@@ -524,56 +524,3 @@ class RespuestaCargada(models.Model):
         db_table = "respuesta_cargada"
         verbose_name = "respuesta cargada"
         verbose_name_plural = "respuestas cargadas"
-
-
-# ---------------------------------------------------------------------------
-# Grupos
-# ---------------------------------------------------------------------------
-
-
-class Grupo(models.Model):
-    # Ficha de un grupo de Django (auth.Group): guarda lo que auth.Group no
-    # tiene (la descripción). Los usuarios y los permisos de verdad viven en
-    # auth.Group (user.groups y group.permissions), los mismos que usa
-    # Gestión → Usuarios. Ver grupos_views.py.
-    id_grupo = models.AutoField(primary_key=True)
-    group = models.OneToOneField(
-        "auth.Group",
-        on_delete=models.CASCADE,
-        db_column="id_group",
-        null=True,
-        blank=True,
-        related_name="ficha",
-    )
-    nombre = models.CharField(max_length=120, unique=True)
-    descripcion = models.TextField(blank=True, default="")
-    # En desuso: los permisos del grupo son los de auth.Group.permissions.
-    # Se conserva para no perder lo cargado antes (lo copia la migración 0010).
-    permisos = models.ManyToManyField(
-        Permission,
-        blank=True,
-        related_name="grupos_core",
-        through="GrupoPermiso",
-    )
-
-    class Meta:
-        db_table = "grupos"
-        ordering = ["nombre"]
-        verbose_name = "grupo"
-
-    def __str__(self):
-        return self.nombre
-
-
-class GrupoPermiso(models.Model):
-    # Tabla intermedia grupos ↔ permisos (permisosxgrupos en el DER): sin id
-    # propio; la clave primaria es la pareja (id_grupo, id_permiso), y cada
-    # una es a la vez clave foránea.
-    pk = models.CompositePrimaryKey("grupo", "permiso")
-    grupo = models.ForeignKey(Grupo, on_delete=models.CASCADE, db_column="id_grupo")
-    permiso = models.ForeignKey(Permission, on_delete=models.CASCADE, db_column="id_permiso")
-
-    class Meta:
-        db_table = "grupos_permisos"
-        verbose_name = "permiso del grupo"
-        verbose_name_plural = "permisos de los grupos"

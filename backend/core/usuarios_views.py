@@ -19,7 +19,7 @@ from django.views.decorators.http import require_http_methods
 
 from .api import ADMINISTRAR, SOLO_SUPERUSUARIO, crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, leer, registrar
-from .models import Grupo, Usuario
+from .models import Usuario
 
 GRUPO_MILITANTES = "Militantes"
 ACCIONES = {"view": "Ver", "add": "Crear", "change": "Editar", "delete": "Borrar"}
@@ -169,8 +169,8 @@ def _guardar(usuario, d):
     usuario.direccion = d["direccion"]
     if d["password"]:
         usuario.set_password(d["password"])
-    # usuarios.id_grupo apunta a la ficha (tabla grupos) del auth.Group elegido
-    usuario.grupo = Grupo.objects.filter(group__in=d["grupos"]).first()
+    # usuarios.id_grupo apunta al grupo de Django (auth_group) elegido
+    usuario.grupo = d["grupos"][0] if d["grupos"] else None
     usuario.save()
     usuario.groups.set(d["grupos"])
     # El permiso propio va directo al usuario (tabla usuarios_user_permissions)
@@ -192,8 +192,8 @@ def usuarios(request):
         return JsonResponse({
             "usuarios": [_usuario_json(u) for u in lista],
             "grupos": [
-                {"id": g.pk, "nombre": g.name, "descripcion": g.ficha.descripcion if hasattr(g, "ficha") else ""}
-                for g in Group.objects.select_related("ficha").order_by("name")
+                {"id": g.pk, "nombre": g.name}
+                for g in Group.objects.order_by("name")
             ],
         })
 

@@ -1,11 +1,10 @@
-"""API para listar, crear, editar y borrar grupos (con descripción, permisos
-e integrantes).
+"""API para listar, crear, editar y borrar grupos (roles), con sus permisos e
+integrantes.
 
-Los grupos son los grupos de Django (auth.Group), los mismos que se asignan en
-Gestión → Usuarios: lo que se le asigna a un usuario allá se ve acá, y los
-permisos que se marcan acá son los que de verdad tiene ese usuario. La
-descripción (que auth.Group no tiene) se guarda en core.Grupo, enlazado a cada
-grupo de Django.
+Los grupos son solo los de Django (tabla auth_group), los mismos que se
+asignan en Gestión → Usuarios: lo que se le asigna a un usuario allá se ve
+acá, y los permisos que se marcan acá (auth_group_permissions) son los que de
+verdad tiene ese usuario.
 """
 
 from django.contrib.auth.models import Group, Permission
@@ -15,15 +14,10 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
 from .api import crud, error, leer_json, requiere_permiso
-from .models import Grupo, Usuario
+from .models import Usuario
 
 # Grupo que el sistema usa por nombre (ver usuarios_views.GRUPO_MILITANTES)
 GRUPO_MILITANTES = "Militantes"
-
-
-def _descripcion(group):
-    ficha = getattr(group, "ficha", None)
-    return ficha.descripcion if ficha else ""
 
 
 def _integrantes(group, campana):
@@ -47,7 +41,6 @@ def grupo_json(group, campana=None):
     return {
         "id": group.pk,
         "nombre": group.name,
-        "descripcion": _descripcion(group),
         "permisos": sorted(p.pk for p in group.permissions.all() if p.content_type.app_label == "core"),
         "usuarios": _integrantes(group, campana),
     }
@@ -73,16 +66,6 @@ def validar_nombre(nombre, group=None):
     return None
 
 
-def validar_descripcion(descripcion):
-    if descripcion is None:
-        return None
-    if not isinstance(descripcion, str):
-        return "La descripción no es válida."
-    if len(descripcion.strip()) > 500:
-        return "La descripción no puede superar los 500 caracteres."
-    return None
-
-
 def validar_permisos(ids):
     """Devuelve (permisos, mensaje). Solo se aceptan permisos de la app core."""
     if ids is None:
@@ -101,17 +84,6 @@ def validar_permisos(ids):
     return list(permisos), None
 
 
-def _guardar_ficha(group, descripcion=None):
-    """Mantiene la ficha (descripción) enlazada al grupo de Django."""
-    ficha = getattr(group, "ficha", None)
-    if ficha is None:
-        ficha = Grupo(group=group)
-    ficha.nombre = group.name
-    if descripcion is not None:
-        ficha.descripcion = descripcion
-    ficha.save()
-
-
 def _asignar_permisos(group, permisos):
     # Los permisos que no son de core (por ejemplo los de ver historial) no se
     # editan desde esta pantalla: se conservan.
@@ -125,8 +97,7 @@ def _asignar_permisos(group, permisos):
 def grupos(request):
     if request.method == "GET":
         lista = (
-            Group.objects.select_related("ficha")
-            .prefetch_related("permissions__content_type")
+            Group.objects.prefetch_related("permissions__content_type")
             .order_by("name")
         )
         return JsonResponse({"grupos": [grupo_json(g, request.campana) for g in lista]})
@@ -136,9 +107,7 @@ def grupos(request):
     if datos is None:
         return error("JSON inválido.")
 
-    mensaje = validar_nombre(datos.get("nombre")) or validar_descripcion(
-        datos.get("descripcion")
-    )
+    mensaje = validar_nombre(datos.get("nombre"))
     permisos, mensaje_permisos = validar_permisos(datos.get("permisos"))
     mensaje = mensaje or mensaje_permisos
 
@@ -147,7 +116,6 @@ def grupos(request):
 
     with transaction.atomic():
         group = Group.objects.create(name=datos["nombre"].strip())
-        _guardar_ficha(group, (datos.get("descripcion") or "").strip())
         if permisos:
             _asignar_permisos(group, permisos)
 
@@ -181,7 +149,6 @@ def grupo_detalle(request, pk):
         return error("El grupo Militantes lo usa el sistema y no se puede renombrar.", 409)
 
     mensaje = validar_nombre(nombre, group)
-    mensaje = mensaje or validar_descripcion(datos.get("descripcion"))
     permisos, mensaje_permisos = validar_permisos(datos.get("permisos"))
     mensaje = mensaje or mensaje_permisos
 
@@ -191,10 +158,8 @@ def grupo_detalle(request, pk):
     with transaction.atomic():
         group.name = nombre.strip()
         group.save()
-        descripcion = datos.get("descripcion")
-        _guardar_ficha(group, descripcion.strip() if descripcion is not None else None)
         if permisos is not None:
             _asignar_permisos(group, permisos)
 
-    group = Group.objects.select_related("ficha").prefetch_related("permissions__content_type").get(pk=group.pk)
+    group = Group.objects.prefetch_related("permissions__content_type").get(pk=group.pk)
     return JsonResponse({"grupo": grupo_json(group, request.campana)})

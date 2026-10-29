@@ -232,3 +232,55 @@ def contornos_aproximados(puntos, vecinos, radio_m=RADIO_BARRIO_M):
             anillo.append(anillo[0])
             contornos[id_barrio] = {"type": "Polygon", "coordinates": [anillo]}
     return contornos
+
+
+# ---------------------------------------------------------------------------
+# Calles por las que pasa una ruta
+# ---------------------------------------------------------------------------
+
+DISTANCIA_CALLE_M = 15  # tolerancia entre el recorrido y el trazado de la calle
+
+
+def _distancia_a_tramo(p, a, b):
+    """Distancia (en las mismas unidades) del punto p al segmento a-b."""
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    largo2 = dx * dx + dy * dy
+    t = 0 if largo2 == 0 else max(0, min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / largo2))
+    return math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy))
+
+
+def calles_del_recorrido(recorrido, calles, tolerancia_m=DISTANCIA_CALLE_M):
+    """Ids de las calles por las que pasa el recorrido (GeoJSON LineString).
+
+    calles: [(id, GeoJSON MultiLineString), ...]. Una calle cuenta si al menos
+    2 de sus puntos quedan a menos de tolerancia_m del recorrido; así no se
+    cuentan las calles que solo lo cruzan (tocan el recorrido en 1 punto).
+    """
+    linea = (recorrido or {}).get("coordinates") or []
+    if len(linea) < 2:
+        return []
+    lat0 = sum(p[1] for p in linea) / len(linea)
+    kx, ky = 111320 * math.cos(math.radians(lat0)), 110540
+    tramos = [((a[0] * kx, a[1] * ky), (b[0] * kx, b[1] * ky)) for a, b in zip(linea, linea[1:])]
+    xs = [p[0] * kx for p in linea]
+    ys = [p[1] * ky for p in linea]
+    minx, maxx = min(xs) - tolerancia_m, max(xs) + tolerancia_m
+    miny, maxy = min(ys) - tolerancia_m, max(ys) + tolerancia_m
+
+    ids = []
+    for id_calle, geometria in calles:
+        cerca = 0
+        for parte in (geometria or {}).get("coordinates") or []:
+            for lng, lat in parte:
+                p = (lng * kx, lat * ky)
+                if not (minx <= p[0] <= maxx and miny <= p[1] <= maxy):
+                    continue
+                if any(_distancia_a_tramo(p, a, b) <= tolerancia_m for a, b in tramos):
+                    cerca += 1
+                    if cerca >= 2:
+                        break
+            if cerca >= 2:
+                break
+        if cerca >= 2:
+            ids.append(id_calle)
+    return ids

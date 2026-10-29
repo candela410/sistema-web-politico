@@ -84,15 +84,37 @@ class MapaTests(TestCase):
 
     @mock.patch("core.mapa_views.calcular_ruta", return_value=RUTA_ORS)
     def test_crear_ruta_con_openrouteservice(self, calcular):
-        zona = Zona.objects.create(nombre="Z", geometria=cuadrado(0, 0, 3))
         paradas = [[-64.2, -31.4], [-64.19, -31.41]]
-        r = self.enviar("post", "/api/mapa/rutas/", {"nombre": "Recorrido 1", "paradas": paradas, "zona": zona.pk})
+        r = self.enviar("post", "/api/mapa/rutas/", {"nombre": "Recorrido 1", "paradas": paradas})
         self.assertEqual(r.status_code, 201, r.content)
         ruta = r.json()["ruta"]
         self.assertEqual((ruta["distancia_m"], ruta["duracion_s"]), (1234, 900))
         calcular.assert_called_once_with(paradas, "foot-walking")
-        # Se crea una campaña si no había ninguna
-        self.assertEqual(Ruta.objects.get().campana, self.campana)
+
+    def test_ruta_toma_calles_y_zona_por_su_recorrido(self):
+        zona = self.enviar("post", "/api/mapa/zonas/", {"nombre": "Z", "geometria": cuadrado(0, 0, 1.2)}).json()["zona"]
+        # Recorrido sobre San Martín (y = 0.5); la calle "Cruce" solo lo cruza en un punto
+        Calle.objects.create(nombre="Cruce", barrio=self.centro,
+                             geometria={"type": "MultiLineString", "coordinates": [[[0.5, 0.1], [0.5, 0.5], [0.5, 0.9]]]})
+        recorrido = ({"type": "LineString", "coordinates": [[0.05, 0.5], [0.95, 0.5]]}, 100, 60)
+        with mock.patch("core.mapa_views.calcular_ruta", return_value=recorrido):
+            ruta = self.enviar("post", "/api/mapa/rutas/", {"nombre": "R", "paradas": [[0, 0.5], [1, 0.5]]}).json()["ruta"]
+        self.assertEqual(list(Calle.objects.filter(ruta_id=ruta["id"]).values_list("nombre", flat=True)), ["San Martín"])
+        self.assertEqual((ruta["calles"], ruta["zonas"]), (1, [zona["nombre"]]))
+
+    @mock.patch("core.mapa_views.calcular_ruta", return_value=RUTA_ORS)
+    def test_rutas_por_campana_segun_equipos(self, _):
+        mia = self.enviar("post", "/api/mapa/rutas/", {"nombre": "Mía", "paradas": [[0, 0], [1, 1]]}).json()["ruta"]
+        ajena = self.enviar("post", "/api/mapa/rutas/", {"nombre": "Ajena", "paradas": [[0, 0], [1, 1]]}).json()["ruta"]
+        libre = self.enviar("post", "/api/mapa/rutas/", {"nombre": "Libre", "paradas": [[0, 0], [1, 1]]}).json()["ruta"]
+        otra = Campana.objects.create(nombre="Otra campaña")
+        e1 = Equipo.objects.create(nombre="E1", ruta_id=mia["id"])
+        e2 = Equipo.objects.create(nombre="E2", ruta_id=ajena["id"])
+        Usuario.objects.filter(email="ana@ejemplo.com").update(campana=self.campana, equipo=e1)
+        Usuario.objects.create_user(username="beto", email="beto@ejemplo.com", password="x", campana=otra, equipo=e2)
+        nombres = [r["nombre"] for r in self.client.get("/api/mapa/rutas/").json()["rutas"]]
+        self.assertEqual(nombres, ["Libre", "Mía"])
+        self.assertTrue(libre)
 
     @mock.patch("core.mapa_views.calcular_ruta", return_value=RUTA_ORS)
     def test_renombrar_ruta_no_recalcula(self, calcular):
@@ -112,9 +134,14 @@ class MapaTests(TestCase):
         self.assertIn("ORS_API_KEY", r.json()["error"])
 
     @mock.patch("core.mapa_views.calcular_ruta", return_value=RUTA_ORS)
-    def test_borrar_ruta_deja_equipo_sin_ruta(self, _):
+    def test_no_se_borra_ruta_con_equipo(self, _):
         ruta = self.enviar("post", "/api/mapa/rutas/", {"nombre": "R", "paradas": [[0, 0], [1, 1]]}).json()["ruta"]
-        equipo = Equipo.objects.create(nombre="E1", campana=Ruta.objects.get().campana, ruta_id=ruta["id"])
-        self.enviar("delete", f"/api/mapa/rutas/{ruta['id']}/")
-        equipo.refresh_from_db()
-        self.assertIsNone(equipo.ruta)
+        Equipo.objects.create(nombre="E1", ruta_id=ruta["id"])
+        self.assertEqual(self.enviar("delete", f"/api/mapa/rutas/{ruta['id']}/").status_code, 409)
+        self.assertTrue(Ruta.objects.filter(pk=ruta["id"]).exists())
+
+    def test_equipo_necesita_ruta(self):
+        from django.db import IntegrityError, transaction
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Equipo.objects.create(nombre="Sin ruta")

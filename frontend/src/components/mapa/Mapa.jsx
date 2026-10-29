@@ -198,7 +198,6 @@ function Mapa() {
         ) : (
           <PanelRutas
             rutas={rutas}
-            zonas={zonas}
             modo={modo}
             setModo={setModo}
             seleccionada={seleccion?.tipo === 'ruta' ? seleccion.id : null}

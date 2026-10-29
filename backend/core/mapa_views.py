@@ -1,11 +1,15 @@
 """API del mapa: barrios y calles (solo lectura), zonas y rutas (crear,
 editar y borrar). Todo en GeoJSON. Barrios, calles y zonas son territorio
-compartido por todas las campañas; las rutas son de la campaña activa."""
+compartido por todas las campañas.
+
+Las rutas no guardan campaña ni zona (como en el DER); se obtienen con
+consultas: la campaña por rutas → equipos → usuarios, y la zona por
+rutas → calles → barrios → zonas."""
 
 import re
 
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
@@ -17,6 +21,7 @@ from .bitacora import diferencias, registrar
 from .geo import (
     ErrorRuteo,
     calcular_ruta,
+    calles_del_recorrido,
     centro,
     es_poligono_valido,
     formato_distancia,
@@ -168,8 +173,6 @@ def zonas(request):
 def zona_detalle(request, pk):
     zona = get_object_or_404(Zona, pk=pk)
     if request.method == "DELETE":
-        if zona.rutas.exists():
-            return _error("La zona tiene rutas asignadas. Borralas o movelas primero.", 409)
         with transaction.atomic():
             zona.barrios.update(zona=None)
             zona.delete()
@@ -205,12 +208,53 @@ def zona_detalle(request, pk):
 # ---------------------------------------------------------------------------
 
 
+def rutas_de_campana(campana):
+    """Rutas que ve una campaña: las que tienen algún equipo con usuarios de
+    esa campaña, más las que todavía no tienen gente asignada (sin equipo, o
+    con equipos sin usuarios), que sirven para todas.
+
+    SQL equivalente:
+        SELECT DISTINCT r.* FROM rutas r
+        LEFT JOIN equipos e ON e.id_ruta = r.id_ruta
+        LEFT JOIN usuarios u ON u.id_equipo = e.id_equipo
+        WHERE u.id_campana = %s
+           OR r.id_ruta NOT IN (
+               SELECT e2.id_ruta FROM equipos e2
+               JOIN usuarios u2 ON u2.id_equipo = e2.id_equipo
+           )
+    """
+    con_gente = Ruta.objects.filter(equipos__usuarios__isnull=False).values("pk")
+    return Ruta.objects.filter(Q(equipos__usuarios__campana=campana) | ~Q(pk__in=con_gente)).distinct()
+
+
+def zonas_de_ruta(ruta):
+    """Zonas por las que pasa la ruta, según sus calles.
+
+    SQL equivalente:
+        SELECT DISTINCT z.* FROM zonas z
+        JOIN barrios b ON b.id_zona = z.id_zona
+        JOIN calles c ON c.id_barrio = b.id_barrio
+        WHERE c.id_ruta = %s
+    """
+    return Zona.objects.filter(barrios__calles__ruta=ruta).distinct().order_by("nombre")
+
+
+def _asignar_calles(ruta):
+    """Asigna a la ruta las calles por las que pasa su recorrido. Las calles
+    que ya son de otra ruta no se tocan (una calle pertenece a una sola ruta)."""
+    Calle.objects.filter(ruta=ruta).update(ruta=None)
+    libres = Calle.objects.filter(ruta__isnull=True).exclude(geometria=None).values_list("pk", "geometria")
+    ids = calles_del_recorrido(ruta.geometria, libres)
+    Calle.objects.filter(pk__in=ids).update(ruta=ruta)
+
+
 def _ruta_json(ruta):
     return {
         "id": ruta.pk,
         "nombre": ruta.nombre,
         "descripcion": ruta.descripcion or "",
-        "zona": ruta.zona_id,
+        "zonas": list(zonas_de_ruta(ruta).values_list("nombre", flat=True)),
+        "calles": ruta.calles.count(),
         "perfil": ruta.perfil,
         "paradas": ruta.paradas,
         "geometria": ruta.geometria,
@@ -240,7 +284,7 @@ def _foto_ruta(r):
     return {
         "Nombre": r.nombre,
         "Notas": r.descripcion or "",
-        "Zona": r.zona.nombre if r.zona_id else "Sin zona",
+        "Calles": r.calles.count(),
         "Cómo se recorre": r.get_perfil_display(),
         "Puntos": len(r.paradas or []),
         "Distancia": formato_distancia(r.distancia_m),
@@ -253,7 +297,7 @@ def _guardar_ruta(ruta, datos):
     nombre = (datos.get("nombre", ruta.nombre) or "").strip()
     if not nombre:
         return _error("Poné un nombre a la ruta.")
-    repetida = Ruta.objects.filter(campana=ruta.campana, nombre__iexact=nombre)
+    repetida = Ruta.objects.filter(nombre__iexact=nombre)
     if ruta.pk:
         repetida = repetida.exclude(pk=ruta.pk)
     if repetida.exists():
@@ -263,16 +307,13 @@ def _guardar_ruta(ruta, datos):
     if perfil not in Ruta.Perfil.values:
         return _error("Elegí cómo se recorre: a pie, en auto o en bicicleta.")
 
-    zona_id = datos.get("zona", ruta.zona_id)
-    if zona_id and not Zona.objects.filter(pk=zona_id).exists():
-        return _error("La zona elegida no existe.")
-
     paradas = datos.get("paradas", ruta.paradas)
     error = _validar_paradas(paradas)
     if error:
         return _error(error)
 
-    if paradas != ruta.paradas or perfil != ruta.perfil or not ruta.geometria:
+    recalcular = paradas != ruta.paradas or perfil != ruta.perfil or not ruta.geometria
+    if recalcular:
         try:
             ruta.geometria, ruta.distancia_m, ruta.duracion_s = calcular_ruta(paradas, perfil)
         except ErrorRuteo as e:
@@ -282,8 +323,10 @@ def _guardar_ruta(ruta, datos):
     ruta.descripcion = (datos.get("descripcion", ruta.descripcion) or "").strip() or None
     ruta.perfil = perfil
     ruta.paradas = paradas
-    ruta.zona_id = zona_id or None
-    ruta.save()
+    with transaction.atomic():
+        ruta.save()
+        if recalcular:
+            _asignar_calles(ruta)
     return None
 
 
@@ -291,13 +334,13 @@ def _guardar_ruta(ruta, datos):
 @requiere_permiso(crud("ruta"))
 def rutas(request):
     if request.method == "GET":
-        lista = Ruta.objects.filter(campana=request.campana).prefetch_related("equipos").order_by("nombre")
+        lista = rutas_de_campana(request.campana).prefetch_related("equipos").order_by("nombre")
         return JsonResponse({"rutas": [_ruta_json(r) for r in lista]})
 
     datos = _leer_json(request)
     if datos is None:
         return _error("JSON inválido.")
-    ruta = Ruta(campana=request.campana, paradas=[])
+    ruta = Ruta(paradas=[])
     error = _guardar_ruta(ruta, datos)
     if error:
         return error
@@ -308,9 +351,13 @@ def rutas(request):
 @require_http_methods(["PATCH", "DELETE"])
 @requiere_permiso(crud("ruta"))
 def ruta_detalle(request, pk):
-    ruta = get_object_or_404(Ruta, pk=pk, campana=request.campana)
+    ruta = get_object_or_404(rutas_de_campana(request.campana), pk=pk)
     if request.method == "DELETE":
-        ruta.delete()  # los equipos quedan sin ruta (SET_NULL)
+        if ruta.equipos.exists():
+            return _error("La ruta tiene equipos asignados. Cambiales la ruta antes de borrarla.", 409)
+        with transaction.atomic():
+            ruta.calles.update(ruta=None)
+            ruta.delete()
         registrar(request, ruta, "borrar", detalle=f"Borró la ruta {ruta.nombre}")
         return JsonResponse({"ok": True})
 

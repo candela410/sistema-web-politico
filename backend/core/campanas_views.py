@@ -51,7 +51,8 @@ def _con_conteos(consulta):
     return consulta.annotate(
         n_cuestionarios=Count("cuestionarios", distinct=True),
         n_usuarios=Count("usuarios", distinct=True),
-        n_rutas=Count("rutas", distinct=True),
+        # Rutas de la campaña: las de los equipos de sus usuarios (usuarios → equipos → rutas)
+        n_rutas=Count("usuarios__equipo__ruta", distinct=True),
     )
 
 
@@ -143,7 +144,7 @@ def campana_detalle(request, pk):
             campana.delete()
         except ProtectedError:
             return error(
-                "No se puede borrar: la campaña tiene datos (usuarios, cuestionarios o rutas). Podés desactivarla.",
+                "No se puede borrar: la campaña tiene datos (usuarios o cuestionarios). Podés desactivarla.",
                 409,
             )
         registrar(request, campana, "borrar", campana=None, detalle=f"Borró la campaña {campana.nombre}")

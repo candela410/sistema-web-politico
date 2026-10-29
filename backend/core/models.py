@@ -135,6 +135,16 @@ class Calle(models.Model):
     )
     # Tramos de la calle dentro del barrio (GeoJSON MultiLineString)
     geometria = models.JSONField(blank=True, null=True)
+    # Ruta que pasa por esta calle (se asigna sola al guardar la ruta, según
+    # su recorrido). Una calle pertenece a una sola ruta.
+    ruta = models.ForeignKey(
+        "Ruta",
+        on_delete=models.SET_NULL,
+        db_column="id_ruta",
+        null=True,
+        blank=True,
+        related_name="calles",
+    )
 
     class Meta:
         db_table = "calles"
@@ -152,23 +162,12 @@ class Calle(models.Model):
 
 
 class Ruta(models.Model):
+    # Sin campaña ni zona propias (como en el DER): la campaña sale de
+    # equipos → usuarios y la zona de calles → barrios (ver mapa_views)
     id_ruta = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=120)
+    nombre = models.CharField(max_length=120, unique=True)
     descripcion = models.TextField(blank=True, null=True)
-    campana = models.ForeignKey(
-        Campana,
-        on_delete=models.PROTECT,
-        db_column="id_campana",
-        related_name="rutas",
-    )
-    zona = models.ForeignKey(
-        Zona,
-        on_delete=models.PROTECT,
-        db_column="id_zona",
-        null=True,
-        blank=True,
-        related_name="rutas",
-    )
+
     class Perfil(models.TextChoices):
         A_PIE = "foot-walking", "A pie"
         AUTO = "driving-car", "En auto"
@@ -185,12 +184,6 @@ class Ruta(models.Model):
     class Meta:
         db_table = "rutas"
         verbose_name = "ruta"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["campana", "nombre"],
-                name="uq_ruta_campana_nombre",
-            )
-        ]
 
     def __str__(self):
         return self.nombre
@@ -198,32 +191,20 @@ class Ruta(models.Model):
 
 class Equipo(models.Model):
     id_equipo = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=120)
+    nombre = models.CharField(max_length=120, unique=True)
     descripcion = models.TextField(blank=True, null=True)
-    campana = models.ForeignKey(
-        Campana,
-        on_delete=models.PROTECT,
-        db_column="id_campana",
-        related_name="equipos",
-    )
+    # Obligatoria: no se puede crear un equipo sin ruta asignada, ni borrar
+    # una ruta que tiene equipos. La campaña sale de sus usuarios.
     ruta = models.ForeignKey(
         Ruta,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         db_column="id_ruta",
-        null=True,
-        blank=True,
         related_name="equipos",
     )
 
     class Meta:
         db_table = "equipos"
         verbose_name = "equipo"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["campana", "nombre"],
-                name="uq_equipo_campana_nombre",
-            )
-        ]
 
     def __str__(self):
         return self.nombre

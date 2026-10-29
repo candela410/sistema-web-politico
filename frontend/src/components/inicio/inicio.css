@@ -192,7 +192,7 @@
 
 .inicio__tarjetas {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -206,12 +206,99 @@
   border-radius: 16px;
   color: #fff;
   text-decoration: none;
-  transition: transform 150ms ease, box-shadow 150ms ease;
+  grid-column: span var(--columnas, 2);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    transform 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out);
 }
 
-.inicio__tarjeta:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 24px rgb(21 18 28 / 0.15);
+/* Las dos principales (Cuestionarios y Cargar encuesta) un poco más grandes */
+.inicio__tarjeta--grande {
+  min-height: 176px;
+}
+
+.inicio__tarjeta--grande .inicio__tarjeta-icono {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+}
+
+.inicio__tarjeta--grande .inicio__tarjeta-pie strong {
+  font-size: 1.3rem;
+}
+
+/* Reflejo: una franja de luz cruza la tarjeta al pasar el cursor.
+   Al salir vuelve a su lugar sin animarse, así no "rebobina". */
+.inicio__tarjeta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.45) 48%,
+    rgb(255 255 255 / 0.18) 54%,
+    transparent 70%
+  );
+  transform: translateX(-110%);
+  pointer-events: none;
+}
+
+/* Brillo suave fijo arriba a la izquierda, como luz sobre la tarjeta */
+.inicio__tarjeta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(120% 90% at 0% 0%, rgb(255 255 255 / 0.18), transparent 60%);
+  pointer-events: none;
+}
+
+.inicio__tarjeta-icono,
+.inicio__tarjeta-flecha {
+  transition: transform 200ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .inicio__tarjeta:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 28px rgb(21 18 28 / 0.18);
+  }
+
+  .inicio__tarjeta:hover::after {
+    transform: translateX(110%);
+    transition: transform 700ms var(--ease-out);
+  }
+
+  .inicio__tarjeta:hover .inicio__tarjeta-icono {
+    transform: scale(1.08) rotate(-4deg);
+  }
+
+  .inicio__tarjeta:hover .inicio__tarjeta-flecha {
+    transform: translateX(3px);
+  }
+}
+
+.inicio__tarjeta:active {
+  transform: scale(0.98);
+  transition-duration: 120ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inicio__tarjeta::after {
+    display: none;
+  }
+
+  .inicio__tarjeta:hover,
+  .inicio__tarjeta:active,
+  .inicio__tarjeta:hover .inicio__tarjeta-icono,
+  .inicio__tarjeta:hover .inicio__tarjeta-flecha {
+    transform: none;
+  }
 }
 
 .inicio__tarjeta:focus-visible {
@@ -381,8 +468,26 @@
     grid-template-columns: 1fr 1fr;
   }
 
+  /* Celular: dos por fila; si quedan impares, la primera ocupa todo el ancho */
   .inicio__tarjetas {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .inicio__tarjeta {
+    grid-column: auto;
+  }
+
+  .inicio__tarjeta:first-child:nth-last-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  /* En media columna la "grande" vuelve al tamaño normal */
+  .inicio__tarjeta--grande:not(:first-child:nth-last-child(odd)) .inicio__tarjeta-pie strong {
+    font-size: 1.08rem;
+  }
+
+  .inicio__tarjeta--grande:not(:first-child:nth-last-child(odd)) {
+    min-height: 130px;
   }
 
   .inicio__tarjeta {

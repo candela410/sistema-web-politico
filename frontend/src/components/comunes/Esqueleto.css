@@ -1,0 +1,66 @@
+/* --- Esqueleto de carga ------------------------------------------------- */
+
+.esqueleto {
+  display: grid;
+  gap: 10px;
+}
+
+.esqueleto__lector {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.esqueleto__fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid var(--lla-borde);
+  border-left: 4px solid #e4e1ec;
+  border-radius: 12px;
+}
+
+/* Las filas se van apagando hacia abajo: se lee como "hay más" sin ruido */
+.esqueleto__fila:nth-child(3) { opacity: 0.75; }
+.esqueleto__fila:nth-child(4) { opacity: 0.5; }
+.esqueleto__fila:nth-child(n + 5) { opacity: 0.3; }
+
+.esqueleto__texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.esqueleto__barra {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  /* Brillo que recorre la barra; lineal porque es movimiento constante */
+  background: linear-gradient(90deg, #efedf3 0%, #f8f7fa 40%, #efedf3 80%) 0 0 / 300% 100%;
+  animation: esqueleto-brillo 1.4s linear infinite;
+}
+
+.esqueleto__barra--chica { width: 64px; height: 10px; }
+.esqueleto__barra--titulo { width: min(260px, 70%); height: 16px; }
+.esqueleto__barra--dato { width: min(160px, 45%); height: 10px; }
+.esqueleto__barra--boton { flex: none; width: 72px; height: 32px; border-radius: 10px; }
+
+@keyframes esqueleto-brillo {
+  from { background-position: 100% 0; }
+  to { background-position: -50% 0; }
+}
+
+@media (max-width: 640px) {
+  .esqueleto__barra--boton { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto__barra { animation: none; }
+}

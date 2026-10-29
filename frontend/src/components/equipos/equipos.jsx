@@ -3,6 +3,10 @@ import * as api from '../../api/equipos'
 import { tiene } from '../../permisos'
 import Modal from '../comunes/Modal'
 import './equipos.css'
+import Esqueleto from '../comunes/Esqueleto'
+import Interruptor from '../comunes/Interruptor'
+import { Pencil } from 'lucide-react'
+import BotonIcono from '../comunes/BotonIcono'
 
 function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) {
   const [nombre, setNombre] = useState(equipo?.nombre ?? '')
@@ -128,7 +132,6 @@ function Equipos({ usuario }) {
   const [editando, setEditando] = useState(null) // null | 'nuevo' | equipo
   const [aviso, setAviso] = useState('')
   const [errorAccion, setErrorAccion] = useState('')
-  const [cambiando, setCambiando] = useState(null) // id del equipo que se está activando o desactivando
 
   const puedeCrear = tiene(usuario, 'core.add_equipo')
   const puedeEditar = tiene(usuario, 'core.change_equipo')
@@ -170,15 +173,12 @@ function Equipos({ usuario }) {
 
   async function cambiarEstado(equipo) {
     setErrorAccion('')
-    setCambiando(equipo.id)
     try {
       const guardado = await api.editarEquipo(equipo.id, { activo: !equipo.activo })
       setEquipos((lista) => lista.map((x) => (x.id === guardado.id ? guardado : x)))
       avisar(guardado.activo ? `Equipo “${guardado.nombre}” activado.` : `Equipo “${guardado.nombre}” desactivado.`)
     } catch (e) {
       setErrorAccion(e.message)
-    } finally {
-      setCambiando(null)
     }
   }
 
@@ -233,7 +233,7 @@ function Equipos({ usuario }) {
           {errorCarga}
         </p>
       ) : equipos === null ? (
-        <p className="vacio-tarjeta">Cargando…</p>
+        <Esqueleto />
       ) : visibles.length === 0 ? (
         <div className="vacio-tarjeta">
           {equipos.length === 0 ? (
@@ -264,18 +264,22 @@ function Equipos({ usuario }) {
                 </p>
               </div>
               {puedeEditar && (
-                <div className="equipo__acciones">
-                  <button type="button" className="boton boton--borde boton--chico" onClick={() => setEditando(e)}>
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className={e.activo ? 'boton boton--peligro boton--chico' : 'boton boton--chico'}
-                    onClick={() => cambiarEstado(e)}
-                    disabled={cambiando === e.id}
-                  >
-                    {e.activo ? 'Desactivar' : 'Activar'}
-                  </button>
+                <div className="equipo__acciones acciones-iconos">
+                  <Interruptor
+                    activo={e.activo}
+                    onCambiar={() => cambiarEstado(e)}
+                    etiqueta={`Equipo ${e.nombre} activo`}
+                    confirmacion={{
+                      titulo: 'Desactivar equipo',
+                      mensaje: (
+                        <>
+                          ¿Seguro que querés desactivar <b>{e.nombre}</b>? Sus integrantes y su ruta se conservan, y lo
+                          podés volver a activar cuando quieras.
+                        </>
+                      ),
+                    }}
+                  />
+                  <BotonIcono icono={Pencil} etiqueta="Editar" onClick={() => setEditando(e)} />
                 </div>
               )}
             </li>

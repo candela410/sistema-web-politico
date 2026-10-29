@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as api from '../../api/cuestionarios'
+import Esqueleto from '../comunes/Esqueleto'
 import Modal from '../comunes/Modal'
 import './asignar.css'
 
@@ -133,7 +134,7 @@ function AsignarCuestionario({ cuestionario, onCerrar, onGuardado }) {
         </p>
       )}
 
-      {datos === null && !error && <p className="modal__texto">Cargando…</p>}
+      {datos === null && !error && <Esqueleto filas={2} />}
 
       {datos && !hayMilitantes && (
         <p className="modal__texto">

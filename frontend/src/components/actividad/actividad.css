@@ -245,3 +245,10 @@
     grid-column: 2;
   }
 }
+
+/* "Ver cambios" con el ícono del ojo */
+.enlace-boton--icono {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

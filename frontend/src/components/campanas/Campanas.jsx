@@ -4,6 +4,9 @@ import * as api from '../../api/campanas'
 import { tiene } from '../../permisos'
 import Modal from '../comunes/Modal'
 import './campanas.css'
+import Esqueleto from '../comunes/Esqueleto'
+import { Pencil, Trash2 } from 'lucide-react'
+import BotonIcono from '../comunes/BotonIcono'
 
 const formatoFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium' })
 const fecha = (iso) => (iso ? formatoFecha.format(new Date(`${iso}T12:00:00`)) : '…')
@@ -160,7 +163,7 @@ function Campanas({ usuario }) {
           {error}
         </p>
       ) : campanas === null ? (
-        <p className="vacio-tarjeta">Cargando…</p>
+        <Esqueleto filas={2} />
       ) : campanas.length === 0 ? (
         <div className="vacio-tarjeta">
           <b>Todavía no hay campañas.</b>
@@ -182,16 +185,10 @@ function Campanas({ usuario }) {
                   {c.rutas} rutas
                 </span>
               </div>
-              <div className="tarjeta-fila__acciones">
-                {puede('change') && (
-                  <button type="button" className="boton boton--borde boton--chico" onClick={() => setEditando(c)}>
-                    Editar
-                  </button>
-                )}
+              <div className="tarjeta-fila__acciones acciones-iconos">
+                {puede('change') && <BotonIcono icono={Pencil} etiqueta="Editar" onClick={() => setEditando(c)} />}
                 {puede('delete') && (
-                  <button type="button" className="boton boton--peligro boton--chico" onClick={() => setBorrando(c)}>
-                    Borrar
-                  </button>
+                  <BotonIcono icono={Trash2} etiqueta="Borrar" variante="peligro" onClick={() => setBorrando(c)} />
                 )}
               </div>
             </li>

@@ -942,32 +942,75 @@
   }
 }
 
-/* Filtros de la lista de cuestionarios */
-.filtros {
+/* Filtros de la lista de cuestionarios: una fila compacta debajo del
+   buscador, cada filtro con su etiqueta al costado. Tiene nombre propio
+   porque .filtros es la grilla de Actividad (el CSS es global). */
+.cuestionarios-filtros {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
-  margin: 12px 0 4px;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: -8px;
 }
 
-.filtros label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 160px;
+.cuestionarios-filtros label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--lla-borde);
+  border-radius: 999px;
+  background: #fff;
   color: var(--lla-gris);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.filtros__limpiar {
-  padding-bottom: 10px;
+.cuestionarios-filtros label:focus-within {
+  border-color: var(--lla-violeta);
+  box-shadow: 0 0 0 3px rgb(81 49 143 / 0.15);
+}
+
+.cuestionarios-filtros .entrada {
+  width: auto;
+  min-height: 0;
+  height: 30px;
+  padding: 0 26px 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background-color: rgb(81 49 143 / 0.07);
+  color: var(--lla-violeta);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cuestionarios-filtros .entrada:focus {
+  box-shadow: none;
+}
+
+.cuestionarios-filtros__limpiar {
+  margin-left: 4px;
 }
 
 @media (max-width: 640px) {
-  .filtros label {
-    flex: 1 1 140px;
-    min-width: 0;
+  /* En celular los filtros son una fila que se desliza de costado */
+  .cuestionarios-filtros {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: -16px;
+    padding: 2px 16px 4px;
+    scrollbar-width: none;
+  }
+
+  .cuestionarios-filtros::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cuestionarios-filtros label,
+  .cuestionarios-filtros__limpiar {
+    flex: none;
   }
 }

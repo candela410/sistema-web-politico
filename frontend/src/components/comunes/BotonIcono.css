@@ -1,0 +1,121 @@
+/* --- Botones con ícono ------------------------------------------------- */
+
+.accion-icono {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1.5px solid var(--lla-violeta);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--lla-violeta);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 160ms var(--ease-out);
+}
+
+.accion-icono--peligro {
+  border-color: #e7b4bb;
+  color: #c0182f;
+}
+
+.accion-icono--lleno {
+  border-color: var(--lla-violeta);
+  background: var(--lla-violeta);
+  color: #fff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .accion-icono:hover:not(:disabled) {
+    background: rgb(81 49 143 / 0.08);
+  }
+
+  .accion-icono--peligro:hover:not(:disabled) {
+    border-color: #c0182f;
+    background: #fdf1f2;
+  }
+
+  .accion-icono--lleno:hover:not(:disabled) {
+    background: var(--lla-violeta-oscuro);
+  }
+}
+
+.accion-icono:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.accion-icono:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.accion-icono:focus-visible {
+  outline: 3px solid rgb(81 49 143 / 0.35);
+  outline-offset: 2px;
+}
+
+/* Cartelito con el nombre de la acción. Aparece después de una breve pausa
+   (para no saltar al pasar el mouse de largo) y se va al instante. */
+.accion-icono::after {
+  content: attr(data-ayuda);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 10;
+  width: max-content;
+  max-width: 220px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: #1f1630;
+  color: #fff;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 3px) scale(0.97);
+  transform-origin: bottom center;
+  transition:
+    opacity 125ms var(--ease-out),
+    transform 125ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .accion-icono:hover::after {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+    transition-delay: 350ms;
+  }
+}
+
+.accion-icono:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+/* Grupo de botones de una fila */
+.acciones-iconos {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accion-icono:active:not(:disabled) {
+    transform: none;
+  }
+
+  .accion-icono::after {
+    transform: translate(-50%, 0);
+  }
+}

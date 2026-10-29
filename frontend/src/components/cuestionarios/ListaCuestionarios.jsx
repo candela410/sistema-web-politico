@@ -5,7 +5,11 @@ import { tiene } from '../../permisos'
 import Modal from '../comunes/Modal'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import AsignarCuestionario from './AsignarCuestionario'
+import VerCuestionario from './VerCuestionario'
+import { ChartColumn, Eye, Pencil, Trash2, UserPlus } from 'lucide-react'
+import BotonIcono from '../comunes/BotonIcono'
 import './cuestionarios.css'
+import Esqueleto from '../comunes/Esqueleto'
 
 function ConfirmarBorrado({ cuestionario, onBorrado, onCerrar }) {
   const [error, setError] = useState('')
@@ -58,6 +62,7 @@ function ListaCuestionarios({ usuario }) {
   const filtrando = busqueda.trim() || Object.entries(filtros).some(([k, v]) => v !== FILTROS_INICIALES[k])
   const [borrando, setBorrando] = useState(null)
   const [asignando, setAsignando] = useState(null)
+  const [viendo, setViendo] = useState(null)
   const [aviso, setAviso] = useState(state?.aviso ?? '')
 
   useEffect(() => {
@@ -127,7 +132,7 @@ function ListaCuestionarios({ usuario }) {
         />
       </div>
 
-      <div className="filtros" role="group" aria-label="Filtros">
+      <div className="cuestionarios-filtros" role="group" aria-label="Filtros">
         <label>
           Categoría
           <select className="entrada" value={filtros.categoria} onChange={filtrar('categoria')}>
@@ -158,7 +163,7 @@ function ListaCuestionarios({ usuario }) {
         {filtrando && (
           <button
             type="button"
-            className="enlace-boton filtros__limpiar"
+            className="enlace-boton cuestionarios-filtros__limpiar"
             onClick={() => {
               setFiltros(FILTROS_INICIALES)
               setBusqueda('')
@@ -180,7 +185,7 @@ function ListaCuestionarios({ usuario }) {
           {errorCarga}
         </p>
       ) : cuestionarios === null ? (
-        <p className="vacio-tarjeta">Cargando…</p>
+        <Esqueleto />
       ) : visibles.length === 0 ? (
         <div className="vacio-tarjeta">
           {cuestionarios.length === 0 ? (
@@ -211,30 +216,25 @@ function ListaCuestionarios({ usuario }) {
                     {!c.activo && <span className="etiqueta-inactivo">Inactivo</span>}
                   </span>
                 </button>
-                <div className="cuestionario-item__acciones">
+                <div className="cuestionario-item__acciones acciones-iconos">
+                  <BotonIcono icono={Eye} etiqueta="Ver detalles" onClick={() => setViendo(c)} />
                   {/* Las estadísticas solo se abren desde este botón */}
                   {tiene(usuario, 'core.view_encuesta') && (
-                    <Link to={`/cuestionarios/${c.id}/estadisticas`} className="boton boton--chico boton--estadisticas">
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M5 20V11M12 20V5M19 20v-6" />
-                      </svg>
-                      Estadísticas
-                    </Link>
+                    <BotonIcono
+                      to={`/cuestionarios/${c.id}/estadisticas`}
+                      icono={ChartColumn}
+                      etiqueta="Estadísticas"
+                      variante="lleno"
+                    />
                   )}
                   {tiene(usuario, 'core.change_asignacioncuestionario') && (
-                    <button type="button" className="boton boton--borde boton--chico" onClick={() => setAsignando(c)}>
-                      Asignar
-                    </button>
+                    <BotonIcono icono={UserPlus} etiqueta="Asignar a militantes" onClick={() => setAsignando(c)} />
                   )}
                   {tiene(usuario, 'core.change_cuestionario') && (
-                    <Link to={`/cuestionarios/${c.id}`} className="boton boton--borde boton--chico">
-                      Editar
-                    </Link>
+                    <BotonIcono to={`/cuestionarios/${c.id}`} icono={Pencil} etiqueta="Editar" />
                   )}
                   {tiene(usuario, 'core.delete_cuestionario') && (
-                    <button type="button" className="boton boton--peligro boton--chico" onClick={() => setBorrando(c)}>
-                      Borrar
-                    </button>
+                    <BotonIcono icono={Trash2} etiqueta="Borrar" variante="peligro" onClick={() => setBorrando(c)} />
                   )}
                 </div>
               </li>
@@ -242,6 +242,14 @@ function ListaCuestionarios({ usuario }) {
           </ul>
           <Paginacion {...paginado} />
         </>
+      )}
+
+      {viendo && (
+        <VerCuestionario
+          cuestionario={viendo}
+          usuario={usuario}
+          onCerrar={() => setViendo(null)}
+        />
       )}
 
       {asignando && (

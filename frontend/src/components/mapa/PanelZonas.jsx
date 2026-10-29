@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
+import BotonIcono from '../comunes/BotonIcono'
+import Confirmacion from '../comunes/Confirmacion'
 import * as api from '../../api/mapa'
 import { COLORES_ZONA } from './formato'
 
@@ -61,8 +64,11 @@ function PanelZonas({ zonas, modo, setModo, seleccionada, onSeleccionar, onGuard
     }
   }
 
+  // Zona que se está por borrar (abre la ventana de confirmación)
+  const [aBorrar, setABorrar] = useState(null)
+
   async function borrar(zona) {
-    if (!window.confirm(`¿Borrar la zona "${zona.nombre}"? Sus barrios quedan sin zona.`)) return
+    setABorrar(null)
     try {
       await api.borrarZona(zona.id)
       onBorrada(zona.id)
@@ -159,18 +165,20 @@ function PanelZonas({ zonas, modo, setModo, seleccionada, onSeleccionar, onGuard
                   .map((b) => b.nombre)
                   .join(', ') + (zonaActiva.barrios.length > 15 ? ` y ${zonaActiva.barrios.length - 15} más.` : '.')}
           </p>
-          <div className="acciones">
-            <button
-              type="button"
-              className="boton boton--borde boton--chico"
-              onClick={() => empezarEdicion(zonaActiva)}
-            >
-              Editar
-            </button>
-            <button type="button" className="boton boton--peligro boton--chico" onClick={() => borrar(zonaActiva)}>
-              Borrar
-            </button>
+          <div className="acciones acciones-iconos">
+            <BotonIcono icono={Pencil} etiqueta="Editar zona" onClick={() => empezarEdicion(zonaActiva)} />
+            <BotonIcono icono={Trash2} etiqueta="Borrar zona" variante="peligro" onClick={() => setABorrar(zonaActiva)} />
           </div>
+          {aBorrar && (
+            <Confirmacion
+              titulo="Borrar zona"
+              textoConfirmar="Borrar"
+              onCerrar={() => setABorrar(null)}
+              onConfirmar={() => borrar(aBorrar)}
+            >
+              ¿Seguro que querés borrar la zona <b>{aBorrar.nombre}</b>? Sus barrios quedan sin zona.
+            </Confirmacion>
+          )}
         </section>
       )}
     </div>

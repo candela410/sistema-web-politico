@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { obtenerHistorial } from '../../api/usuarios'
 import './actividad.css'
+import Esqueleto from '../comunes/Esqueleto'
+import { Eye, EyeOff } from 'lucide-react'
 
 // Historial de actividad: cada movimiento registrado en el log de Django
 // (fecha, hora, quién, qué hizo y, si editó, el valor anterior y el nuevo).
@@ -43,10 +45,11 @@ function Movimiento({ m }) {
           <>
             <button
               type="button"
-              className="enlace-boton"
+              className="enlace-boton enlace-boton--icono"
               aria-expanded={abierto}
               onClick={() => setAbierto((a) => !a)}
             >
+              {abierto ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
               {abierto ? 'Ocultar cambios' : `Ver ${m.cambios.length === 1 ? 'el cambio' : `los ${m.cambios.length} cambios`}`}
             </button>
             {abierto && (
@@ -215,7 +218,7 @@ function Actividad({ usuario }) {
       )}
 
       {!datos ? (
-        !error && <p className="vacio-tarjeta">Cargando…</p>
+        !error && <Esqueleto filas={4} />
       ) : datos.total === 0 ? (
         <p className="vacio-tarjeta">{hayFiltros ? 'No hay movimientos con esos filtros.' : 'Todavía no hay movimientos.'}</p>
       ) : (

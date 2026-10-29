@@ -8,7 +8,7 @@ import Categorias from './components/categorias/Categorias'
 import Aviso from './components/comunes/Aviso'
 import DetalleCuestionario from './components/cuestionarios/DetalleCuestionario'
 import EditorCuestionario from './components/cuestionarios/EditorCuestionario'
-import Equipos from './components/equipos/Equipos'
+import Equipos from './components/equipos/equipos'
 import Grupos from './components/grupos/grupos'
 import Inicio from './components/inicio/Inicio'
 import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
@@ -20,6 +20,7 @@ import ListaResponder from './components/responder/ListaResponder'
 import ResponderCuestionario from './components/responder/ResponderCuestionario'
 import Usuarios from './components/usuarios/Usuarios'
 import { inicioDe, tiene } from './permisos'
+import logo from './assets/logo.png'
 
 // Rutas de la app. Cada sección pide un permiso de Django (el mismo que usa el
 // menú lateral en components/menu/opciones.js):
@@ -93,7 +94,18 @@ function Rutas() {
     window.location.replace('/login')
   }
 
-  if (cargando) return <main className="centrado">Cargando…</main>
+  if (cargando)
+    return (
+      <main className="arranque" role="status">
+        <img className="arranque__logo" src={logo} alt="" />
+        <span className="arranque__puntos" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
+        <span className="arranque__texto">Cargando…</span>
+      </main>
+    )
 
   const s = (permiso, elemento, sinCampana) => (
     <Seccion usuario={usuario} permiso={permiso} sinCampana={sinCampana}>

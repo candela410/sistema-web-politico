@@ -1,0 +1,280 @@
+/* Movimiento compartido por toda la app.
+   Criterios: solo se animan transform y opacity; las entradas usan una
+   curva ease-out fuerte y duran menos de 300ms; las acciones de teclado
+   y lo que se repite todo el tiempo no se animan. Con "reducir movimiento"
+   quedan solo los fundidos. */
+
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --duracion-presion: 160ms;
+  --duracion-entrada: 260ms;
+}
+
+@keyframes subir-y-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ventana-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
+@keyframes aviso-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* --- Entrada de cada pantalla ------------------------------------------
+   Los bloques de arriba (título, buscador, filtros, lista) entran en
+   cascada corta. Al cambiar de sección, la página nueva se monta y la
+   animación corre una vez. */
+
+.pagina > :not(dialog, .aviso-ok, [role='alert']),
+.editor > :not(dialog, .aviso-ok, [role='alert']),
+.inicio > :not(dialog, .aviso-ok, [role='alert']) {
+  animation: subir-y-aparecer var(--duracion-entrada) var(--ease-out) backwards;
+}
+
+.pagina > :nth-child(2):not(dialog, .aviso-ok, [role='alert']),
+.editor > :nth-child(2):not(dialog, .aviso-ok, [role='alert']),
+.inicio > :nth-child(2):not(dialog, .aviso-ok, [role='alert']) {
+  animation-delay: 40ms;
+}
+
+.pagina > :nth-child(3):not(dialog, .aviso-ok, [role='alert']),
+.editor > :nth-child(3):not(dialog, .aviso-ok, [role='alert']),
+.inicio > :nth-child(3):not(dialog, .aviso-ok, [role='alert']) {
+  animation-delay: 80ms;
+}
+
+.pagina > :nth-child(n + 4):not(dialog, .aviso-ok, [role='alert']),
+.editor > :nth-child(n + 4):not(dialog, .aviso-ok, [role='alert']),
+.inicio > :nth-child(n + 4):not(dialog, .aviso-ok, [role='alert']) {
+  animation-delay: 120ms;
+}
+
+/* --- Listas de tarjetas -------------------------------------------------
+   Cuando llegan los datos, las primeras tarjetas aparecen escalonadas
+   (35ms entre una y otra). De la octava en adelante entran todas juntas
+   para no hacer esperar. */
+
+:is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta) {
+  animation: subir-y-aparecer var(--duracion-entrada) var(--ease-out) backwards;
+}
+
+:is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta):nth-child(2) { animation-delay: 35ms; }
+:is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta):nth-child(3) { animation-delay: 70ms; }
+:is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta):nth-child(4) { animation-delay: 105ms; }
+:is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta):nth-child(5) { animation-delay: 140ms; }
+:is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta):nth-child(6) { animation-delay: 175ms; }
+:is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta):nth-child(7) { animation-delay: 210ms; }
+:is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta):nth-child(n + 8) { animation-delay: 245ms; }
+
+/* --- Ventanas (modales) -------------------------------------------------
+   Entran centradas, con una escala apenas menor y el fondo fundiéndose. */
+
+.modal[open] {
+  animation: ventana-entra 240ms var(--ease-out);
+}
+
+.modal[open]::backdrop {
+  animation: aparecer 240ms var(--ease-out);
+}
+
+/* --- Avisos y errores ---------------------------------------------------- */
+
+.aviso-ok,
+.texto-error[role='alert'] {
+  animation: aviso-entra 200ms var(--ease-out);
+}
+
+/* --- Botones: respuesta inmediata al presionar ---------------------------- */
+
+.boton {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform var(--duracion-presion) var(--ease-out);
+}
+
+.boton:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.enlace-boton:active,
+.cuestionario-item__abrir:active,
+.responder-item:active {
+  transform: scale(0.99);
+}
+
+.cuestionario-item__abrir,
+.responder-item {
+  transition-property: box-shadow, transform;
+  transition-duration: 150ms, var(--duracion-presion);
+  transition-timing-function: ease, var(--ease-out);
+}
+
+/* --- Reducir movimiento: sin desplazamientos, solo fundidos ---------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .pagina > :not(dialog, .aviso-ok, [role='alert']),
+  .editor > :not(dialog, .aviso-ok, [role='alert']),
+  .inicio > :not(dialog, .aviso-ok, [role='alert']),
+  :is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta),
+  .modal[open],
+  .aviso-ok,
+  .texto-error[role='alert'] {
+    animation-name: aparecer;
+    animation-delay: 0ms;
+  }
+
+  .boton:active:not(:disabled),
+  .enlace-boton:active,
+  .cuestionario-item__abrir:active,
+  .responder-item:active {
+    transform: none;
+  }
+}
+
+/* --- Pantalla de arranque (mientras se verifica la sesión) ----------------- */
+
+.arranque {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 22px;
+  background: linear-gradient(135deg, var(--lla-violeta-oscuro), var(--lla-violeta) 60%, #6a3fa6);
+  animation: aparecer 300ms ease backwards;
+}
+
+.arranque__logo {
+  height: 72px;
+  width: auto;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgb(21 18 28 / 0.25);
+  animation: subir-y-aparecer 400ms var(--ease-out) backwards;
+}
+
+.arranque__puntos {
+  display: flex;
+  gap: 8px;
+}
+
+.arranque__puntos i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  animation: arranque-punto 900ms ease-in-out infinite;
+}
+
+.arranque__puntos i:nth-child(2) { animation-delay: 150ms; }
+.arranque__puntos i:nth-child(3) { animation-delay: 300ms; }
+
+@keyframes arranque-punto {
+  0%, 100% { opacity: 0.35; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-4px); }
+}
+
+.arranque__texto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arranque__logo { animation-name: aparecer; }
+  .arranque__puntos i { animation: none; opacity: 0.7; }
+}
+
+/* --- Interruptor de píldora (activar / desactivar) ------------------------
+   La bolita se desliza con una curva ease-out fuerte y, mientras se
+   presiona, se estira un poco hacia donde va a ir (como en iOS). */
+
+.interruptor__pista {
+  transition: background-color 200ms ease;
+}
+
+.interruptor__pista::after {
+  transform-origin: left center;
+  transition: transform 220ms var(--ease-out);
+}
+
+.interruptor input:checked + .interruptor__pista::after {
+  transform-origin: right center;
+}
+
+.interruptor:active input:not(:disabled) + .interruptor__pista::after {
+  transform: scaleX(1.25);
+}
+
+.interruptor:active input:checked:not(:disabled) + .interruptor__pista::after {
+  transform: translateX(16px) scaleX(1.25);
+}
+
+/* Versión de las listas (Equipos, Usuarios): texto del estado al costado */
+.interruptor--lista {
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px 0 6px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  transition: background-color 150ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .interruptor--lista:hover {
+    background: rgb(81 49 143 / 0.06);
+  }
+}
+
+.interruptor--lista .interruptor__texto {
+  /* Ancho fijo: "Activo" e "Inactivo" no mueven los botones de al lado */
+  min-width: 52px;
+  color: var(--lla-violeta);
+  transition: color 200ms ease;
+}
+
+.interruptor--apagado .interruptor__texto {
+  color: var(--lla-gris);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .interruptor__pista::after {
+    transition: none;
+  }
+
+  .interruptor:active input + .interruptor__pista::after {
+    transform: none;
+  }
+
+  .interruptor:active input:checked + .interruptor__pista::after {
+    transform: translateX(16px);
+  }
+}
+
+.equipo__acciones,
+.tarjeta-fila__acciones {
+  align-items: center;
+}

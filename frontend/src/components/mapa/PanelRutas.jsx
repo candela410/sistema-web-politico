@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
+import BotonIcono from '../comunes/BotonIcono'
+import Confirmacion from '../comunes/Confirmacion'
 import * as api from '../../api/mapa'
 import { PERFILES, distancia, duracion } from './formato'
 
@@ -36,8 +39,11 @@ function PanelRutas({ rutas, zonas, modo, setModo, seleccionada, onSeleccionar, 
     }
   }
 
+  // Ruta que se está por borrar (abre la ventana de confirmación)
+  const [aBorrar, setABorrar] = useState(null)
+
   async function borrar(ruta) {
-    if (!window.confirm(`¿Borrar la ruta "${ruta.nombre}"?`)) return
+    setABorrar(null)
     try {
       await api.borrarRuta(ruta.id)
       onBorrada(ruta.id)
@@ -184,14 +190,20 @@ function PanelRutas({ rutas, zonas, modo, setModo, seleccionada, onSeleccionar, 
             )}
           </dl>
           {rutaActiva.descripcion && <p className="texto-suave">{rutaActiva.descripcion}</p>}
-          <div className="acciones">
-            <button type="button" className="boton boton--borde boton--chico" onClick={() => empezar(rutaActiva)}>
-              Editar
-            </button>
-            <button type="button" className="boton boton--peligro boton--chico" onClick={() => borrar(rutaActiva)}>
-              Borrar
-            </button>
+          <div className="acciones acciones-iconos">
+            <BotonIcono icono={Pencil} etiqueta="Editar ruta" onClick={() => empezar(rutaActiva)} />
+            <BotonIcono icono={Trash2} etiqueta="Borrar ruta" variante="peligro" onClick={() => setABorrar(rutaActiva)} />
           </div>
+          {aBorrar && (
+            <Confirmacion
+              titulo="Borrar ruta"
+              textoConfirmar="Borrar"
+              onCerrar={() => setABorrar(null)}
+              onConfirmar={() => borrar(aBorrar)}
+            >
+              ¿Seguro que querés borrar la ruta <b>{aBorrar.nombre}</b>?
+            </Confirmacion>
+          )}
         </section>
       )}
     </div>

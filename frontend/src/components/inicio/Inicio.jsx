@@ -10,6 +10,21 @@ import { seccionesPara } from '../menu/opciones'
 import './inicio.css'
 
 const COLORES = ['celeste', 'violeta', 'naranja', 'magenta']
+
+// Accesos de la pantalla de inicio: solo las secciones del día a día, en este
+// orden y con su color. Categorías, roles, permisos, actividad y campañas
+// quedan solo en el menú lateral.
+const TARJETAS = [
+  { ruta: '/cuestionarios', color: 'violeta' },
+  { ruta: '/responder', color: 'magenta' },
+  { ruta: '/mapa', color: 'celeste' },
+  { ruta: '/equipos', color: 'naranja' },
+  { ruta: '/usuarios', color: 'violeta' },
+]
+
+// Cuántas columnas (de 6) ocupa cada tarjeta según cuántas hay, para que
+// las filas queden completas: con 5, las dos primeras van más grandes.
+const ANCHOS = { 1: [6], 2: [3, 3], 3: [2, 2, 2], 4: [3, 3, 3, 3], 5: [3, 3, 2, 2, 2] }
 const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 // Números del tablero según los permisos del usuario: solo se pide lo que puede ver.
@@ -61,9 +76,12 @@ const fechaCorta = (iso) => new Date(iso).toLocaleDateString('es-AR', { day: 'nu
 // Pantalla de inicio: saludo, números generales y accesos a las secciones del menú
 function Inicio({ usuario }) {
   const [resumen, setResumen] = useState(null)
-  const tarjetas = seccionesPara(usuario)
-    .flatMap((s) => s.opciones)
-    .filter((o) => o.ruta !== '/inicio')
+  const permitidas = seccionesPara(usuario).flatMap((s) => s.opciones)
+  const tarjetas = TARJETAS.map((t) => {
+    const opcion = permitidas.find((o) => o.ruta === t.ruta)
+    return opcion && { ...opcion, color: t.color }
+  }).filter(Boolean)
+  const anchos = ANCHOS[tarjetas.length] ?? []
   const accesos = [
     { ruta: '/cuestionarios/nuevo', texto: 'Nuevo cuestionario', icono: FilePlus2, permiso: 'core.add_cuestionario' },
     { ruta: '/responder', texto: 'Cargar encuesta', icono: ClipboardList, permiso: 'core.add_encuesta' },
@@ -144,8 +162,13 @@ function Inicio({ usuario }) {
         )}
 
         <section className="inicio__tarjetas" aria-label="Secciones">
-          {tarjetas.map(({ ruta, texto, descripcion, icono: Icono }, i) => (
-            <Link key={ruta} to={ruta} className={`inicio__tarjeta inicio__tarjeta--${COLORES[i % COLORES.length]}`}>
+          {tarjetas.map(({ ruta, texto, descripcion, icono: Icono, color }, i) => (
+            <Link
+              key={ruta}
+              to={ruta}
+              className={`inicio__tarjeta inicio__tarjeta--${color}${anchos[i] === 3 ? ' inicio__tarjeta--grande' : ''}`}
+              style={{ '--columnas': anchos[i] ?? 2 }}
+            >
               <span className="inicio__tarjeta-icono">
                 <Icono size={22} aria-hidden="true" />
               </span>

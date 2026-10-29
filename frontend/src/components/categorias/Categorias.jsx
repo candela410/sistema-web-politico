@@ -3,6 +3,9 @@ import * as api from '../../api/categorias'
 import Modal from '../comunes/Modal'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './categorias.css'
+import Esqueleto from '../comunes/Esqueleto'
+import { Pencil, Trash2 } from 'lucide-react'
+import BotonIcono from '../comunes/BotonIcono'
 
 const ordenar = (lista) => [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
@@ -184,7 +187,7 @@ function Categorias() {
           {errorCarga}
         </p>
       ) : categorias === null ? (
-        <p className="vacio-tarjeta">Cargando…</p>
+        <Esqueleto />
       ) : visibles.length === 0 ? (
         <div className="vacio-tarjeta">
           {categorias.length === 0 ? (
@@ -208,13 +211,9 @@ function Categorias() {
                     {c.cuestionarios === 1 ? '1 cuestionario' : `${c.cuestionarios} cuestionarios`}
                   </span>
                 </div>
-                <div className="categoria__acciones">
-                  <button type="button" className="boton boton--borde boton--chico" onClick={() => setEditando(c)}>
-                    Editar
-                  </button>
-                  <button type="button" className="boton boton--peligro boton--chico" onClick={() => setBorrando(c)}>
-                    Borrar
-                  </button>
+                <div className="categoria__acciones acciones-iconos">
+                  <BotonIcono icono={Pencil} etiqueta="Editar" onClick={() => setEditando(c)} />
+                  <BotonIcono icono={Trash2} etiqueta="Borrar" variante="peligro" onClick={() => setBorrando(c)} />
                 </div>
               </li>
             ))}

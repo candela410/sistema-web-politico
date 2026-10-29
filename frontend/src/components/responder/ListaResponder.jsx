@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import * as api from '../../api/encuestas'
 import './responder.css'
+import Esqueleto from '../comunes/Esqueleto'
 
 // Vista del militante: cuestionarios activos para cargar encuestas
 function ListaResponder() {
@@ -35,7 +36,7 @@ function ListaResponder() {
           {error}
         </p>
       ) : cuestionarios === null ? (
-        <p className="vacio-tarjeta">Cargando…</p>
+        <Esqueleto filas={2} />
       ) : cuestionarios.length === 0 ? (
         <div className="vacio-tarjeta">
           <b>No hay cuestionarios activos.</b>

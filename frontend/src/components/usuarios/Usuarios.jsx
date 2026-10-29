@@ -4,6 +4,10 @@ import { tiene } from '../../permisos'
 import Modal from '../comunes/Modal'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './usuarios.css'
+import Esqueleto from '../comunes/Esqueleto'
+import Interruptor from '../comunes/Interruptor'
+import { Pencil } from 'lucide-react'
+import BotonIcono from '../comunes/BotonIcono'
 
 const GRUPO_MILITANTES = 'Militantes'
 const formatoFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
@@ -229,7 +233,7 @@ function Usuarios({ usuario: yo }) {
       )}
 
       {!datos ? (
-        !error && <p className="vacio-tarjeta">Cargando…</p>
+        !error && <Esqueleto />
       ) : visibles.length === 0 ? (
         <div className="vacio-tarjeta">
           <b>{datos.usuarios.length ? 'No hay usuarios que coincidan.' : 'Todavía no hay usuarios en esta campaña.'}</b>
@@ -266,19 +270,25 @@ function Usuarios({ usuario: yo }) {
                   </span>
                 </div>
                 {puedeEditar && (
-                  <div className="tarjeta-fila__acciones">
-                    <button type="button" className="boton boton--borde boton--chico" onClick={() => setEditando(u)}>
-                      Editar
-                    </button>
+                  <div className="tarjeta-fila__acciones acciones-iconos">
+                    {/* Uno no puede desactivarse a sí mismo: no se muestra el interruptor */}
                     {u.id !== yo.id && (
-                      <button
-                        type="button"
-                        className={`boton boton--chico ${u.activo ? 'boton--peligro' : 'boton--borde'}`}
-                        onClick={() => cambiarEstado(u)}
-                      >
-                        {u.activo ? 'Desactivar' : 'Activar'}
-                      </button>
+                      <Interruptor
+                        activo={u.activo}
+                        onCambiar={() => cambiarEstado(u)}
+                        etiqueta={`Usuario ${u.email} activo`}
+                        confirmacion={{
+                          titulo: 'Desactivar usuario',
+                          mensaje: (
+                            <>
+                              ¿Seguro que querés desactivar a <b>{`${u.nombre} ${u.apellido}`.trim() || u.email}</b>? No va
+                              a poder iniciar sesión hasta que lo vuelvas a activar.
+                            </>
+                          ),
+                        }}
+                      />
                     )}
+                    <BotonIcono icono={Pencil} etiqueta="Editar" onClick={() => setEditando(u)} />
                   </div>
                 )}
               </li>

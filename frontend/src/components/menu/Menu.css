@@ -22,7 +22,9 @@
 .panel__barra {
   flex: none;
   display: grid;
-  grid-template-columns: 1fr minmax(0, 480px) 1fr;
+  /* La columna de la marca nunca es más chica que su contenido, así
+     "Panel de gestión" no se corta en pantallas medianas */
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, 480px) 1fr;
   align-items: center;
   gap: 20px;
   height: 72px;
@@ -559,6 +561,8 @@
     inset: 0;
     z-index: 15;
     background: rgb(21 18 28 / 0.4);
+    /* El fondo se oscurece junto con el cajón que entra */
+    animation: aparecer 260ms var(--curva-cajon);
   }
 }
 

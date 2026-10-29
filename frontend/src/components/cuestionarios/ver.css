@@ -1,0 +1,191 @@
+/* --- Detalle del cuestionario (ventana del ojo) ------------------------- */
+
+.ver__cabecera {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--lla-borde);
+  border-radius: 12px;
+  background: rgb(81 49 143 / 0.04);
+}
+
+.ver__cabecera h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.ver__cabecera > p {
+  margin: 0;
+  color: var(--lla-gris);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.ver__datos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.ver__fecha {
+  color: var(--lla-gris);
+  font-size: 0.78rem;
+}
+
+/* Lo de abajo se desplaza dentro de la ventana si es largo */
+.ver__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: min(52vh, 460px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ver__seccion h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lla-gris);
+}
+
+.ver__contador {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgb(81 49 143 / 0.1);
+  color: var(--lla-violeta);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ver__preguntas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 0 22px;
+}
+
+.ver__preguntas > li::marker {
+  color: var(--lla-violeta);
+  font-weight: 800;
+}
+
+.ver__preguntas > li > p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ver__obligatoria {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgb(195 38 140 / 0.1);
+  color: #8f1c66;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.ver__opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ver__opciones li {
+  padding: 3px 10px;
+  border: 1px solid var(--lla-borde);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.8rem;
+}
+
+.ver__vacio {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed var(--lla-borde);
+  border-radius: 10px;
+  color: var(--lla-gris);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.ver__equipos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.ver__equipo {
+  padding: 10px 12px;
+  border: 1px solid var(--lla-borde);
+  border-left: 4px solid var(--lla-violeta);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ver__equipo--suelto {
+  border-left-color: var(--lla-celeste);
+}
+
+.ver__equipo-nombre {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-weight: 700;
+  color: var(--lla-violeta);
+}
+
+.ver__equipo-nombre small {
+  margin-left: auto;
+  color: var(--lla-gris);
+  font-weight: 600;
+}
+
+.ver__equipo ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ver__equipo li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+}
+
+.ver__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgb(81 49 143 / 0.12);
+  color: var(--lla-violeta);
+  font-size: 0.72rem;
+  font-weight: 800;
+}

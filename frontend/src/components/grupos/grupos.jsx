@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import * as api from '../../api/grupos'
 import Modal from '../comunes/Modal'
 import './grupos.css'
+import Esqueleto from '../comunes/Esqueleto'
+import { Pencil, Trash2 } from 'lucide-react'
+import BotonIcono from '../comunes/BotonIcono'
 
 const GRUPO_MILITANTES = 'Militantes'
 
@@ -320,7 +323,7 @@ function Grupos() {
           {errorCarga}
         </p>
       ) : grupos === null ? (
-        <p className="vacio-tarjeta">Cargando roles…</p>
+        <Esqueleto texto="Cargando roles…" />
       ) : visibles.length === 0 ? (
         <div className="vacio-tarjeta">
           {grupos.length === 0 ? (
@@ -373,24 +376,16 @@ function Grupos() {
                 )}
               </div>
 
-              <div className="grupo__acciones">
-                <button
-                  type="button"
-                  className="boton boton--borde boton--chico"
-                  onClick={() => setEditando(grupo)}
-                >
-                  Editar
-                </button>
-
-                <button
-                  type="button"
-                  className="boton boton--peligro boton--chico"
+              <div className="grupo__acciones acciones-iconos">
+                <BotonIcono icono={Pencil} etiqueta="Editar" onClick={() => setEditando(grupo)} />
+                <BotonIcono
+                  icono={Trash2}
+                  etiqueta="Borrar rol"
+                  ayuda={motivoSinBorrar(grupo) || 'Borrar rol'}
+                  variante="peligro"
                   onClick={() => setBorrando(grupo)}
                   disabled={!!motivoSinBorrar(grupo)}
-                  title={motivoSinBorrar(grupo) || 'Borrar rol'}
-                >
-                  Borrar
-                </button>
+                />
               </div>
             </li>
           ))}

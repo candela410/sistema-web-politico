@@ -6,6 +6,8 @@ export const crearUsuario = (datos) => pedir('/api/usuarios/', { method: 'POST',
 export const editarUsuario = (id, datos) =>
   pedir(`/api/usuarios/${id}/`, { method: 'PATCH', datos }).then((r) => r.usuario)
 export const desactivarUsuario = (id) => pedir(`/api/usuarios/${id}/`, { method: 'DELETE' }).then((r) => r.usuario)
+// Envía al email del usuario un enlace para restablecer su contraseña
+export const enviarRestablecer = (id) => pedir(`/api/usuarios/${id}/restablecer/`, { method: 'POST' })
 
 export const obtenerPermisos = () => pedir('/api/permisos/')
 

@@ -6,7 +6,7 @@ import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './usuarios.css'
 import Esqueleto from '../comunes/Esqueleto'
 import Interruptor from '../comunes/Interruptor'
-import { Pencil } from 'lucide-react'
+import { KeyRound, Pencil } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 
 const GRUPO_MILITANTES = 'Militantes'
@@ -148,6 +148,7 @@ function Usuarios({ usuario: yo }) {
   const [busqueda, setBusqueda] = useState('')
   const [editando, setEditando] = useState(null)
   const [aviso, setAviso] = useState('')
+  const [enviandoA, setEnviandoA] = useState(null) // id del usuario al que se le está enviando el enlace
 
   useEffect(() => {
     api
@@ -182,6 +183,19 @@ function Usuarios({ usuario: yo }) {
       setAviso(actualizado.activo ? 'Usuario activado.' : 'Usuario desactivado: ya no puede ingresar.')
     } catch (e) {
       setError(e.message)
+    }
+  }
+
+  async function enviarRestablecer(u) {
+    setError('')
+    setEnviandoA(u.id)
+    try {
+      const { email } = await api.enviarRestablecer(u.id)
+      setAviso(`Enviamos a ${email} un enlace para restablecer la contraseña.`)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setEnviandoA(null)
     }
   }
 
@@ -288,6 +302,19 @@ function Usuarios({ usuario: yo }) {
                         }}
                       />
                     )}
+                    <BotonIcono
+                      icono={KeyRound}
+                      etiqueta="Restablecer contraseña"
+                      ayuda={
+                        u.activo
+                          ? enviandoA === u.id
+                            ? 'Enviando…'
+                            : `Enviar a ${u.email} un enlace para restablecer la contraseña`
+                          : 'Activá el usuario para restablecer su contraseña'
+                      }
+                      disabled={!u.activo || enviandoA === u.id}
+                      onClick={() => enviarRestablecer(u)}
+                    />
                     <BotonIcono icono={Pencil} etiqueta="Editar" onClick={() => setEditando(u)} />
                   </div>
                 )}

@@ -225,6 +225,13 @@
 .login__submit:hover:not(:disabled) { background: var(--purple-dark); }
 .login__submit:active:not(:disabled) { transform: translateY(1px); }
 .login__submit:disabled { opacity: 0.7; cursor: wait; }
+/* Mismo botón, pero como enlace (pantalla de restablecer contraseña) */
+.login__submit--enlace {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
 
 /* ===== PANTALLAS CHICAS (tablet / celular) ===== */
 /* Debajo de 900px la foto pasa a ser un fondo muy suave y el formulario se centra */

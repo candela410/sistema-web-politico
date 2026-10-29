@@ -13,6 +13,7 @@ import Grupos from './components/grupos/grupos'
 import Inicio from './components/inicio/Inicio'
 import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
 import Login from './components/login/Login'
+import Restablecer from './components/login/Restablecer'
 import Mapa from './components/mapa/Mapa'
 import Menu from './components/menu/Menu'
 import Permisos from './components/permisos/Permisos'
@@ -25,6 +26,7 @@ import logo from './assets/logo.png'
 // Rutas de la app. Cada sección pide un permiso de Django (el mismo que usa el
 // menú lateral en components/menu/opciones.js):
 //   /login        ingreso
+//   /restablecer/:uid/:token  elegir contraseña nueva (enlace del correo)
 //   /inicio       panel de inicio (todos los que tienen campaña)
 //   /campana      elegir la campaña (superusuario o permiso "elegir_campana")
 //   /mapa, /cuestionarios(/nuevo|/:id|/:id/estadisticas), /categorias, /responder(/:id)
@@ -116,6 +118,10 @@ function Rutas() {
   return (
     <Routes>
       <Route path="/login" element={<PaginaLogin usuario={usuario} onIngreso={setUsuario} />} />
+      {/* Enlace del correo para elegir una contraseña nueva (no pide sesión) */}
+      <Route path="/restablecer/:uid/:token" element={<Restablecer />} />
+      {/* Enlace cortado al copiarlo (le falta el token): se avisa en vez de ir al login */}
+      <Route path="/restablecer/*" element={<Restablecer />} />
       <Route
         path="/campana"
         element={

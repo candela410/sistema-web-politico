@@ -146,8 +146,16 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
+# En desarrollo los correos se muestran en la terminal de runserver (no se envían).
+# core.correo.ConsolaLegible los imprime como texto, con los enlaces enteros.
 MAILERS = {
     'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        'BACKEND': 'core.correo.ConsolaLegible',
     },
 }
+DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'Panel de gestión <no-responder@panel.local>')
+
+# Dirección del frontend, para armar los enlaces de los correos (ej: restablecer contraseña)
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+# El enlace para restablecer la contraseña vence a las 24 horas (y sirve una sola vez)
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24

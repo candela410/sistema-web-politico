@@ -1,7 +1,7 @@
 from django.contrib.auth.models import Group, Permission
 from django.test import Client, TestCase
 
-from .models import Campana, Categoria, Cuestionario, Usuario, Zona
+from .models import AsignacionCuestionario, Campana, Categoria, Cuestionario, Usuario, Zona
 
 CLAVE = "clave-segura-123"
 
@@ -52,8 +52,12 @@ class CampanasTests(Base):
 
     def test_los_datos_se_separan_por_campana(self):
         cat = Categoria.objects.create(nombre="General")
-        Cuestionario.objects.create(titulo="Del norte", categoria=cat, campana=self.norte)
-        Cuestionario.objects.create(titulo="Del sur", categoria=cat, campana=self.sur)
+        # La campaña de un cuestionario sale de los usuarios a los que está asignado
+        norte = Cuestionario.objects.create(titulo="Del norte", categoria=cat)
+        sur = Cuestionario.objects.create(titulo="Del sur", categoria=cat)
+        del_sur = Usuario.objects.create_user(username="s", email="s@ejemplo.com", password=CLAVE, campana=self.sur)
+        AsignacionCuestionario.objects.create(usuario=self.coordinadora, cuestionario=norte)
+        AsignacionCuestionario.objects.create(usuario=del_sur, cuestionario=sur)
         Zona.objects.create(nombre="Zona compartida")
         self.entrar("jefe@ejemplo.com", self.sur)
         self.assertEqual([c["titulo"] for c in self.client.get("/api/cuestionarios/").json()["cuestionarios"]], ["Del sur"])

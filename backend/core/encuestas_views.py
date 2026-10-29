@@ -9,9 +9,10 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
 from . import graficos
+from .cuestionarios_views import cuestionarios_de_campana
 from .api import error, leer_json, permisos_de, requiere_permiso
 from .bitacora import registrar
-from .models import Barrio, Cuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada
+from .models import Barrio, Encuesta, Encuestado, Pregunta, RespuestaCargada
 
 
 
@@ -37,7 +38,7 @@ def _cuestionario_para_responder(c):
 def _para_responder(request):
     """Cuestionarios activos de la campaña que el usuario puede responder: los
     que tiene asignados. Quien administra cuestionarios los ve todos."""
-    lista = Cuestionario.objects.filter(activo=True, campana=request.campana)
+    lista = cuestionarios_de_campana(request.campana).filter(activo=True)
     if "core.view_cuestionario" not in permisos_de(request.user):
         lista = lista.filter(usuarios=request.user)
     return lista
@@ -181,7 +182,7 @@ def responder(request, pk):
 @require_http_methods(["GET"])
 @requiere_permiso("core.view_cuestionario", "core.view_encuesta")
 def estadisticas(request, pk):
-    cuestionario = get_object_or_404(Cuestionario.objects.select_related("categoria"), pk=pk, campana=request.campana)
+    cuestionario = get_object_or_404(cuestionarios_de_campana(request.campana).select_related("categoria"), pk=pk)
     total = cuestionario.encuestas.count()
     ultima = cuestionario.encuestas.order_by("-realizada_en").values_list("realizada_en", flat=True).first()
     # Todas las respuestas en un DataFrame de pandas; de ahí salen las frecuencias
@@ -221,7 +222,7 @@ def grafico(request, pk, pregunta, clave):
     """Imagen PNG de un gráfico de una pregunta, hecha con pandas y matplotlib."""
     if clave not in graficos.GRAFICOS:
         return error("Ese gráfico no existe.", 404)
-    cuestionario = get_object_or_404(Cuestionario, pk=pk, campana=request.campana)
+    cuestionario = get_object_or_404(cuestionarios_de_campana(request.campana), pk=pk)
     p = get_object_or_404(cuestionario.preguntas.prefetch_related("opciones"), pk=pregunta)
     tabla, _, respondidas = graficos.tabla_de(p, graficos.respuestas_de(cuestionario))
     respuesta = HttpResponse(graficos.grafico_png(clave, tabla, respondidas), content_type="image/png")

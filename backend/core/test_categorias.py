@@ -47,7 +47,7 @@ class CategoriasTests(TestCase):
 
     def test_no_borra_categoria_en_uso(self):
         categoria = Categoria.objects.create(nombre="Educación")
-        Cuestionario.objects.create(titulo="Escuelas", categoria=categoria, campana=self.campana)
+        Cuestionario.objects.create(titulo="Escuelas", categoria=categoria)
         r = self.enviar("delete", f"/api/categorias/{categoria.pk}/")
         self.assertEqual(r.status_code, 409)
         self.assertTrue(Categoria.objects.filter(pk=categoria.pk).exists())

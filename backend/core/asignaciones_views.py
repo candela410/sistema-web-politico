@@ -16,8 +16,9 @@ from django.views.decorators.http import require_http_methods
 
 from .api import error, leer_json, requiere_permiso
 from .bitacora import registrar
+from .cuestionarios_views import cuestionarios_de_campana
 from .equipos_views import equipos_de_campana
-from .models import AsignacionCuestionario, Cuestionario, Usuario
+from .models import AsignacionCuestionario, Usuario
 from .usuarios_views import GRUPO_MILITANTES
 
 PERMISOS = {
@@ -54,7 +55,7 @@ def _usuario_json(u, asignados, elegible=True):
 @requiere_permiso(PERMISOS)
 def asignaciones(request, pk):
     cuestionario = get_object_or_404(
-        Cuestionario.objects.select_related("categoria"), pk=pk, campana=request.campana
+        cuestionarios_de_campana(request.campana).select_related("categoria"), pk=pk
     )
     if request.method == "GET":
         return JsonResponse(_respuesta(request, cuestionario))

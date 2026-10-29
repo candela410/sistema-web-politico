@@ -20,7 +20,7 @@ class EncuestasTests(TestCase):
         self.login("mili@ejemplo.com")
 
         self.c = Cuestionario.objects.create(
-            titulo="Barrial", categoria=Categoria.objects.create(nombre="G"), campana=self.campana
+            titulo="Barrial", categoria=Categoria.objects.create(nombre="G")
         )
         # El militante solo ve y responde los cuestionarios que tiene asignados
         AsignacionCuestionario.objects.create(usuario=usuario, cuestionario=self.c)
@@ -63,14 +63,14 @@ class EncuestasTests(TestCase):
         self.assertEqual(self.client.get("/api/categorias/").status_code, 403)
 
     def test_lista_y_detalle_para_responder(self):
-        Cuestionario.objects.create(titulo="Inactivo", activo=False, categoria=self.c.categoria, campana=self.c.campana)
+        Cuestionario.objects.create(titulo="Inactivo", activo=False, categoria=self.c.categoria)
         lista = self.client.get("/api/responder/").json()["cuestionarios"]
         self.assertEqual([c["titulo"] for c in lista], ["Barrial"])
         detalle = self.client.get(f"/api/responder/{self.c.pk}/").json()["cuestionario"]
         self.assertEqual([p["tipo"] for p in detalle["preguntas"]], ["una_opcion", "una_opcion", "una_opcion"])
 
     def test_no_ve_ni_responde_cuestionarios_sin_asignar(self):
-        otro = Cuestionario.objects.create(titulo="Sin asignar", categoria=self.c.categoria, campana=self.campana)
+        otro = Cuestionario.objects.create(titulo="Sin asignar", categoria=self.c.categoria)
         lista = self.client.get("/api/responder/").json()["cuestionarios"]
         self.assertNotIn("Sin asignar", [c["titulo"] for c in lista])
         self.assertEqual(self.client.get(f"/api/responder/{otro.pk}/").status_code, 404)

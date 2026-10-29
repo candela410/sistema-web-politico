@@ -15,7 +15,7 @@ class AsignacionesTests(TestCase):
         self.enviar("post", "/api/auth/login/", {"email": "adm@x.com", "password": "clave-segura-123"})
         self.enviar("post", "/api/campanas/activa/", {"campana": self.campana.pk})
         self.c = Cuestionario.objects.create(
-            titulo="Barrial", categoria=Categoria.objects.create(nombre="G"), campana=self.campana
+            titulo="Barrial", categoria=Categoria.objects.create(nombre="G")
         )
         self.url = f"/api/cuestionarios/{self.c.pk}/asignaciones/"
         self.ruta = Ruta.objects.create(nombre="R", paradas=[])
@@ -97,7 +97,9 @@ class AsignacionesTests(TestCase):
         self.assertEqual(self.asignados(), set())
 
     def test_cuestionario_de_otra_campana_no_se_ve(self):
-        ajeno = Cuestionario.objects.create(titulo="X", categoria=self.c.categoria, campana=self.otra)
+        ajeno = Cuestionario.objects.create(titulo="X", categoria=self.c.categoria)
+        # Es de la otra campaña porque está asignado a un usuario de esa campaña
+        AsignacionCuestionario.objects.create(usuario=self.militante("otra@x.com", campana=self.otra), cuestionario=ajeno)
         self.assertEqual(self.client.get(f"/api/cuestionarios/{ajeno.pk}/asignaciones/").status_code, 404)
 
     def test_militante_no_puede_asignar(self):

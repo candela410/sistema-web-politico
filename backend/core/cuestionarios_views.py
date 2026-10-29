@@ -2,7 +2,7 @@
 en un solo pedido, como un formulario de Google Forms."""
 
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
@@ -13,6 +13,19 @@ from .models import Categoria, Cuestionario, Opcion, Pregunta
 
 MAX_PREGUNTAS = 15
 MAX_OPCIONES = 30
+
+
+def cuestionarios_de_campana(campana):
+    """Cuestionarios que ve una campaña: los asignados a algún usuario de esa
+    campaña y los que todavía no están asignados a nadie.
+
+    SQL equivalente:
+        SELECT DISTINCT c.* FROM cuestionarios c
+        LEFT JOIN usuariosxcuestionarios uc ON uc.id_cuestionario = c.id_cuestionario
+        LEFT JOIN usuarios u ON u.id = uc.id_usuario
+        WHERE u.id_campana = %s OR uc.id_usuario IS NULL
+    """
+    return Cuestionario.objects.filter(Q(usuarios__campana=campana) | Q(usuarios__isnull=True)).distinct()
 
 
 class DatosInvalidos(Exception):
@@ -148,7 +161,7 @@ def _foto(c):
 def cuestionarios(request):
     if request.method == "GET":
         lista = (
-            Cuestionario.objects.filter(campana=request.campana)
+            cuestionarios_de_campana(request.campana)
             .select_related("categoria")
             .annotate(
                 cantidad_preguntas=Count("preguntas", distinct=True),
@@ -167,7 +180,7 @@ def cuestionarios(request):
     except DatosInvalidos as e:
         return error(str(e))
     with transaction.atomic():
-        cuestionario = Cuestionario.objects.create(campana=request.campana, **cabecera)
+        cuestionario = Cuestionario.objects.create(**cabecera)
         _crear_preguntas(cuestionario, preguntas)
     registrar(
         request, cuestionario, "crear",
@@ -179,7 +192,7 @@ def cuestionarios(request):
 @require_http_methods(["GET", "PUT", "DELETE"])
 @requiere_permiso(crud("cuestionario"))
 def cuestionario_detalle(request, pk):
-    cuestionario = get_object_or_404(Cuestionario, pk=pk, campana=request.campana)
+    cuestionario = get_object_or_404(cuestionarios_de_campana(request.campana), pk=pk)
 
     if request.method == "GET":
         return JsonResponse({"cuestionario": _detalle_json(cuestionario)})

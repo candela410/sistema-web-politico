@@ -340,12 +340,8 @@ class Cuestionario(models.Model):
     titulo = models.CharField(max_length=180)
     descripcion = models.TextField(blank=True, null=True)
 
-    campana = models.ForeignKey(
-        Campana,
-        on_delete=models.PROTECT,
-        db_column="id_campana",
-        related_name="cuestionarios",
-    )
+    # Sin campaña propia (como en el DER): la campaña sale de los usuarios a
+    # los que está asignado (cuestionarios → usuariosxcuestionarios → usuarios)
     categoria = models.ForeignKey(
         Categoria,
         on_delete=models.PROTECT,

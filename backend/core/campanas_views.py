@@ -49,7 +49,8 @@ def _campana_json(c):
 
 def _con_conteos(consulta):
     return consulta.annotate(
-        n_cuestionarios=Count("cuestionarios", distinct=True),
+        # Cuestionarios asignados a usuarios de la campaña (usuarios → usuariosxcuestionarios)
+        n_cuestionarios=Count("usuarios__cuestionarios_asignados", distinct=True),
         n_usuarios=Count("usuarios", distinct=True),
         # Rutas de la campaña: las de los equipos de sus usuarios (usuarios → equipos → rutas)
         n_rutas=Count("usuarios__equipo__ruta", distinct=True),

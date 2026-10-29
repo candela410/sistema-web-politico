@@ -140,3 +140,14 @@ class EncuestasTests(TestCase):
             self.assertTrue(r.content.startswith(b"\x89PNG"), clave)
         r = self.client.get(f"/api/cuestionarios/{self.c.pk}/estadisticas/{una['id']}/otro.png")
         self.assertEqual(r.status_code, 404)
+
+    def test_mapa_muestra_donde_se_hizo_cada_encuesta(self):
+        self.responder("1", "Seguridad", latitud=-24.79, longitud=-65.41)
+        self.responder("2", "Salud")  # sin ubicación: no aparece
+        self.enviar("post", "/api/auth/logout/")
+        self.login("adm@ejemplo.com")
+        datos = self.client.get("/api/mapa/encuestas/").json()
+        self.assertEqual(len(datos["features"]), 1)
+        punto = datos["features"][0]
+        self.assertEqual(punto["geometry"]["coordinates"], [-65.41, -24.79])
+        self.assertEqual(punto["properties"]["cuestionario"], "Barrial")

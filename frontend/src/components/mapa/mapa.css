@@ -404,6 +404,24 @@
   background: var(--lla-magenta);
 }
 
+.ref--encuesta {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #f7a832;
+  box-shadow: 0 0 0 1px rgb(21 18 28 / 0.25);
+}
+
+/* La leyenda no responde al mouse, salvo la casilla de mostrar encuestas */
+.mapa__leyenda-opcion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 .mapa-tooltip {
   font-family: 'Montserrat', system-ui, sans-serif;
   font-weight: 600;

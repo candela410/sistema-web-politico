@@ -230,3 +230,33 @@ def grafico(request, pk, pregunta, clave):
     respuesta = HttpResponse(graficos.grafico_png(clave, tabla, respondidas), content_type="image/png")
     respuesta["Cache-Control"] = "private, no-cache"
     return respuesta
+
+
+@require_http_methods(["GET"])
+@requiere_permiso("core.view_encuesta")
+def mapa_encuestas(request):
+    """Puntos del mapa: dónde se hizo cada encuesta de la campaña (latitud y
+    longitud que dio el celular). Las encuestas sin ubicación no aparecen."""
+    encuestas = (
+        Encuesta.objects.filter(cuestionario__in=cuestionarios_de_campana(request.campana))
+        .exclude(latitud=None)
+        .exclude(longitud=None)
+        .select_related("cuestionario", "usuario")
+        .order_by("-realizada_en")
+    )
+    return JsonResponse({
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [float(e.longitud), float(e.latitud)]},
+                "properties": {
+                    "id": e.pk,
+                    "cuestionario": e.cuestionario.titulo,
+                    "militante": (e.usuario.get_full_name().strip() or e.usuario.email) if e.usuario else "",
+                    "fecha": e.realizada_en.isoformat(),
+                },
+            }
+            for e in encuestas
+        ],
+    })

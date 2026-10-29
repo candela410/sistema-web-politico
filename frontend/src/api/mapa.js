@@ -17,3 +17,6 @@ export const crearRuta = (datos) =>
 export const editarRuta = (id, datos) =>
   pedir(`/api/mapa/rutas/${id}/`, { method: 'PATCH', datos }).then((r) => r.ruta)
 export const borrarRuta = (id) => pedir(`/api/mapa/rutas/${id}/`, { method: 'DELETE' })
+
+// Dónde se hizo cada encuesta (solo las que tienen ubicación)
+export const obtenerEncuestas = () => pedir('/api/mapa/encuestas/')

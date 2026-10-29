@@ -4,7 +4,7 @@ import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { GeoJSON, MapContainer, TileLayer, useMap } from 'react-leaflet'
+import { CircleMarker, GeoJSON, MapContainer, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import * as api from '../../api/mapa'
 import { CapaRutas, MarcarParadas } from './CapaRutas'
 import { DibujarPoligono, EditarPoligono } from './Dibujo'
@@ -13,6 +13,7 @@ import PanelZonas from './PanelZonas'
 import './mapa.css'
 
 const CENTRO_ARGENTINA = [-34.6, -64.5]
+const fechaEncuesta = new Intl.DateTimeFormat('es-AR', { dateStyle: 'short', timeStyle: 'short' })
 
 function Encuadrar({ datos }) {
   const map = useMap()
@@ -47,6 +48,9 @@ function Mapa() {
   const [seleccion, setSeleccion] = useState(null) // { tipo: 'zona'|'ruta'|'barrio', id }
   const [calles, setCalles] = useState(null)
   const [destino, setDestino] = useState(null)
+  // Puntos donde se hicieron las encuestas (lat/long que dio el celular)
+  const [encuestas, setEncuestas] = useState([])
+  const [verEncuestas, setVerEncuestas] = useState(true)
 
   useEffect(() => {
     Promise.all([api.obtenerBarrios(), api.obtenerZonas(), api.obtenerRutas()])
@@ -56,6 +60,11 @@ function Mapa() {
         setRutas(r)
       })
       .catch((e) => setError(e.message))
+    // Sin permiso para ver encuestas simplemente no se muestran
+    api
+      .obtenerEncuestas()
+      .then((d) => setEncuestas(d.features))
+      .catch(() => setEncuestas([]))
   }, [])
 
   const recargarBarrios = useCallback(() => api.obtenerBarrios().then(setBarrios), [])
@@ -243,6 +252,12 @@ function Mapa() {
           <span>
             <i className="ref ref--ruta" /> Ruta
           </span>
+          {encuestas.length > 0 && (
+            <label className="mapa__leyenda-opcion">
+              <input type="checkbox" checked={verEncuestas} onChange={(e) => setVerEncuestas(e.target.checked)} />
+              <i className="ref ref--encuesta" /> Encuestas ({encuestas.length})
+            </label>
+          )}
         </div>
         <MapContainer center={CENTRO_ARGENTINA} zoom={5} preferCanvas className="mapa__leaflet">
           <TileLayer
@@ -306,6 +321,22 @@ function Mapa() {
               onCambio={(geometria) => setModo((m) => ({ ...m, geometria }))}
             />
           )}
+          {verEncuestas &&
+            encuestas.map((e) => (
+              <CircleMarker
+                key={e.properties.id}
+                center={[e.geometry.coordinates[1], e.geometry.coordinates[0]]}
+                radius={6}
+                pathOptions={{ color: '#fff', weight: 2, fillColor: '#f7a832', fillOpacity: 1 }}
+              >
+                <Tooltip className="mapa-tooltip">
+                  {e.properties.cuestionario}
+                  <br />
+                  {e.properties.militante && `${e.properties.militante} · `}
+                  {fechaEncuesta.format(new Date(e.properties.fecha))}
+                </Tooltip>
+              </CircleMarker>
+            ))}
           <Encuadrar datos={barrios} />
           <IrA destino={destino} />
         </MapContainer>

@@ -52,4 +52,5 @@ urlpatterns = [
     path("mapa/zonas/<int:pk>/", mapa_views.zona_detalle, name="mapa-zona"),
     path("mapa/rutas/", mapa_views.rutas, name="mapa-rutas"),
     path("mapa/rutas/<int:pk>/", mapa_views.ruta_detalle, name="mapa-ruta"),
+    path("mapa/encuestas/", encuestas_views.mapa_encuestas, name="mapa-encuestas"),
 ]

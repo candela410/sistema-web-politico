@@ -272,21 +272,13 @@ class Encuestado(models.Model):
     # cuestionario lo controla Encuesta (uq_encuesta_encuestado_cuestionario).
     documento = models.CharField(max_length=30, unique=True)
 
-    # FK como en el DER: el grupo (rol) del militante que lo encuestó y la
-    # asignación (usuario + cuestionario) con la que se lo registró. Se
-    # completan solas al cargar la primera encuesta de la persona.
+    # FK como en el DER: el grupo (rol) del militante que lo encuestó. Se
+    # completa solo al cargar la primera encuesta de la persona. Quién lo
+    # encuestó y con qué cuestionario queda en la tabla encuestas.
     grupo = models.ForeignKey(
         "Grupo",
         on_delete=models.SET_NULL,
         db_column="id_grupo",
-        null=True,
-        blank=True,
-        related_name="encuestados",
-    )
-    asignacion = models.ForeignKey(
-        "AsignacionCuestionario",
-        on_delete=models.SET_NULL,
-        db_column="id_usuariosxcuestionarios",
         null=True,
         blank=True,
         related_name="encuestados",

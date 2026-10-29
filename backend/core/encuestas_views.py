@@ -12,7 +12,7 @@ from . import graficos
 from .cuestionarios_views import cuestionarios_de_campana
 from .api import error, leer_json, permisos_de, requiere_permiso
 from .bitacora import registrar
-from .models import AsignacionCuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada
+from .models import Encuesta, Encuestado, Pregunta, RespuestaCargada
 
 
 
@@ -152,14 +152,10 @@ def responder(request, pk):
                 for campo, valor in encuestado_datos.items():
                     setattr(encuestado, campo, valor)
                 encuestado.save()
-            if encuestado.asignacion_id is None:
-                # Primera encuesta de la persona: queda ligada a la asignación
-                # (usuariosxcuestionarios) y al grupo de quien la encuestó
-                encuestado.asignacion = AsignacionCuestionario.objects.filter(
-                    usuario=request.user, cuestionario=cuestionario
-                ).first()
-                encuestado.grupo_id = encuestado.grupo_id or request.user.grupo_id
-                encuestado.save(update_fields=["asignacion", "grupo"])
+            if encuestado.grupo_id is None and request.user.grupo_id:
+                # Primera encuesta de la persona: toma el grupo de quien la encuestó
+                encuestado.grupo_id = request.user.grupo_id
+                encuestado.save(update_fields=["grupo"])
             encuesta = Encuesta.objects.create(
                 encuestado=encuestado,
                 cuestionario=cuestionario,

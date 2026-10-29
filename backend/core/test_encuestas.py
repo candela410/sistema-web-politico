@@ -82,9 +82,8 @@ class EncuestasTests(TestCase):
         self.assertEqual(encuesta.usuario, self.militante)
         self.assertEqual(encuesta.encuestado.documento, "30123456")
         self.assertEqual(RespuestaCargada.objects.count(), 3)  # una por pregunta
-        # FK del encuestado: la asignación (usuariosxcuestionarios) con la que se lo encuestó
-        asignacion = AsignacionCuestionario.objects.get(usuario=self.militante, cuestionario=self.c)
-        self.assertEqual(encuesta.encuestado.asignacion, asignacion)
+        # Quién lo encuestó y con qué cuestionario queda en la encuesta
+        self.assertEqual((encuesta.usuario, encuesta.cuestionario), (self.militante, self.c))
         self.assertEqual(float(encuesta.latitud), -24.79)
 
     def test_no_responde_dos_veces(self):

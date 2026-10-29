@@ -1,0 +1,108 @@
+/* --- Asignar cuestionario (ventana) ------------------------------------ */
+
+.modal--ancho {
+  width: min(620px, calc(100% - 32px));
+}
+
+.asignar__cuestionario {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--lla-borde);
+  border-radius: 10px;
+  background: rgb(81 49 143 / 0.04);
+}
+
+.asignar__cuestionario b {
+  font-size: 1.05rem;
+}
+
+.asignar__cuestionario small,
+.asignar__ayuda {
+  margin: 0;
+  color: var(--lla-gris);
+  font-size: 0.85rem;
+}
+
+.asignar__nota {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgb(240 130 40 / 0.12);
+  font-size: 0.9rem;
+}
+
+.asignar__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(50vh, 420px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.asignar__grupo {
+  border: 1px solid var(--lla-borde);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.asignar__equipo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgb(81 49 143 / 0.08);
+  cursor: pointer;
+}
+
+.asignar__equipo-nombre {
+  font-weight: 700;
+}
+
+.asignar__equipo small {
+  margin-left: auto;
+  color: var(--lla-gris);
+}
+
+.asignar__miembros {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+
+.asignar__miembro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 28px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.asignar__miembro:hover {
+  background: rgb(81 49 143 / 0.06);
+}
+
+.asignar__nombre {
+  font-weight: 600;
+}
+
+.asignar__miembro small {
+  color: var(--lla-gris);
+  overflow-wrap: anywhere;
+}
+
+.asignar__miembro--viejo .asignar__nombre {
+  color: var(--lla-gris);
+}
+
+.asignar input[type='checkbox'],
+.asignar__equipo input,
+.asignar__miembro input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--lla-violeta);
+}

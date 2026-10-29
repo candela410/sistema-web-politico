@@ -1,7 +1,9 @@
 from django.contrib.auth.models import Group
 from django.test import Client, TestCase
 
-from .models import Campana, Categoria, Cuestionario, Encuesta, Encuestado, Opcion, Pregunta, Usuario
+from .models import (
+    AsignacionCuestionario, Campana, Categoria, Cuestionario, Encuesta, Encuestado, Opcion, Pregunta, Usuario,
+)
 
 
 class EncuestasTests(TestCase):
@@ -20,6 +22,8 @@ class EncuestasTests(TestCase):
         self.c = Cuestionario.objects.create(
             titulo="Barrial", categoria=Categoria.objects.create(nombre="G"), campana=self.campana
         )
+        # El militante solo ve y responde los cuestionarios que tiene asignados
+        AsignacionCuestionario.objects.create(usuario=usuario, cuestionario=self.c)
         # Una sola opción, cualitativa
         self.p_una = self.pregunta(1, "Problema", "una_opcion", ["Seguridad", "Salud"], obligatoria=True)
         # Opción múltiple, cualitativa
@@ -64,6 +68,12 @@ class EncuestasTests(TestCase):
         self.assertEqual([c["titulo"] for c in lista], ["Barrial"])
         detalle = self.client.get(f"/api/responder/{self.c.pk}/").json()["cuestionario"]
         self.assertEqual([p["tipo"] for p in detalle["preguntas"]], ["una_opcion", "opcion_multiple", "una_opcion"])
+
+    def test_no_ve_ni_responde_cuestionarios_sin_asignar(self):
+        otro = Cuestionario.objects.create(titulo="Sin asignar", categoria=self.c.categoria, campana=self.campana)
+        lista = self.client.get("/api/responder/").json()["cuestionarios"]
+        self.assertNotIn("Sin asignar", [c["titulo"] for c in lista])
+        self.assertEqual(self.client.get(f"/api/responder/{otro.pk}/").status_code, 404)
 
     def test_responder_guarda_encuesta_con_militante(self):
         r = self.responder("30.123.456", "Seguridad", ["Radio", "Redes"], "4", latitud=-24.79, longitud=-65.41)

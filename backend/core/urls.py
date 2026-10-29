@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import (
+    asignaciones_views,
     campanas_views,
     categorias_views,
     cuestionarios_views,
@@ -36,6 +37,7 @@ urlpatterns = [
     path("equipos/<int:pk>/", equipos_views.equipo_detalle, name="equipo"),
     path("cuestionarios/", cuestionarios_views.cuestionarios, name="cuestionarios"),
     path("cuestionarios/<int:pk>/", cuestionarios_views.cuestionario_detalle, name="cuestionario"),
+    path("cuestionarios/<int:pk>/asignaciones/", asignaciones_views.asignaciones, name="cuestionario-asignaciones"),
     path("cuestionarios/<int:pk>/estadisticas/", encuestas_views.estadisticas, name="cuestionario-estadisticas"),
     path(
         "cuestionarios/<int:pk>/estadisticas/<int:pregunta>/<str:clave>.png",

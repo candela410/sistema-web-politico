@@ -4,6 +4,7 @@ import * as api from '../../api/cuestionarios'
 import { tiene } from '../../permisos'
 import Modal from '../comunes/Modal'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
+import AsignarCuestionario from './AsignarCuestionario'
 import './cuestionarios.css'
 
 function ConfirmarBorrado({ cuestionario, onBorrado, onCerrar }) {
@@ -56,6 +57,7 @@ function ListaCuestionarios({ usuario }) {
   const [filtros, setFiltros] = useState(FILTROS_INICIALES)
   const filtrando = busqueda.trim() || Object.entries(filtros).some(([k, v]) => v !== FILTROS_INICIALES[k])
   const [borrando, setBorrando] = useState(null)
+  const [asignando, setAsignando] = useState(null)
   const [aviso, setAviso] = useState(state?.aviso ?? '')
 
   useEffect(() => {
@@ -219,6 +221,11 @@ function ListaCuestionarios({ usuario }) {
                       Estadísticas
                     </Link>
                   )}
+                  {tiene(usuario, 'core.change_asignacioncuestionario') && (
+                    <button type="button" className="boton boton--borde boton--chico" onClick={() => setAsignando(c)}>
+                      Asignar
+                    </button>
+                  )}
                   {tiene(usuario, 'core.change_cuestionario') && (
                     <Link to={`/cuestionarios/${c.id}`} className="boton boton--borde boton--chico">
                       Editar
@@ -235,6 +242,21 @@ function ListaCuestionarios({ usuario }) {
           </ul>
           <Paginacion {...paginado} />
         </>
+      )}
+
+      {asignando && (
+        <AsignarCuestionario
+          cuestionario={asignando}
+          onCerrar={() => setAsignando(null)}
+          onGuardado={(cantidad) => {
+            setAsignando(null)
+            setAviso(
+              cantidad === 0
+                ? `${asignando.titulo} quedó sin militantes asignados.`
+                : `${asignando.titulo} quedó asignado a ${cantidad === 1 ? '1 militante' : `${cantidad} militantes`}.`,
+            )
+          }}
+        />
       )}
 
       {borrando && (

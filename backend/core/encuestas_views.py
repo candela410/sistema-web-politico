@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
 from . import graficos
-from .api import error, leer_json, requiere_permiso
+from .api import error, leer_json, permisos_de, requiere_permiso
 from .bitacora import registrar
 from .models import Barrio, Cuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada
 
@@ -34,10 +34,19 @@ def _cuestionario_para_responder(c):
     }
 
 
+def _para_responder(request):
+    """Cuestionarios activos de la campaña que el usuario puede responder: los
+    que tiene asignados. Quien administra cuestionarios los ve todos."""
+    lista = Cuestionario.objects.filter(activo=True, campana=request.campana)
+    if "core.view_cuestionario" not in permisos_de(request.user):
+        lista = lista.filter(usuarios=request.user)
+    return lista
+
+
 @require_http_methods(["GET"])
 @requiere_permiso("core.add_encuesta")
 def cuestionarios_para_responder(request):
-    lista = Cuestionario.objects.filter(activo=True, campana=request.campana).select_related("categoria").order_by("titulo")
+    lista = _para_responder(request).select_related("categoria").order_by("titulo")
     return JsonResponse({
         "cuestionarios": [
             {
@@ -118,9 +127,7 @@ def _coordenada(valor, minimo, maximo):
 @require_http_methods(["GET", "POST"])
 @requiere_permiso("core.add_encuesta")
 def responder(request, pk):
-    cuestionario = get_object_or_404(
-        Cuestionario.objects.select_related("categoria"), pk=pk, activo=True, campana=request.campana
-    )
+    cuestionario = get_object_or_404(_para_responder(request).select_related("categoria"), pk=pk)
     if request.method == "GET":
         return JsonResponse({"cuestionario": _cuestionario_para_responder(cuestionario)})
 

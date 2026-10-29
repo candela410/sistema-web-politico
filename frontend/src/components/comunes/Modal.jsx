@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import './Modal.css'
 
 // Ventana modal basada en <dialog>: Escape y el fondo la cierran
-function Modal({ titulo, children, onCerrar }) {
+function Modal({ titulo, children, onCerrar, className = '' }) {
   const ref = useRef(null)
   useEffect(() => {
     const dialogo = ref.current
@@ -12,7 +12,7 @@ function Modal({ titulo, children, onCerrar }) {
   return (
     <dialog
       ref={ref}
-      className="modal"
+      className={`modal ${className}`.trim()}
       aria-labelledby="modal-titulo"
       onCancel={(e) => {
         e.preventDefault()

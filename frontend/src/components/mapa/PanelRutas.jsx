@@ -5,8 +5,8 @@ import Confirmacion from '../comunes/Confirmacion'
 import * as api from '../../api/mapa'
 import { PERFILES, distancia, duracion } from './formato'
 
-function PanelRutas({ rutas, zonas, modo, setModo, seleccionada, onSeleccionar, onGuardada, onBorrada, onError }) {
-  const [form, setForm] = useState({ nombre: '', perfil: 'foot-walking', zona: '', descripcion: '' })
+function PanelRutas({ rutas, modo, setModo, seleccionada, onSeleccionar, onGuardada, onBorrada, onError }) {
+  const [form, setForm] = useState({ nombre: '', perfil: 'foot-walking', descripcion: '' })
   const [guardando, setGuardando] = useState(false)
 
   const rutaActiva = rutas.find((r) => r.id === seleccionada)
@@ -17,7 +17,6 @@ function PanelRutas({ rutas, zonas, modo, setModo, seleccionada, onSeleccionar, 
     setForm({
       nombre: ruta?.nombre ?? '',
       perfil: ruta?.perfil ?? 'foot-walking',
-      zona: ruta?.zona ?? '',
       descripcion: ruta?.descripcion ?? '',
     })
     setModo({ tipo: 'ruta', id: ruta?.id, paradas: ruta?.paradas ?? [] })
@@ -27,7 +26,7 @@ function PanelRutas({ rutas, zonas, modo, setModo, seleccionada, onSeleccionar, 
     evento.preventDefault()
     setGuardando(true)
     onError('')
-    const datos = { ...form, zona: form.zona ? Number(form.zona) : null, paradas: modo.paradas }
+    const datos = { ...form, paradas: modo.paradas }
     try {
       const ruta = modo.id ? await api.editarRuta(modo.id, datos) : await api.crearRuta(datos)
       onGuardada(ruta, !modo.id)
@@ -107,16 +106,6 @@ function PanelRutas({ rutas, zonas, modo, setModo, seleccionada, onSeleccionar, 
           ))}
         </select>
 
-        <label htmlFor="ruta-zona">Zona</label>
-        <select id="ruta-zona" className="entrada" value={form.zona} onChange={cambiar('zona')}>
-          <option value="">Sin zona</option>
-          {zonas.map((z) => (
-            <option key={z.id} value={z.id}>
-              {z.nombre}
-            </option>
-          ))}
-        </select>
-
         <label htmlFor="ruta-descripcion">Notas</label>
         <textarea
           id="ruta-descripcion"
@@ -178,8 +167,11 @@ function PanelRutas({ rutas, zonas, modo, setModo, seleccionada, onSeleccionar, 
             <dd>{distancia(rutaActiva.distancia_m)}</dd>
             <dt>Tiempo estimado</dt>
             <dd>{duracion(rutaActiva.duracion_s)}</dd>
-            <dt>Zona</dt>
-            <dd>{zonas.find((z) => z.id === rutaActiva.zona)?.nombre ?? 'Sin zona'}</dd>
+            {/* Zonas y calles salen de consultas: rutas → calles → barrios → zonas */}
+            <dt>{rutaActiva.zonas.length === 1 ? 'Zona' : 'Zonas'}</dt>
+            <dd>{rutaActiva.zonas.length ? rutaActiva.zonas.join(', ') : 'Sin zona'}</dd>
+            <dt>Calles</dt>
+            <dd>{rutaActiva.calles}</dd>
             <dt>Puntos</dt>
             <dd>{rutaActiva.paradas.length}</dd>
             {rutaActiva.equipos.length > 0 && (

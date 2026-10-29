@@ -16,10 +16,6 @@ class Migration(migrations.Migration):
         ),
         migrations.RemoveField(
             model_name='respuestacargada',
-            name='cargada_en',
-        ),
-        migrations.RemoveField(
-            model_name='respuestacargada',
             name='encuesta',
         ),
         migrations.RemoveField(

@@ -12,7 +12,7 @@ from . import graficos
 from .cuestionarios_views import cuestionarios_de_campana
 from .api import error, leer_json, permisos_de, requiere_permiso
 from .bitacora import registrar
-from .models import Barrio, Encuesta, Encuestado, Pregunta, RespuestaCargada
+from .models import AsignacionCuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada
 
 
 
@@ -80,11 +80,6 @@ def _limpiar_encuestado(datos):
         valor = str(datos.get(campo) or "").strip()[:maximo]
         if valor:
             limpio[campo] = valor
-    barrio = datos.get("barrio")
-    if barrio:
-        if not Barrio.objects.filter(pk=barrio).exists():
-            raise RespuestaInvalida("El barrio elegido no existe.")
-        limpio["barrio_id"] = barrio
     return limpio
 
 
@@ -157,6 +152,14 @@ def responder(request, pk):
                 for campo, valor in encuestado_datos.items():
                     setattr(encuestado, campo, valor)
                 encuestado.save()
+            if encuestado.asignacion_id is None:
+                # Primera encuesta de la persona: queda ligada a la asignación
+                # (usuariosxcuestionarios) y al grupo de quien la encuestó
+                encuestado.asignacion = AsignacionCuestionario.objects.filter(
+                    usuario=request.user, cuestionario=cuestionario
+                ).first()
+                encuestado.grupo_id = encuestado.grupo_id or request.user.grupo_id
+                encuestado.save(update_fields=["asignacion", "grupo"])
             encuesta = Encuesta.objects.create(
                 encuestado=encuestado,
                 cuestionario=cuestionario,

@@ -274,18 +274,21 @@ class Encuestado(models.Model):
     telefono = models.CharField(max_length=40, blank=True, null=True)
     direccion = models.TextField(blank=True, null=True)
 
-    calle = models.ForeignKey(
-        Calle,
+    # FK como en el DER: el grupo (rol) del militante que lo encuestó y la
+    # asignación (usuario + cuestionario) con la que se lo registró. Se
+    # completan solas al cargar la primera encuesta de la persona.
+    grupo = models.ForeignKey(
+        "Grupo",
         on_delete=models.SET_NULL,
-        db_column="id_calle",
+        db_column="id_grupo",
         null=True,
         blank=True,
         related_name="encuestados",
     )
-    barrio = models.ForeignKey(
-        Barrio,
+    asignacion = models.ForeignKey(
+        "AsignacionCuestionario",
         on_delete=models.SET_NULL,
-        db_column="id_barrio",
+        db_column="id_usuariosxcuestionarios",
         null=True,
         blank=True,
         related_name="encuestados",
@@ -518,8 +521,8 @@ class Encuesta(models.Model):
 
 
 class RespuestaCargada(models.Model):
-    # Como en el DER: solo id_respuesta e id_opcion. La pregunta y el
-    # cuestionario salen de la opción (opciones → preguntas → cuestionarios).
+    # Como en el DER, la única FK es id_opcion. La pregunta y el cuestionario
+    # salen de la opción (opciones → preguntas → cuestionarios).
     id_respuesta = models.AutoField(primary_key=True)
     # PROTECT: borrar una opción nunca elimina respuestas cargadas
     opcion = models.ForeignKey(
@@ -528,6 +531,7 @@ class RespuestaCargada(models.Model):
         db_column="id_opcion",
         related_name="respuestas",
     )
+    cargada_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "respuesta_cargada"

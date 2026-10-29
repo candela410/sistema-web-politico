@@ -62,15 +62,18 @@ class AsignacionesTests(TestCase):
         self.asignar(b)
         self.assertEqual(self.asignados(), {"b@x.com"})
 
-    def test_quitar_no_borra_las_encuestas_cargadas(self):
+    def test_no_se_quita_a_quien_ya_cargo_encuestas(self):
+        # encuestas.(id_usuario, id_cuestionario) es FK a usuariosxcuestionarios
         a = self.militante("a@x.com")
         self.asignar(a)
         from .models import Encuestado
         Encuesta.objects.create(
             cuestionario=self.c, usuario=a, encuestado=Encuestado.objects.create(documento="1", nombre="X")
         )
-        self.asignar()
-        self.assertEqual(self.asignados(), set())
+        r = self.asignar()
+        self.assertEqual(r.status_code, 409)
+        self.assertIn("ya cargó encuestas", r.json()["error"])
+        self.assertEqual(self.asignados(), {"a@x.com"})
         self.assertEqual(Encuesta.objects.filter(usuario=a).count(), 1)
 
     def test_no_asigna_a_quien_no_es_militante_activo_de_la_campana(self):

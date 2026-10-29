@@ -360,6 +360,10 @@ class Cuestionario(models.Model):
 
 
 class AsignacionCuestionario(models.Model):
+    # Clave primaria compuesta (id_usuario, id_cuestionario), sin id propio.
+    # encuestas.(id_usuario, id_cuestionario) es FK a esta tabla (la crea la
+    # migración 0020 en la base: Django no maneja FK hacia claves compuestas).
+    pk = models.CompositePrimaryKey("usuario", "cuestionario")
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -375,12 +379,6 @@ class AsignacionCuestionario(models.Model):
     class Meta:
         db_table = "usuariosxcuestionarios"
         verbose_name = "asignación de cuestionario"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["usuario", "cuestionario"],
-                name="uq_usuario_cuestionario",
-            )
-        ]
 
 
 class Pregunta(models.Model):
@@ -521,7 +519,6 @@ class RespuestaCargada(models.Model):
         db_column="id_opcion",
         related_name="respuestas",
     )
-    cargada_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "respuesta_cargada"

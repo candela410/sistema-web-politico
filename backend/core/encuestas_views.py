@@ -12,7 +12,7 @@ from . import graficos
 from .cuestionarios_views import cuestionarios_de_campana
 from .api import error, leer_json, permisos_de, requiere_permiso
 from .bitacora import registrar
-from .models import Encuesta, Encuestado, Pregunta, RespuestaCargada
+from .models import AsignacionCuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada
 
 
 
@@ -156,6 +156,9 @@ def responder(request, pk):
                 # Primera encuesta de la persona: toma el grupo de quien la encuestó
                 encuestado.grupo_id = request.user.grupo_id
                 encuestado.save(update_fields=["grupo"])
+            # encuestas.(id_usuario, id_cuestionario) es FK a usuariosxcuestionarios:
+            # quien carga sin estar asignado (por ejemplo, quien administra) queda asignado
+            AsignacionCuestionario.objects.get_or_create(usuario=request.user, cuestionario=cuestionario)
             encuesta = Encuesta.objects.create(
                 encuestado=encuestado,
                 cuestionario=cuestionario,

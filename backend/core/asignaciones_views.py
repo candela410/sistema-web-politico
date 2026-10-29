@@ -75,6 +75,14 @@ def asignaciones(request, pk):
         if validos != nuevos:
             return error("Alguno de los usuarios no existe, no está activo o no es militante de la campaña.")
     quitados = antes - elegidos
+    # encuestas.(id_usuario, id_cuestionario) es FK a esta asignación: a quien ya
+    # cargó encuestas de este cuestionario no se le puede quitar
+    con_encuestas = set(
+        cuestionario.encuestas.filter(usuario_id__in=quitados).values_list("usuario_id", flat=True)
+    )
+    if con_encuestas:
+        nombres = ", ".join(sorted(_nombre(u) for u in Usuario.objects.filter(pk__in=con_encuestas)))
+        return error(f"No se puede quitar a {nombres}: ya cargó encuestas de este cuestionario.", 409)
 
     if nuevos or quitados:
         with transaction.atomic():

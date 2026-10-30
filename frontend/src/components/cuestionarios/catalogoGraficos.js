@@ -18,7 +18,8 @@ export const CATALOGO = [
 
 export const disponibles = (pregunta) => CATALOGO.filter((g) => g.sirve(pregunta))
 
+// Gráfico que se muestra si la persona todavía no eligió uno (solo uno por pregunta)
 export function porDefecto(pregunta) {
-  if (pregunta.variable === 'cuantitativa') return ['columnas', 'medidas', 'tabla']
-  return ['barras', 'distribucion']
+  if (pregunta.variable === 'cuantitativa') return 'columnas'
+  return 'barras'
 }

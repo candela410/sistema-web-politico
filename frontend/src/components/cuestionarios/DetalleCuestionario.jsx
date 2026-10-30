@@ -7,7 +7,7 @@ import { disponibles, f, plural, porDefecto } from './catalogoGraficos'
 import { Dato, Grafico } from './graficos'
 
 // Estadísticas de un cuestionario (se abren con el botón "Estadísticas" de la
-// lista). En cada pregunta la persona elige qué gráficos ver, y puede
+// lista). En cada pregunta la persona elige UN tipo de gráfico a la vez, y puede
 // descargar un PDF eligiendo cuáles incluir.
 
 const formatoFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
@@ -30,15 +30,18 @@ function guardarEleccion(id, eleccion) {
   }
 }
 
-function EstadisticaPregunta({ cuestionario, pregunta, numero, elegidos, onCambio, registrar }) {
+// Devuelve el único gráfico elegido para la pregunta. Si lo guardado no sirve
+// (por ejemplo, elecciones viejas con varios gráficos) se usa el primero válido
+// o el gráfico por defecto.
+function graficoDe(pregunta, guardado) {
+  const validas = disponibles(pregunta).map((g) => g.clave)
+  const candidatos = Array.isArray(guardado) ? guardado : [guardado]
+  return candidatos.find((c) => validas.includes(c)) ?? porDefecto(pregunta)
+}
+
+function EstadisticaPregunta({ cuestionario, pregunta, numero, elegido, onCambio, registrar }) {
   const cuantitativa = pregunta.variable === 'cuantitativa'
   const opciones = disponibles(pregunta)
-  const alternar = (clave) =>
-    onCambio(
-      elegidos.includes(clave)
-        ? elegidos.filter((c) => c !== clave)
-        : opciones.map((o) => o.clave).filter((c) => c === clave || elegidos.includes(c)),
-    )
 
   return (
     <section className="tarjeta-form estadistica">
@@ -60,28 +63,26 @@ function EstadisticaPregunta({ cuestionario, pregunta, numero, elegidos, onCambi
         <p className="texto-suave">Nadie respondió esta pregunta todavía.</p>
       ) : (
         <>
-          <div className="selector-graficos" role="group" aria-label="Gráficos a mostrar">
-            <span className="selector-graficos__titulo">Gráficos:</span>
+          <div className="selector-graficos" role="radiogroup" aria-label="Tipo de gráfico a mostrar">
+            <span className="selector-graficos__titulo">Gráfico:</span>
             {opciones.map((g) => (
               <button
-                key={g.clave}
+                key={g.nombre}
                 type="button"
+                role="radio"
                 className="chip-grafico"
-                aria-pressed={elegidos.includes(g.clave)}
-                onClick={() => alternar(g.clave)}
+                aria-checked={elegido === g.clave}
+                onClick={() => elegido !== g.clave && onCambio(g.clave)}
               >
                 {g.nombre}
               </button>
             ))}
           </div>
 
-          {elegidos.length === 0 && <p className="texto-suave">Elegí al menos un gráfico para esta pregunta.</p>}
-          {elegidos.map((clave) => (
-            <figure key={clave} className="grafico" ref={(nodo) => registrar(pregunta.id, clave, nodo)}>
-              <figcaption>{nombreDe(pregunta, clave)}</figcaption>
-              <Grafico clave={clave} pregunta={pregunta} cuestionario={cuestionario} />
-            </figure>
-          ))}
+          <figure key={elegido} className="grafico" ref={(nodo) => registrar(pregunta.id, elegido, nodo)}>
+            <figcaption>{nombreDe(pregunta, elegido)}</figcaption>
+            <Grafico clave={elegido} pregunta={pregunta} cuestionario={cuestionario} />
+          </figure>
         </>
       )}
     </section>
@@ -106,29 +107,35 @@ function DescargarPdf({ datos, eleccion, nodos, onCerrar }) {
     setError('')
     try {
       const { descargarPdf } = await import('./pdf')
-      const secciones = []
-      if (incluir.resumen) {
-        secciones.push({ titulo: 'Resumen', graficos: [{ nodo: nodos.current.get('resumen') }] })
-      }
-      datos.preguntas.forEach((p, i) => {
-        const graficos = (eleccion[p.id] ?? [])
+      const total = datos.preguntas.length
+      const lista = datos.preguntas.map((p, i) => ({
+        ...p,
+        numero: i + 1,
+        total,
+        graficos: (eleccion[p.id] ?? [])
           .filter((c) => incluir[`${p.id}:${c}`])
-          .map((c) => ({ nodo: nodos.current.get(`${p.id}:${c}`) }))
-          .filter((g) => g.nodo)
-        if (graficos.length) {
-          secciones.push({
-            titulo: `${i + 1}. ${p.enunciado}`,
-            detalle: `Variable ${p.variable} · ${plural(p.respondidas, 'persona respondió', 'personas respondieron')}`,
-            graficos,
-          })
-        }
-      })
+          .map((c) => ({ nodo: nodos.current.get(`${p.id}:${c}`), nombre: nombreDe(p, c) }))
+          .filter((g) => g.nodo),
+      }))
       const nombre = datos.cuestionario.titulo.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g, '').trim().replace(/\s+/g, '-')
       await descargarPdf({
-        titulo: datos.cuestionario.titulo,
-        subtitulo: `Estadísticas · ${datos.cuestionario.categoria} · ${f(datos.total_encuestas)} encuestas · Generado el ${formatoFecha.format(new Date())}`,
-        secciones,
-        archivo: `estadisticas-${nombre || 'cuestionario'}.pdf`,
+        cuestionario: datos.cuestionario,
+        campana: datos.campana,
+        generadoPor: datos.generado_por,
+        generadoEn: new Date(),
+        formatoFecha,
+        f,
+        resumen: incluir.resumen
+          ? {
+              encuestas: datos.total_encuestas,
+              militantes: datos.militantes,
+              preguntas: total,
+              conRespuestas: datos.preguntas.filter((p) => p.respondidas > 0).length,
+              ultima: datos.ultima_encuesta,
+            }
+          : null,
+        preguntas: { total, lista },
+        archivo: `informe-estadisticas-${nombre || 'cuestionario'}.pdf`,
       })
       onCerrar()
     } catch (e) {
@@ -139,11 +146,14 @@ function DescargarPdf({ datos, eleccion, nodos, onCerrar }) {
 
   return (
     <Modal titulo="Descargar PDF" onCerrar={onCerrar}>
-      <p className="modal__texto">Marcá qué querés incluir. Aparecen los gráficos que estás viendo en cada pregunta.</p>
+      <p className="modal__texto">
+        El informe siempre empieza con los datos del cuestionario (nombre, categoría, campaña, fecha). Marcá qué más querés
+        incluir: aparece el gráfico que estás viendo en cada pregunta.
+      </p>
       <div className="pdf-lista">
         <label className="casilla-texto">
           <input type="checkbox" checked={!!incluir.resumen} onChange={() => alternar('resumen')} />
-          <span>Resumen (encuestas, militantes y última encuesta)</span>
+          <span>Resumen general (encuestas, militantes, preguntas y última encuesta)</span>
         </label>
         {preguntas.map((p) => (
           <fieldset key={p.id} className="pdf-lista__pregunta">
@@ -176,7 +186,7 @@ function DescargarPdf({ datos, eleccion, nodos, onCerrar }) {
         <button type="button" className="boton boton--borde" onClick={onCerrar}>
           Cancelar
         </button>
-        <button type="button" className="boton" onClick={generar} disabled={generando || (!cantidad && !incluir.resumen)}>
+        <button type="button" className="boton" onClick={generar} disabled={generando}>
           {generando ? 'Generando…' : `Descargar PDF${cantidad ? ` (${cantidad} gráfico${cantidad === 1 ? '' : 's'})` : ''}`}
         </button>
       </div>
@@ -199,9 +209,9 @@ function DetalleCuestionario() {
       .catch((e) => setError(e.message))
   }, [id])
 
-  const elegidosDe = (p) => eleccion[p.id] ?? porDefecto(p)
-  function cambiar(p, elegidos) {
-    const nueva = { ...eleccion, [p.id]: elegidos }
+  const elegidoDe = (p) => graficoDe(p, eleccion[p.id])
+  function cambiar(p, clave) {
+    const nueva = { ...eleccion, [p.id]: clave }
     setEleccion(nueva)
     guardarEleccion(id, nueva)
   }
@@ -240,7 +250,7 @@ function DetalleCuestionario() {
             <section className="tarjeta-form tarjeta-titulo">
               <span className="cuestionario-item__categoria detalle__categoria">{datos.cuestionario.categoria}</span>
               <h1 className="detalle__titulo">{datos.cuestionario.titulo}</h1>
-              <div className="datos-grilla" ref={(nodo) => (nodo ? nodos.current.set('resumen', nodo) : nodos.current.delete('resumen'))}>
+              <div className="datos-grilla">
                 <Dato etiqueta="Encuestas" valor={f(datos.total_encuestas)} />
                 <Dato etiqueta="Militantes que cargaron" valor={f(datos.militantes)} />
                 <Dato
@@ -263,8 +273,8 @@ function DetalleCuestionario() {
                 cuestionario={id}
                 pregunta={p}
                 numero={i + 1}
-                elegidos={elegidosDe(p)}
-                onCambio={(elegidos) => cambiar(p, elegidos)}
+                elegido={elegidoDe(p)}
+                onCambio={(clave) => cambiar(p, clave)}
                 registrar={registrar}
               />
             ))}
@@ -275,7 +285,7 @@ function DetalleCuestionario() {
       {pdfAbierto && datos && (
         <DescargarPdf
           datos={datos}
-          eleccion={Object.fromEntries(datos.preguntas.map((p) => [p.id, elegidosDe(p)]))}
+          eleccion={Object.fromEntries(datos.preguntas.map((p) => [p.id, [elegidoDe(p)]]))}
           nodos={nodos}
           onCerrar={() => setPdfAbierto(false)}
         />

@@ -817,14 +817,14 @@
   color: var(--lla-violeta);
 }
 
-.chip-grafico[aria-pressed='true'] {
+.chip-grafico[aria-checked='true'] {
   border-color: var(--lla-violeta);
   background: var(--lla-violeta);
   color: #fff;
 }
 
-.chip-grafico[aria-pressed='true']::before {
-  content: '✓ ';
+.chip-grafico[aria-checked='true']::before {
+  content: '● ';
 }
 
 .chip-grafico:focus-visible {

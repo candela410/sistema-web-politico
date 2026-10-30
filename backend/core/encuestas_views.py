@@ -210,7 +210,17 @@ def estadisticas(request, pk):
         preguntas.append(dato)
 
     return JsonResponse({
-        "cuestionario": {"id": cuestionario.pk, "titulo": cuestionario.titulo, "categoria": cuestionario.categoria.nombre},
+        "cuestionario": {
+            "id": cuestionario.pk,
+            "titulo": cuestionario.titulo,
+            "categoria": cuestionario.categoria.nombre,
+            "descripcion": cuestionario.descripcion or "",
+            "activo": cuestionario.activo,
+            "creado_en": cuestionario.creado_en.isoformat() if cuestionario.creado_en else None,
+        },
+        # Datos para el encabezado del informe PDF
+        "campana": request.campana.nombre if request.campana else "",
+        "generado_por": request.user.get_full_name().strip() or request.user.email,
         "total_encuestas": total,
         "ultima_encuesta": ultima.isoformat() if ultima else None,
         "militantes": cuestionario.encuestas.exclude(usuario=None).values("usuario").distinct().count(),

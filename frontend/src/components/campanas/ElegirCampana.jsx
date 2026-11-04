@@ -40,7 +40,7 @@ function ElegirCampana({ usuario, onElegida, onSalir }) {
       </svg>
 
       <main className="elegir__contenido">
-        <img className="elegir__logo" src={logo} alt="La Libertad Avanza" />
+        <img className="elegir__logo" src={logo} alt="Logo" />
         <header>
           <h1>Elegí la campaña</h1>
           <p>

@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import Spinner from 'react-bootstrap/Spinner'
 import Modal from './Modal'
 
 // Ventana para confirmar una acción ("¿Seguro que querés desactivar…?").
-// onConfirmar puede ser async: mientras corre, el botón queda en "…".
+// onConfirmar puede ser async: mientras corre, el botón muestra un spinner y "…".
 function Confirmacion({ titulo, children, textoConfirmar = 'Confirmar', peligro = true, onConfirmar, onCerrar }) {
   const [trabajando, setTrabajando] = useState(false)
 
@@ -29,6 +30,7 @@ function Confirmacion({ titulo, children, textoConfirmar = 'Confirmar', peligro 
           disabled={trabajando}
           autoFocus
         >
+          {trabajando && <Spinner animation="border" size="sm" aria-hidden="true" />}
           {trabajando ? `${textoConfirmar}…` : textoConfirmar}
         </button>
       </div>

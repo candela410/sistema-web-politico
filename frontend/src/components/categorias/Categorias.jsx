@@ -6,6 +6,7 @@ import './categorias.css'
 import Esqueleto from '../comunes/Esqueleto'
 import { Pencil, Trash2 } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
+import AvisoOk from '../comunes/AvisoOk'
 
 const ordenar = (lista) => [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
@@ -176,11 +177,7 @@ function Categorias() {
         />
       </div>
 
-      {aviso && (
-        <p className="aviso-ok" role="status">
-          {aviso}
-        </p>
-      )}
+      <AvisoOk>{aviso}</AvisoOk>
 
       {errorCarga ? (
         <p className="texto-error" role="alert">

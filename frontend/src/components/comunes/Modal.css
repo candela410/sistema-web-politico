@@ -1,17 +1,33 @@
-/* --- Modal ------------------------------------------------------------ */
+/* --- Modal (react-bootstrap) -------------------------------------------- */
 
-.modal {
-  width: min(460px, calc(100% - 32px));
-  padding: 0;
+/* Caja centrada: el ancho de siempre y 1rem de aire arriba y abajo */
+.ventana-capa {
+  --bs-modal-margin: 1rem;
+}
+
+.ventana.modal-dialog {
+  max-width: min(460px, calc(100% - 32px));
+  margin-inline: auto;
+}
+
+.ventana.modal--ancho {
+  max-width: min(620px, calc(100% - 32px));
+}
+
+.ventana__caja {
+  overflow: hidden;
   border: 0;
   border-radius: 16px;
+  background: #fff;
   color: var(--lla-texto);
   font-family: 'Montserrat', system-ui, sans-serif;
   box-shadow: 0 20px 50px rgb(21 18 28 / 0.25);
 }
 
-.modal::backdrop {
-  background: rgb(31 21 56 / 0.45);
+/* Fondo oscuro violeta detrás de la ventana */
+.ventana__fondo {
+  --bs-backdrop-bg: rgb(31 21 56);
+  --bs-backdrop-opacity: 0.45;
 }
 
 .modal__contenido {

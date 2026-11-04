@@ -220,10 +220,14 @@
   color: #fff;
   background: var(--purple);
   cursor: pointer;
-  transition: background 0.15s, transform 0.05s;
+  transition: background-color 150ms ease, transform var(--duracion-presion) var(--ease-out);
 }
 .login__submit:hover:not(:disabled) { background: var(--purple-dark); }
-.login__submit:active:not(:disabled) { transform: translateY(1px); }
+/* Se achica apenas al presionarlo (con "reducir movimiento", no) */
+.login__submit:active:not(:disabled) { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .login__submit:active:not(:disabled) { transform: none; }
+}
 .login__submit:disabled { opacity: 0.7; cursor: wait; }
 /* Mismo botón, pero como enlace (pantalla de restablecer contraseña) */
 .login__submit--enlace {

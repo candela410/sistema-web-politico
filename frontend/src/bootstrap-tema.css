@@ -1,0 +1,246 @@
+/* Bootstrap adaptado al diseño del proyecto.
+   Se carga después de bootstrap.min.css y antes de index.css.
+
+   1) Deshace el "reboot" de Bootstrap (los estilos que pone a h1, p, ul, body,
+      inputs, tablas…) y vuelve a los valores por defecto del navegador, para que
+      las pantallas se vean igual que antes. Son selectores de etiqueta solos, así
+      que cualquier clase de Bootstrap (.btn, .modal-title, .dropdown-item…) sigue
+      ganando, y lo de index.css y los .css de cada pantalla también.
+   2) Les pone a los componentes de Bootstrap los colores y la tipografía de la
+      campaña (variables --bs-*).
+*/
+
+/* --- 1) Sin reboot ------------------------------------------------------ */
+
+body {
+  font-family: revert;
+  font-size: revert;
+  font-weight: revert;
+  line-height: revert;
+  color: revert;
+  text-align: revert;
+  -webkit-text-size-adjust: revert;
+  -webkit-tap-highlight-color: revert;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: revert;
+  font-size: revert;
+  font-weight: revert;
+  line-height: revert;
+  color: revert;
+}
+
+p,
+dl,
+dd,
+blockquote,
+figure,
+address {
+  margin: revert;
+}
+
+ol,
+ul {
+  margin: revert;
+  padding-left: revert;
+}
+
+ol ol,
+ul ul,
+ol ul,
+ul ol {
+  margin: revert;
+}
+
+dt,
+b,
+strong {
+  font-weight: revert;
+}
+
+address {
+  font-style: revert;
+  line-height: revert;
+}
+
+abbr[title] {
+  text-decoration: revert;
+  cursor: revert;
+  text-decoration-skip-ink: revert;
+}
+
+small {
+  font-size: revert;
+}
+
+mark {
+  padding: revert;
+  background-color: revert;
+  color: revert;
+}
+
+sub,
+sup {
+  position: revert;
+  font-size: revert;
+  line-height: revert;
+  vertical-align: revert;
+}
+
+a {
+  color: revert;
+  text-decoration: revert;
+}
+
+pre,
+code,
+kbd,
+samp {
+  font-family: revert;
+  font-size: revert;
+}
+
+pre {
+  display: revert;
+  margin: revert;
+  overflow: revert;
+}
+
+code {
+  color: revert;
+  word-wrap: revert;
+}
+
+kbd {
+  padding: revert;
+  border-radius: revert;
+  background-color: revert;
+  color: revert;
+}
+
+img,
+svg {
+  vertical-align: revert;
+}
+
+table {
+  caption-side: revert;
+  border-collapse: revert;
+}
+
+caption {
+  padding: revert;
+  color: revert;
+  text-align: revert;
+}
+
+th {
+  text-align: revert;
+}
+
+thead,
+tbody,
+tfoot,
+tr,
+td,
+th {
+  border-color: revert;
+  border-style: revert;
+  border-width: revert;
+}
+
+label {
+  display: revert;
+}
+
+button {
+  border-radius: revert;
+}
+
+input,
+button,
+select,
+optgroup,
+textarea {
+  margin: revert;
+  font-family: revert;
+  font-size: revert;
+  line-height: revert;
+}
+
+button,
+select {
+  text-transform: revert;
+}
+
+select {
+  word-wrap: revert;
+}
+
+textarea {
+  resize: revert;
+}
+
+fieldset {
+  min-width: revert;
+  margin: revert;
+  padding: revert;
+  border: revert;
+}
+
+legend {
+  float: revert;
+  width: revert;
+  margin-bottom: revert;
+  padding: revert;
+  font-size: revert;
+  line-height: revert;
+}
+
+hr {
+  margin: revert;
+  border: revert;
+  color: revert;
+  opacity: revert;
+}
+
+iframe {
+  border: revert;
+}
+
+summary {
+  display: revert;
+  cursor: revert;
+}
+
+progress {
+  vertical-align: revert;
+}
+
+/* --- 2) Colores y tipografía de la campaña ----------------------------- */
+
+:root {
+  --bs-primary: #51318f;
+  --bs-primary-rgb: 81, 49, 143;
+  --bs-secondary: #5d5a66;
+  --bs-secondary-rgb: 93, 90, 102;
+  --bs-danger: #c0182f;
+  --bs-danger-rgb: 192, 24, 47;
+  --bs-link-color: #51318f;
+  --bs-link-color-rgb: 81, 49, 143;
+  --bs-link-hover-color: #41267a;
+  --bs-link-hover-color-rgb: 65, 38, 122;
+  --bs-border-color: var(--lla-borde);
+  --bs-border-radius: 10px;
+  --bs-border-radius-lg: 16px;
+  --bs-focus-ring-color: rgb(81 49 143 / 0.35);
+  --bs-body-color: var(--lla-texto);
+  --bs-emphasis-color: var(--lla-texto);
+  --bs-secondary-color: var(--lla-gris);
+}

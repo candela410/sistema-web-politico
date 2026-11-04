@@ -80,7 +80,7 @@ function Menu({ usuario, onCambio, onSalir }) {
             <IconoMenu size={22} />
           </button>
           <div className="panel__marca">
-            <img className="panel__logo" src={logo} alt="La Libertad Avanza" />
+            <img className="panel__logo" src={logo} alt="Logo" />
             <div className="panel__titulo">
               <strong>Panel de gestión</strong>
               <span>{actual?.texto ?? 'Inicio'}</span>

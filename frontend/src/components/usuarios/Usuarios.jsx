@@ -8,6 +8,7 @@ import Esqueleto from '../comunes/Esqueleto'
 import Interruptor from '../comunes/Interruptor'
 import { KeyRound, Pencil } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
+import AvisoOk from '../comunes/AvisoOk'
 
 const GRUPO_MILITANTES = 'Militantes'
 const formatoFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
@@ -235,11 +236,7 @@ function Usuarios({ usuario: yo }) {
         />
       </div>
 
-      {aviso && (
-        <p className="aviso-ok" role="status">
-          {aviso}
-        </p>
-      )}
+      <AvisoOk>{aviso}</AvisoOk>
       {error && (
         <p className="texto-error" role="alert">
           {error}

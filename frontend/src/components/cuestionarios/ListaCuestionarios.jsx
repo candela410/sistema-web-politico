@@ -10,6 +10,7 @@ import { ChartColumn, Eye, Pencil, Trash2, UserPlus } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import './cuestionarios.css'
 import Esqueleto from '../comunes/Esqueleto'
+import AvisoOk from '../comunes/AvisoOk'
 
 function ConfirmarBorrado({ cuestionario, onBorrado, onCerrar }) {
   const [error, setError] = useState('')
@@ -174,11 +175,7 @@ function ListaCuestionarios({ usuario }) {
         )}
       </div>
 
-      {aviso && (
-        <p className="aviso-ok" role="status">
-          {aviso}
-        </p>
-      )}
+      <AvisoOk>{aviso}</AvisoOk>
 
       {errorCarga ? (
         <p className="texto-error" role="alert">

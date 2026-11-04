@@ -84,20 +84,47 @@
 :is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta):nth-child(7) { animation-delay: 210ms; }
 :is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta):nth-child(n + 8) { animation-delay: 245ms; }
 
-/* --- Ventanas (modales) -------------------------------------------------
-   Entran centradas, con una escala apenas menor y el fondo fundiéndose. */
+/* --- Ventanas (modales de react-bootstrap) -------------------------------
+   Entran centradas, subiendo apenas y con una escala un poco menor, y el
+   fondo se funde. Al cerrarse con Escape o clickeando afuera se van más
+   rápido de lo que entraron (150ms contra 240ms). */
 
-.modal[open] {
-  animation: ventana-entra 240ms var(--ease-out);
+.ventana-capa.fade,
+.ventana__fondo.fade {
+  transition: opacity 150ms var(--ease-out);
 }
 
-.modal[open]::backdrop {
-  animation: aparecer 240ms var(--ease-out);
+.ventana-capa.show,
+.ventana__fondo.show {
+  transition-duration: 240ms;
 }
 
-/* --- Avisos y errores ---------------------------------------------------- */
+.ventana-capa.fade .ventana {
+  transform: translateY(6px) scale(0.97);
+  transition: transform 150ms var(--ease-out);
+}
 
-.aviso-ok,
+.ventana-capa.show .ventana {
+  transform: none;
+  transition-duration: 240ms;
+}
+
+/* --- Avisos y errores ----------------------------------------------------
+   El aviso de "listo" (AvisoOk) baja apenas al aparecer y se desvanece al
+   irse, más rápido de lo que entró. */
+
+.aviso-ok.fade {
+  transform: translateY(-4px);
+  transition:
+    opacity 150ms var(--ease-out),
+    transform 150ms var(--ease-out);
+}
+
+.aviso-ok.fade.show {
+  transform: none;
+  transition-duration: 200ms;
+}
+
 .texto-error[role='alert'] {
   animation: aviso-entra 200ms var(--ease-out);
 }
@@ -129,6 +156,52 @@
   transition-timing-function: ease, var(--ease-out);
 }
 
+/* --- Ingreso (login y restablecer clave) ---------------------------------
+   Se ve una vez por sesión, así que puede tener un poco más de presencia:
+   los bloques del formulario suben en cascada corta. */
+
+.login__form > * {
+  animation: subir-y-aparecer 300ms var(--ease-out) backwards;
+}
+
+.login__form > :nth-child(2) { animation-delay: 30ms; }
+.login__form > :nth-child(3) { animation-delay: 60ms; }
+.login__form > :nth-child(4) { animation-delay: 90ms; }
+.login__form > :nth-child(5) { animation-delay: 120ms; }
+.login__form > :nth-child(n + 6) { animation-delay: 150ms; }
+
+/* El error del login entra igual que los demás errores, sin esperar */
+.login__form > .login__error {
+  animation: aviso-entra 200ms var(--ease-out);
+}
+
+/* --- Elegir campaña --------------------------------------------------------
+   Las campañas aparecen escalonadas. */
+
+.elegir__lista > li {
+  animation: subir-y-aparecer var(--duracion-entrada) var(--ease-out) backwards;
+}
+
+.elegir__lista > li:nth-child(2) { animation-delay: 40ms; }
+.elegir__lista > li:nth-child(3) { animation-delay: 80ms; }
+.elegir__lista > li:nth-child(n + 4) { animation-delay: 120ms; }
+
+/* --- Menú del usuario (barra superior) ------------------------------------
+   Crece desde la esquina del botón que lo abre. Al cerrarse se va al
+   instante: no hace falta esperar a que termine para seguir trabajando. */
+
+.usuario__desplegable.show {
+  transform-origin: top right;
+  animation: desplegable-entra 180ms var(--ease-out);
+}
+
+@keyframes desplegable-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
 /* --- Reducir movimiento: sin desplazamientos, solo fundidos ---------------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -136,11 +209,25 @@
   .editor > :not(dialog, .aviso-ok, [role='alert']),
   .inicio > :not(dialog, .aviso-ok, [role='alert']),
   :is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila, .responder-lista > li, .inicio__tarjeta),
-  .modal[open],
-  .aviso-ok,
-  .texto-error[role='alert'] {
+  .texto-error[role='alert'],
+  .login__form > *,
+  .login__form > .login__error,
+  .elegir__lista > li,
+  .usuario__desplegable.show {
     animation-name: aparecer;
     animation-delay: 0ms;
+  }
+
+  /* Ventanas y avisos: solo el fundido, sin desplazamiento */
+  .ventana-capa.fade .ventana,
+  .aviso-ok.fade {
+    transform: none;
+  }
+
+  .ventana-capa.fade,
+  .ventana__fondo.fade,
+  .aviso-ok.fade {
+    transition: opacity 150ms ease;
   }
 
   .boton:active:not(:disabled),

@@ -56,51 +56,70 @@
   cursor: not-allowed;
 }
 
+/* Envoltorio de un botón deshabilitado: recibe el mouse por él (BotonIcono.jsx) */
+.accion-icono__envoltorio {
+  display: inline-flex;
+  flex: none;
+  cursor: not-allowed;
+}
+
+.accion-icono__envoltorio .accion-icono {
+  pointer-events: none;
+}
+
 .accion-icono:focus-visible {
   outline: 3px solid rgb(81 49 143 / 0.35);
   outline-offset: 2px;
 }
 
-/* Cartelito con el nombre de la acción. Aparece después de una breve pausa
-   (para no saltar al pasar el mouse de largo) y se va al instante. */
-.accion-icono::after {
-  content: attr(data-ayuda);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  z-index: 10;
-  width: max-content;
-  max-width: 220px;
-  padding: 5px 9px;
-  border-radius: 7px;
-  background: #1f1630;
-  color: #fff;
+/* Cartelito con el nombre de la acción (Tooltip de react-bootstrap, ver
+   BotonIcono.jsx). Aparece después de una breve pausa, crece desde el botón
+   y se va rápido. Si se recorre una fila de botones, los siguientes aparecen
+   sin animación (.cartelito--instantaneo). */
+.cartelito {
+  --bs-tooltip-bg: #1f1630;
+  --bs-tooltip-color: #fff;
+  --bs-tooltip-opacity: 1;
+  --bs-tooltip-max-width: 220px;
+  --bs-tooltip-padding-x: 9px;
+  --bs-tooltip-padding-y: 5px;
+  --bs-tooltip-border-radius: 7px;
+  --bs-tooltip-font-size: 0.75rem;
+  --bs-tooltip-arrow-height: 0;
   font-family: 'Montserrat', system-ui, sans-serif;
-  font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.3;
-  text-align: center;
-  white-space: normal;
   pointer-events: none;
-  opacity: 0;
-  transform: translate(-50%, 3px) scale(0.97);
+}
+
+.cartelito .tooltip-arrow {
+  display: none;
+}
+
+.cartelito.fade {
+  transition: opacity 125ms var(--ease-out);
+}
+
+.cartelito .tooltip-inner {
+  width: max-content;
+  transform: translateY(3px) scale(0.97);
   transform-origin: bottom center;
-  transition:
-    opacity 125ms var(--ease-out),
-    transform 125ms var(--ease-out);
+  transition: transform 125ms var(--ease-out);
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .accion-icono:hover::after {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-    transition-delay: 350ms;
-  }
+/* Si no entra arriba, Popper lo pone abajo: crece desde arriba */
+.cartelito.bs-tooltip-bottom .tooltip-inner {
+  transform: translateY(-3px) scale(0.97);
+  transform-origin: top center;
 }
 
-.accion-icono:focus-visible::after {
-  opacity: 1;
-  transform: translate(-50%, 0) scale(1);
+.cartelito.show .tooltip-inner {
+  transform: none;
+}
+
+.cartelito--instantaneo.fade,
+.cartelito--instantaneo .tooltip-inner {
+  transition-duration: 0ms;
 }
 
 /* Grupo de botones de una fila */
@@ -115,7 +134,12 @@
     transform: none;
   }
 
-  .accion-icono::after {
-    transform: translate(-50%, 0);
+  .cartelito .tooltip-inner,
+  .cartelito.bs-tooltip-bottom .tooltip-inner {
+    transform: none;
+  }
+
+  .cartelito.fade {
+    transition: opacity 125ms ease;
   }
 }

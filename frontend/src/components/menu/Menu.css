@@ -46,7 +46,7 @@
   background: #fff;
   color: var(--lla-violeta);
   cursor: pointer;
-  transition: transform 140ms ease-out, box-shadow 150ms ease;
+  transition: transform var(--duracion-presion) var(--ease-out), box-shadow 150ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -325,6 +325,13 @@
   border: 1px solid var(--lla-borde);
   border-radius: 12px;
   box-shadow: 0 12px 32px rgb(21 18 28 / 0.16);
+  /* Colores de las opciones del Dropdown de react-bootstrap (hover, foco con
+     teclado y mientras se presiona) */
+  --bs-dropdown-link-color: var(--lla-texto);
+  --bs-dropdown-link-hover-color: var(--lla-texto);
+  --bs-dropdown-link-hover-bg: #f4f2f9;
+  --bs-dropdown-link-active-color: var(--lla-texto);
+  --bs-dropdown-link-active-bg: #ece7f6;
 }
 
 .usuario__datos {
@@ -396,6 +403,13 @@
 .usuario__accion--salir,
 .usuario__accion--salir svg {
   color: #c0182f;
+}
+
+.usuario__accion--salir {
+  --bs-dropdown-link-hover-color: #c0182f;
+  --bs-dropdown-link-hover-bg: #fdf1f2;
+  --bs-dropdown-link-active-color: #c0182f;
+  --bs-dropdown-link-active-bg: #fbe3e6;
 }
 
 .usuario__accion--salir:hover {
@@ -478,7 +492,7 @@
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color 150ms ease, color 150ms ease, transform 140ms ease-out;
+  transition: background-color 150ms ease, color 150ms ease, transform var(--duracion-presion) var(--ease-out);
 }
 
 .lateral__opcion svg {

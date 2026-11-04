@@ -5,6 +5,7 @@ import './grupos.css'
 import Esqueleto from '../comunes/Esqueleto'
 import { Pencil, Trash2 } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
+import AvisoOk from '../comunes/AvisoOk'
 
 const GRUPO_MILITANTES = 'Militantes'
 
@@ -298,11 +299,7 @@ function Grupos() {
         />
       </div>
 
-      {aviso && (
-        <p className="aviso-ok" role="status">
-          {aviso}
-        </p>
-      )}
+      <AvisoOk>{aviso}</AvisoOk>
 
       {errorCarga ? (
         <p className="texto-error" role="alert">

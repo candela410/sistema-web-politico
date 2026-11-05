@@ -1,16 +1,3 @@
-/* Bootstrap adaptado al diseño del proyecto.
-   Se carga después de bootstrap.min.css y antes de index.css.
-
-   1) Deshace el "reboot" de Bootstrap (los estilos que pone a h1, p, ul, body,
-      inputs, tablas…) y vuelve a los valores por defecto del navegador, para que
-      las pantallas se vean igual que antes. Son selectores de etiqueta solos, así
-      que cualquier clase de Bootstrap (.btn, .modal-title, .dropdown-item…) sigue
-      ganando, y lo de index.css y los .css de cada pantalla también.
-   2) Les pone a los componentes de Bootstrap los colores y la tipografía de la
-      campaña (variables --bs-*).
-*/
-
-/* --- 1) Sin reboot ------------------------------------------------------ */
 
 body {
   font-family: revert;

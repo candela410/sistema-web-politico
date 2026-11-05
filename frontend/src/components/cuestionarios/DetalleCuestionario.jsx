@@ -10,6 +10,11 @@ import { Dato, Grafico } from './graficos'
 // lista). En cada pregunta la persona elige UN tipo de gráfico a la vez, y puede
 // descargar un PDF eligiendo cuáles incluir.
 
+// Mientras la pantalla está a la vista, las estadísticas se vuelven a pedir
+// cada 5 segundos: si llegó una encuesta nueva, los números y los gráficos se
+// actualizan solos (por ejemplo, mientras alguien responde desde el celular)
+const CADA = 5000
+
 const formatoFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
 
 const nombreDe = (pregunta, clave) => disponibles(pregunta).find((g) => g.clave === clave)?.nombre ?? clave
@@ -39,7 +44,7 @@ function graficoDe(pregunta, guardado) {
   return candidatos.find((c) => validas.includes(c)) ?? porDefecto(pregunta)
 }
 
-function EstadisticaPregunta({ cuestionario, pregunta, numero, elegido, onCambio, registrar }) {
+function EstadisticaPregunta({ cuestionario, pregunta, numero, elegido, onCambio, registrar, version }) {
   const cuantitativa = pregunta.variable === 'cuantitativa'
   const opciones = disponibles(pregunta)
 
@@ -81,7 +86,7 @@ function EstadisticaPregunta({ cuestionario, pregunta, numero, elegido, onCambio
 
           <figure key={elegido} className="grafico" ref={(nodo) => registrar(pregunta.id, elegido, nodo)}>
             <figcaption>{nombreDe(pregunta, elegido)}</figcaption>
-            <Grafico clave={elegido} pregunta={pregunta} cuestionario={cuestionario} />
+            <Grafico clave={elegido} pregunta={pregunta} cuestionario={cuestionario} version={version} />
           </figure>
         </>
       )}
@@ -209,6 +214,33 @@ function DetalleCuestionario() {
       .catch((e) => setError(e.message))
   }, [id])
 
+  // Actualización en vivo. Espera si la pestaña no está a la vista o si se está
+  // armando el PDF, y un error de red en una vuelta no borra lo que ya se ve.
+  // Solo se redibuja si cambió algo (llegó una encuesta nueva).
+  const cargado = datos !== null
+  useEffect(() => {
+    if (!cargado || pdfAbierto) return
+    let vigente = true
+    const reloj = setInterval(() => {
+      if (document.hidden) return
+      obtenerEstadisticas(id)
+        .then((nuevos) => {
+          if (!vigente) return
+          setDatos((actuales) =>
+            actuales.total_encuestas === nuevos.total_encuestas &&
+            actuales.ultima_encuesta === nuevos.ultima_encuesta
+              ? actuales
+              : nuevos,
+          )
+        })
+        .catch(() => {})
+    }, CADA)
+    return () => {
+      vigente = false
+      clearInterval(reloj)
+    }
+  }, [id, cargado, pdfAbierto])
+
   const elegidoDe = (p) => graficoDe(p, eleccion[p.id])
   function cambiar(p, clave) {
     const nueva = { ...eleccion, [p.id]: clave }
@@ -227,7 +259,14 @@ function DetalleCuestionario() {
         <Link to="/cuestionarios" className="enlace-volver">
           ← Cuestionarios
         </Link>
-        <span className="editor__estado" />
+        <span className="editor__estado">
+          {datos && (
+            <span className="en-vivo">
+              <span className="en-vivo__punto" aria-hidden="true" />
+              Se actualiza solo
+            </span>
+          )}
+        </span>
         {datos && datos.total_encuestas > 0 && (
           <button type="button" className="boton" onClick={() => setPdfAbierto(true)}>
             Descargar PDF
@@ -276,6 +315,7 @@ function DetalleCuestionario() {
                 elegido={elegidoDe(p)}
                 onCambio={(clave) => cambiar(p, clave)}
                 registrar={registrar}
+                version={datos.total_encuestas}
               />
             ))}
           </>

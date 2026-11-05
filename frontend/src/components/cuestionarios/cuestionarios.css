@@ -1014,3 +1014,36 @@
     flex: none;
   }
 }
+
+/* --- Estadísticas en vivo ---------------------------------------------------- */
+
+/* Aviso en la barra: un punto verde que late despacio */
+.en-vivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.en-vivo__punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1baf7a;
+  animation: en-vivo-late 2s var(--ease-out) infinite;
+}
+
+@keyframes en-vivo-late {
+  0% {
+    box-shadow: 0 0 0 0 rgb(27 175 122 / 0.45);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 6px rgb(27 175 122 / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .en-vivo__punto {
+    animation: none;
+  }
+}

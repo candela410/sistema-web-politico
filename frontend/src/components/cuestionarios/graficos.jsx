@@ -8,13 +8,15 @@ import { f } from './catalogoGraficos'
 
 const IMAGENES = new Set(['barras', 'columnas', 'linea', 'torta', 'distribucion'])
 
-function Imagen({ cuestionario, pregunta, clave }) {
+// `version` cambia cuando llega una encuesta nueva: el navegador vuelve a pedir
+// la imagen en lugar de mostrar la que ya tenía
+function Imagen({ cuestionario, pregunta, clave, version }) {
   const [estado, setEstado] = useState('cargando')
   return (
     <div className={`grafico-imagen grafico-imagen--${estado}`}>
       {estado === 'error' && <p className="texto-error">No se pudo dibujar el gráfico.</p>}
       <img
-        src={`/api/cuestionarios/${cuestionario}/estadisticas/${pregunta.id}/${clave}.png`}
+        src={`/api/cuestionarios/${cuestionario}/estadisticas/${pregunta.id}/${clave}.png?v=${version ?? 0}`}
         alt={`Gráfico de ${pregunta.enunciado}`}
         onLoad={() => setEstado('listo')}
         onError={() => setEstado('error')}
@@ -99,8 +101,8 @@ export function Medidas({ medidas }) {
 }
 
 // Dibuja el gráfico pedido para una pregunta
-export function Grafico({ clave, pregunta, cuestionario }) {
-  if (IMAGENES.has(clave)) return <Imagen cuestionario={cuestionario} pregunta={pregunta} clave={clave} />
+export function Grafico({ clave, pregunta, cuestionario, version }) {
+  if (IMAGENES.has(clave)) return <Imagen cuestionario={cuestionario} pregunta={pregunta} clave={clave} version={version} />
   switch (clave) {
     case 'tabla':
       return <Tabla opciones={pregunta.opciones} total={pregunta.elecciones} acumuladas={pregunta.variable === 'cuantitativa'} />

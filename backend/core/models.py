@@ -271,18 +271,8 @@ class Encuestado(models.Model):
     # Único: identifica a la persona. Que responda una sola vez cada
     # cuestionario lo controla Encuesta (uq_encuesta_encuestado_cuestionario).
     documento = models.CharField(max_length=30, unique=True)
+    # Quién lo encuestó y con qué cuestionario queda en la tabla encuestas.
 
-    # FK como en el DER: el grupo (rol) del militante que lo encuestó. Se
-    # completa solo al cargar la primera encuesta de la persona. Quién lo
-    # encuestó y con qué cuestionario queda en la tabla encuestas.
-    grupo = models.ForeignKey(
-        "auth.Group",
-        on_delete=models.SET_NULL,
-        db_column="id_grupo",
-        null=True,
-        blank=True,
-        related_name="encuestados",
-    )
     # Ubicación del domicilio para mostrarlo como punto en el mapa
     latitud = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitud = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)

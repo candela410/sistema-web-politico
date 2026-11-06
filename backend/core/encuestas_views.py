@@ -152,10 +152,6 @@ def responder(request, pk):
                 for campo, valor in encuestado_datos.items():
                     setattr(encuestado, campo, valor)
                 encuestado.save()
-            if encuestado.grupo_id is None and request.user.grupo_id:
-                # Primera encuesta de la persona: toma el grupo de quien la encuestó
-                encuestado.grupo_id = request.user.grupo_id
-                encuestado.save(update_fields=["grupo"])
             # encuestas.(id_usuario, id_cuestionario) es FK a usuariosxcuestionarios:
             # quien carga sin estar asignado (por ejemplo, quien administra) queda asignado
             AsignacionCuestionario.objects.get_or_create(usuario=request.user, cuestionario=cuestionario)

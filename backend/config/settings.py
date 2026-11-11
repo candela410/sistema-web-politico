@@ -146,14 +146,44 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-# En desarrollo los correos se muestran en la terminal de runserver (no se envían).
-# core.correo.ConsolaLegible los imprime como texto, con los enlaces enteros.
-MAILERS = {
-    'default': {
-        'BACKEND': 'core.correo.ConsolaLegible',
-    },
+# Con EMAIL_USUARIO y EMAIL_CLAVE en el .env los correos se envían de verdad por
+# Gmail (EMAIL_CLAVE es una "contraseña de aplicación" de Google, no la de la cuenta).
+# Sin ellos se muestran en la terminal de runserver: core.correo.ConsolaLegible los
+# imprime como texto, con los enlaces enteros.
+EMAIL_USUARIO = os.environ.get('EMAIL_USUARIO', '')
+EMAIL_CLAVE = os.environ.get('EMAIL_CLAVE', '').replace(' ', '')
+if EMAIL_USUARIO and EMAIL_CLAVE:
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+            'OPTIONS': {
+                'host': os.environ.get('EMAIL_HOST', 'smtp.gmail.com'),
+                'port': int(os.environ.get('EMAIL_PORT', '587')),
+                'username': EMAIL_USUARIO,
+                'password': EMAIL_CLAVE,
+                'use_tls': True,
+                'timeout': 20,
+            },
+        },
+    }
+else:
+    MAILERS = {
+        'default': {
+            'BACKEND': 'core.correo.ConsolaLegible',
+        },
+    }
+# Gmail solo deja enviar desde la propia cuenta
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DJANGO_DEFAULT_FROM_EMAIL',
+    f'Panel de gestión <{EMAIL_USUARIO}>' if EMAIL_USUARIO else 'Panel de gestión <no-responder@panel.local>',
+)
+# Correos que existen de verdad. Al restablecer la contraseña de un usuario con
+# otro correo (de prueba), el enlace le llega a quien lo pidió.
+CORREOS_REALES = {
+    c.strip().lower()
+    for c in os.environ.get('CORREOS_REALES', '').split(',')
+    if c.strip()
 }
-DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'Panel de gestión <no-responder@panel.local>')
 
 # Dirección del frontend, para armar los enlaces de los correos (ej: restablecer contraseña)
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')

@@ -191,8 +191,12 @@ function Usuarios({ usuario: yo }) {
     setError('')
     setEnviandoA(u.id)
     try {
-      const { email } = await api.enviarRestablecer(u.id)
-      setAviso(`Enviamos a ${email} un enlace para restablecer la contraseña.`)
+      const { email, redirigido } = await api.enviarRestablecer(u.id)
+      setAviso(
+        redirigido
+          ? `${u.email} es un correo de prueba: te enviamos el enlace a ${email}.`
+          : `Enviamos a ${email} un enlace para restablecer la contraseña.`,
+      )
     } catch (e) {
       setError(e.message)
     } finally {

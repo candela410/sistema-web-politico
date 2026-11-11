@@ -27,6 +27,7 @@ from .geo import (
     formato_distancia,
     formato_duracion,
     punto_en_poligono,
+    se_pisan,
 )
 from .models import Barrio, Calle, Ruta, Zona
 from .validaciones import nombre_cosa
@@ -141,8 +142,16 @@ def _validar_zona(datos, zona=None):
         return "Ya existe una zona con ese nombre."
     if datos.get("color") and not COLOR_HEX.match(datos["color"]):
         return "El color debe tener el formato #RRGGBB."
-    if "geometria" in datos and not es_poligono_valido(datos["geometria"]):
-        return "Dibujá la zona como un polígono en el mapa."
+    if "geometria" in datos:
+        if not es_poligono_valido(datos["geometria"]):
+            return "Dibujá la zona como un polígono en el mapa."
+        # Las zonas no se pueden pisar: así cada ruta queda dentro de una sola
+        otras = Zona.objects.exclude(geometria=None)
+        if zona:
+            otras = otras.exclude(pk=zona.pk)
+        pisada = next((z for z in otras if se_pisan(datos["geometria"], z.geometria)), None)
+        if pisada:
+            return f"La zona se superpone con «{pisada.nombre}». Dibujala sin pisar otras zonas (pueden compartir el borde)."
     return None
 
 
@@ -284,6 +293,23 @@ def _validar_paradas(paradas):
     return None
 
 
+def _validar_paradas_en_zona(paradas):
+    """Todos los puntos de la ruta tienen que estar dentro de una misma zona.
+    Devuelve el mensaje de error o None."""
+    zonas = list(Zona.objects.exclude(geometria=None))
+    if not zonas:
+        return "Primero dibujá una zona: las rutas se hacen dentro de una zona."
+    candidatas = zonas
+    for i, (lng, lat) in enumerate(paradas, start=1):
+        contienen = [z for z in zonas if punto_en_poligono(lng, lat, z.geometria)]
+        if not contienen:
+            return f"El punto {i} queda fuera de todas las zonas. La ruta tiene que estar dentro de una zona."
+        candidatas = [z for z in candidatas if z in contienen]
+        if not candidatas:
+            return f"El punto {i} está en otra zona. Todos los puntos de la ruta tienen que estar en la misma zona."
+    return None
+
+
 def _foto_ruta(r):
     return {
         "Nombre": r.nombre,
@@ -316,6 +342,9 @@ def _guardar_ruta(ruta, datos):
 
     paradas = datos.get("paradas", ruta.paradas)
     error = _validar_paradas(paradas)
+    if error:
+        return _error(error)
+    error = _validar_paradas_en_zona(paradas)
     if error:
         return _error(error)
 

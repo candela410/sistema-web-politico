@@ -48,6 +48,60 @@ def punto_en_poligono(lng, lat, geometria):
     return False
 
 
+TOLERANCIA_BORDE_M = 5  # dos zonas que solo comparten el borde no se pisan
+
+
+def _cruzan(a, b, c, d):
+    """Los segmentos a-b y c-d se cruzan de verdad (no solo se tocan en una punta
+    ni van uno encima del otro, como el borde que comparten dos zonas vecinas)."""
+
+    def lado(p, q, r):
+        return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+
+    eps = 1e-6
+    d1, d2, d3, d4 = lado(c, d, a), lado(c, d, b), lado(a, b, c), lado(a, b, d)
+    return ((d1 > eps and d2 < -eps) or (d1 < -eps and d2 > eps)) and (
+        (d3 > eps and d4 < -eps) or (d3 < -eps and d4 > eps)
+    )
+
+
+def se_pisan(geometria_a, geometria_b, tolerancia_m=TOLERANCIA_BORDE_M):
+    """True si dos polígonos (GeoJSON) se superponen. Compartir el borde no cuenta."""
+    anillos_a = [p[0] for p in _anillos_exteriores(geometria_a) if p]
+    anillos_b = [p[0] for p in _anillos_exteriores(geometria_b) if p]
+    todos = [v for anillo in anillos_a + anillos_b for v in anillo]
+    if not todos:
+        return False
+    # Se pasa a metros para comparar con la tolerancia
+    lat0 = sum(v[1] for v in todos) / len(todos)
+    kx, ky = 111320 * math.cos(math.radians(lat0)), 110540
+
+    def metros(anillos):
+        return [[(v[0] * kx, v[1] * ky) for v in anillo] for anillo in anillos]
+
+    a, b = metros(anillos_a), metros(anillos_b)
+    tramos_a = [(r[i - 1], r[i]) for r in a for i in range(1, len(r))]
+    tramos_b = [(r[i - 1], r[i]) for r in b for i in range(1, len(r))]
+
+    if any(_cruzan(p, q, r, s) for p, q in tramos_a for r, s in tramos_b):
+        return True
+
+    def adentro(vertices, anillos, tramos):
+        # Un vértice bien adentro del otro polígono (no sobre su borde)
+        return any(
+            any(_punto_en_anillo(v[0], v[1], anillo) for anillo in anillos)
+            and min(_distancia_a_tramo(v, p, q) for p, q in tramos) > tolerancia_m
+            for v in vertices
+        )
+
+    # Los centros cubren el caso de dos zonas iguales (todos los vértices sobre el borde)
+    centros_a = [(c[0] * kx, c[1] * ky) for c in [centro(geometria_a)] if c]
+    centros_b = [(c[0] * kx, c[1] * ky) for c in [centro(geometria_b)] if c]
+    return adentro([v for r in a for v in r] + centros_a, b, tramos_b) or adentro(
+        [v for r in b for v in r] + centros_b, a, tramos_a
+    )
+
+
 def centro(geometria):
     """Centro aproximado. Un Point devuelve sus coordenadas; un polígono, el
     promedio de los vértices de su anillo exterior más grande.

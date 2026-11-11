@@ -1,14 +1,17 @@
 /* Sección Tutorial: reproductor con pasos a la izquierda y lista de videos a
    la derecha. Mismo lenguaje visual que el resto del panel. */
 
+/* Igual que .pagina (index.css): el scroll ocupa todo el ancho para que la
+   franja de color del encabezado vaya de borde a borde; el contenido queda
+   centrado en 1192px */
 .tutorial {
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  isolation: isolate;
   width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 32px 24px 48px;
+  padding: 32px max(24px, calc((100% - 1192px) / 2)) 48px;
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -18,25 +21,26 @@
   flex-shrink: 0;
 }
 
+/* Sobre la franja de color del encabezado: texto y barra en blanco */
 .tutorial__progreso {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
   margin-bottom: 12px;
-  color: var(--lla-gris);
+  color: rgb(255 255 255 / 0.85);
   font-size: 0.88rem;
 }
 
 .tutorial__progreso b {
-  color: var(--lla-violeta);
+  color: #fff;
 }
 
 .tutorial__barra {
   width: 180px;
   height: 6px;
   border-radius: 999px;
-  background: rgb(81 49 143 / 0.12);
+  background: rgb(255 255 255 / 0.25);
   overflow: hidden;
 }
 
@@ -44,7 +48,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--lla-violeta);
+  background: #fff;
   transition: width 300ms ease;
 }
 

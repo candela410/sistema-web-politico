@@ -365,3 +365,99 @@
 .tarjeta-fila__acciones {
   align-items: center;
 }
+
+/* --- Encabezado de las pantallas de listado -----------------------------
+   La franja de color está desde el primer cuadro (no parpadea); lo que entra
+   es su contenido: título, descripción y botón en cascada corta, y la
+   franjita de colores se "dibuja" de izquierda a derecha. */
+
+:is(.pagina, .tutorial) > .pagina__encabezado {
+  animation: none;
+}
+
+.pagina__encabezado > * {
+  animation: subir-y-aparecer var(--duracion-entrada) var(--ease-out) backwards;
+}
+
+.pagina__encabezado > :nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.pagina__encabezado .franja-corta {
+  transform-origin: left;
+  animation: franja-se-dibuja 480ms var(--ease-out) 140ms backwards;
+}
+
+@keyframes franja-se-dibuja {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* Tarjetas de las listas: se levantan apenas al pasar el mouse */
+.pagina :is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila) {
+  transition:
+    transform 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pagina :is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgb(52 28 96 / 0.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pagina__encabezado > * {
+    animation-name: aparecer;
+    animation-delay: 0ms;
+  }
+
+  .pagina__encabezado .franja-corta {
+    animation: none;
+  }
+
+  .pagina :is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila):hover {
+    transform: none;
+  }
+}
+
+/* --- Editor, estadísticas y responder ------------------------------------
+   La barra de arriba no se anima (es parte del marco). Lo que entra es el
+   contenido: la tarjeta del título sube "flotando" y las demás tarjetas
+   aparecen en cascada. Una pregunta nueva en el editor entra sola con la
+   misma animación (sin demora, si está más abajo de la sexta). */
+
+.editor > :is(.editor__barra, .editor__columna) {
+  animation: none;
+}
+
+.editor__columna > * {
+  animation: subir-y-aparecer var(--duracion-entrada) var(--ease-out) backwards;
+}
+
+.editor__columna > .tarjeta-titulo {
+  animation: tarjeta-flota 420ms var(--ease-out) backwards;
+}
+
+.editor__columna > :nth-child(2) { animation-delay: 40ms; }
+.editor__columna > :nth-child(3) { animation-delay: 80ms; }
+.editor__columna > :nth-child(4) { animation-delay: 120ms; }
+.editor__columna > :nth-child(5) { animation-delay: 160ms; }
+.editor__columna > :nth-child(6) { animation-delay: 200ms; }
+
+@keyframes tarjeta-flota {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor__columna > *,
+  .editor__columna > .tarjeta-titulo {
+    animation-name: aparecer;
+    animation-delay: 0ms;
+  }
+}

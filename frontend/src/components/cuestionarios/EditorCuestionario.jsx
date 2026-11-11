@@ -20,7 +20,8 @@ const nuevaPregunta = () => ({
   enunciado: '',
   tipo: 'una_opcion',
   obligatoria: false,
-  opciones: [nuevaOpcion('Opción 1'), nuevaOpcion('Opción 2')],
+  // Vacías: "Opción 1", "Opción 2"... se ven como placeholder
+  opciones: [nuevaOpcion(), nuevaOpcion()],
 })
 
 function desdeServidor(c) {
@@ -86,7 +87,7 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
     cambiar({ opciones: pregunta.opciones.map((o) => (o.clave === c ? { ...o, texto } : o)) })
   const quitarOpcion = (c) => cambiar({ opciones: pregunta.opciones.filter((o) => o.clave !== c) })
   function agregarOpcion(despuesDe) {
-    const opcion = nuevaOpcion(`Opción ${pregunta.opciones.length + 1}`)
+    const opcion = nuevaOpcion()
     const i = despuesDe ? pregunta.opciones.findIndex((o) => o.clave === despuesDe) + 1 : pregunta.opciones.length
     cambiar({ opciones: [...pregunta.opciones.slice(0, i), opcion, ...pregunta.opciones.slice(i)] })
     setEnfocar(opcion.clave)
@@ -125,6 +126,7 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
               className="campo-linea"
               value={o.texto}
               onChange={(e) => cambiarOpcion(o.clave, e.target.value)}
+              placeholder={`Opción ${i + 1}`}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()

@@ -6,6 +6,7 @@ import Esqueleto from '../comunes/Esqueleto'
 import { Pencil, Trash2 } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
+import Paginacion, { usePaginado } from '../comunes/Paginacion'
 
 const GRUPO_MILITANTES = 'Militantes'
 
@@ -254,6 +255,7 @@ function Grupos() {
         .includes(texto),
     )
   }, [grupos, busqueda])
+  const paginado = usePaginado(visibles)
 
   function avisar(texto) {
     setAviso(texto)
@@ -321,8 +323,9 @@ function Grupos() {
           )}
         </div>
       ) : (
+        <>
         <ul className="grupos-lista">
-          {visibles.map((grupo) => (
+          {paginado.items.map((grupo) => (
             <li key={grupo.id} className="grupo">
               <div className="grupo__texto">
                 <h3>{grupo.nombre}</h3>
@@ -369,6 +372,8 @@ function Grupos() {
             </li>
           ))}
         </ul>
+        <Paginacion {...paginado} />
+        </>
       )}
 
       {editando && (

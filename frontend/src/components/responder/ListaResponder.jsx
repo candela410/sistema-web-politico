@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import * as api from '../../api/encuestas'
 import './responder.css'
 import Esqueleto from '../comunes/Esqueleto'
+import Paginacion, { usePaginado } from '../comunes/Paginacion'
 
 // Vista del militante: cuestionarios activos para cargar encuestas
 function ListaResponder() {
@@ -15,6 +16,8 @@ function ListaResponder() {
       .then(setCuestionarios)
       .catch((e) => setError(e.message))
   }, [])
+
+  const paginado = usePaginado(cuestionarios ?? [])
 
   return (
     <main className="pagina">
@@ -43,8 +46,9 @@ function ListaResponder() {
           <span>Cuando la administración active uno, va a aparecer acá.</span>
         </div>
       ) : (
+        <>
         <ul className="responder-lista">
-          {cuestionarios.map((c) => (
+          {paginado.items.map((c) => (
             <li key={c.id}>
               <Link to={`/responder/${c.id}`} className="responder-item">
                 <span className="chip-categoria">{c.categoria}</span>
@@ -58,6 +62,8 @@ function ListaResponder() {
             </li>
           ))}
         </ul>
+        <Paginacion {...paginado} />
+        </>
       )}
     </main>
   )

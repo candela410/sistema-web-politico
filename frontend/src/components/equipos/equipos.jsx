@@ -8,6 +8,7 @@ import Interruptor from '../comunes/Interruptor'
 import { Pencil } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
+import Paginacion, { usePaginado } from '../comunes/Paginacion'
 
 function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) {
   const [nombre, setNombre] = useState(equipo?.nombre ?? '')
@@ -166,6 +167,7 @@ function Equipos({ usuario }) {
         e.usuarios.some((u) => u.nombre.toLowerCase().includes(texto)),
     )
   }, [equipos, busqueda])
+  const paginado = usePaginado(visibles)
 
   function avisar(texto) {
     setAviso(texto)
@@ -243,8 +245,9 @@ function Equipos({ usuario }) {
           )}
         </div>
       ) : (
+        <>
         <ul className="equipos-lista">
-          {visibles.map((e) => (
+          {paginado.items.map((e) => (
             <li key={e.id} className={e.activo ? 'equipo' : 'equipo equipo--inactivo'}>
               <div className="equipo__texto">
                 <h3>{e.nombre}</h3>
@@ -282,6 +285,8 @@ function Equipos({ usuario }) {
             </li>
           ))}
         </ul>
+        <Paginacion {...paginado} />
+        </>
       )}
 
       {editando && (

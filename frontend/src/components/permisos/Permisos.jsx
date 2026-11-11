@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { obtenerPermisos } from '../../api/usuarios'
+import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './permisos.css'
 
 // Permisos de Django por grupo, solo para consultar. Se asignan desde el
@@ -15,6 +16,9 @@ function Permisos() {
       .then(setDatos)
       .catch((e) => setError(e.message))
   }, [])
+
+  // Antes de los return de error y carga: los hooks no pueden ir después
+  const paginado = usePaginado(datos?.usuarios ?? [])
 
   if (error)
     return (
@@ -117,8 +121,9 @@ function Permisos() {
       {datos.usuarios.length === 0 ? (
         <p className="vacio-tarjeta">No hay usuarios activos en esta campaña.</p>
       ) : (
+        <>
         <ul className="permisos__usuarios">
-          {datos.usuarios.map((u) => (
+          {paginado.items.map((u) => (
             <li key={u.id}>
               <b>{u.nombre}</b>
               <span className="texto-suave">{u.email}</span>
@@ -139,6 +144,8 @@ function Permisos() {
             </li>
           ))}
         </ul>
+        <Paginacion {...paginado} />
+        </>
       )}
     </main>
   )

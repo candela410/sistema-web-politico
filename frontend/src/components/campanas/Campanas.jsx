@@ -7,6 +7,7 @@ import './campanas.css'
 import Esqueleto from '../comunes/Esqueleto'
 import { Pencil, Trash2 } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
+import Paginacion, { usePaginado } from '../comunes/Paginacion'
 
 const formatoFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium' })
 const fecha = (iso) => (iso ? formatoFecha.format(new Date(`${iso}T12:00:00`)) : '…')
@@ -130,6 +131,7 @@ function Campanas({ usuario }) {
       .catch((e) => setError(e.message))
   }, [])
 
+  const paginado = usePaginado(campanas ?? [])
   const puede = (accion) => tiene(usuario, `core.${accion}_campana`)
 
   return (
@@ -170,8 +172,9 @@ function Campanas({ usuario }) {
           <span>Creá la primera con “+ Nueva campaña”.</span>
         </div>
       ) : (
+        <>
         <ul className="tarjetas-lista">
-          {campanas.map((c) => (
+          {paginado.items.map((c) => (
             <li key={c.id} className={`tarjeta-fila${c.activa ? '' : ' tarjeta-fila--apagada'}`}>
               <div className="tarjeta-fila__texto">
                 <h3>
@@ -194,6 +197,8 @@ function Campanas({ usuario }) {
             </li>
           ))}
         </ul>
+        <Paginacion {...paginado} />
+        </>
       )}
 
       {editando && (

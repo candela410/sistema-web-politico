@@ -367,8 +367,8 @@
 }
 
 /* --- Encabezado de las pantallas de listado -----------------------------
-   La franja de color está desde el primer cuadro (no parpadea); lo que entra
-   es su contenido: título, descripción y botón en cascada corta, y la
+   El encabezado está desde el primer cuadro (no parpadea); lo que entra es
+   su contenido: título, descripción y botón en cascada corta, y la
    franjita de colores se "dibuja" de izquierda a derecha. */
 
 :is(.pagina, .tutorial) > .pagina__encabezado {

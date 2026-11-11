@@ -195,9 +195,8 @@ body {
 
 /* Páginas de listado (categorías, cuestionarios) */
 
-/* El área con scroll ocupa todo el ancho (así la franja de color del
-   encabezado llega de borde a borde y se desplaza con el título); el
-   contenido queda centrado en --ancho-contenido con el relleno lateral. */
+/* El área con scroll ocupa todo el ancho; el contenido queda centrado en
+   --ancho-contenido con el relleno lateral. */
 .pagina {
   --ancho-contenido: 872px;
   flex: 1;
@@ -219,38 +218,6 @@ body {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  color: #fff;
-}
-
-/* Franja violeta → magenta detrás del encabezado, de borde a borde. Baja
-   hasta la mitad del bloque siguiente (el buscador o los filtros), que
-   queda "flotando" sobre su borde. */
-.pagina__encabezado::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  top: -32px;
-  bottom: -46px;
-  left: 50%;
-  width: 100vw; /* lo que sobra a los costados lo recorta .pagina (overflow-x: hidden) */
-  transform: translateX(-50%);
-  background:
-    radial-gradient(500px 240px at 85% 0%, rgb(255 255 255 / 0.18), transparent 70%),
-    linear-gradient(120deg, #4a2a86, #5d35a3 50%, #b0287f);
-}
-
-.pagina__encabezado .franja-corta i:first-child {
-  background: #fff;
-}
-
-.pagina__encabezado .boton {
-  background: #fff;
-  color: var(--lla-violeta);
-  box-shadow: 0 6px 16px rgb(30 10 60 / 0.25);
-}
-
-.pagina__encabezado .boton:hover:not(:disabled) {
-  background: #f1ecfa;
 }
 
 .pagina__encabezado h1 {
@@ -262,7 +229,7 @@ body {
 
 .pagina__encabezado p {
   margin: 4px 0 12px;
-  color: rgb(255 255 255 / 0.85);
+  color: var(--lla-gris);
 }
 
 .franja-corta {
@@ -633,15 +600,6 @@ body {
 
 .panel__contenido:has(> .pagina, > .tutorial) {
   background: #f4f1fa;
-}
-
-/* El bloque que flota sobre la franja (buscador, filtros o aviso) lleva sombra */
-.pagina__encabezado + :is(.buscador, .filtros, .analitica__filtros, .aviso-info) {
-  box-shadow: 0 10px 26px rgb(52 28 96 / 0.16);
-}
-
-.pagina__encabezado + .buscador {
-  border-color: transparent;
 }
 
 /* Tarjetas de las listas: borde lavanda (el izquierdo conserva su color) y sombra suave */

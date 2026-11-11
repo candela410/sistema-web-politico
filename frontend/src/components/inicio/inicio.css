@@ -128,52 +128,6 @@
 
 /* --- Saludo y números ------------------------------------------------- */
 
-/* Banner de bienvenida: degradé violeta → magenta con luces suaves y un aro decorativo */
-.inicio__saludo {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  padding: 30px 30px 26px;
-  border-radius: 22px;
-  color: #fff;
-  background:
-    radial-gradient(420px 220px at 92% -10%, rgb(255 255 255 / 0.22), transparent 70%),
-    radial-gradient(380px 260px at 70% 140%, rgb(47 180 233 / 0.45), transparent 70%),
-    linear-gradient(120deg, #4a2a86, #5d35a3 50%, #b0287f);
-}
-
-.inicio__saludo::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  top: -60px;
-  right: -60px;
-  width: 220px;
-  height: 220px;
-  border: 28px solid rgb(255 255 255 / 0.07);
-  border-radius: 50%;
-}
-
-/* Un arco de luz recorre el aro muy despacio (una vuelta cada 24 segundos) */
-.inicio__saludo::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  top: -60px;
-  right: -60px;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: conic-gradient(transparent 0 55%, rgb(255 255 255 / 0.2) 75%, transparent 92%);
-  mask: radial-gradient(farthest-side, transparent calc(100% - 28px), #000 calc(100% - 27px));
-  animation: inicio-aro 24s linear infinite;
-}
-
-/* Si debajo vienen los números, el banner deja lugar para que floten encima */
-.inicio__saludo:has(+ .inicio__numeros) {
-  padding-bottom: 84px;
-}
-
 .inicio__saludo h1 {
   margin: 0;
   font-size: clamp(1.7rem, 3.4vw, 2.3rem);
@@ -183,12 +137,7 @@
 
 .inicio__saludo p {
   margin: 6px 0 12px;
-  color: rgb(255 255 255 / 0.85);
-}
-
-/* La franjita de colores: el tramo violeta no se vería sobre el banner, va en blanco */
-.inicio__saludo .franja-corta i:first-child {
-  background: #fff;
+  color: var(--lla-gris);
 }
 
 .inicio__numeros {
@@ -196,13 +145,6 @@
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   padding: 0;
   overflow: hidden;
-}
-
-.inicio__saludo + .inicio__numeros {
-  position: relative;
-  margin: -76px 22px 0;
-  border: 0;
-  box-shadow: 0 12px 30px rgb(52 28 96 / 0.18);
 }
 
 .inicio__numero {
@@ -545,15 +487,6 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .inicio__saludo {
-    padding: 22px 20px 20px;
-    border-radius: 18px;
-  }
-
-  .inicio__saludo + .inicio__numeros {
-    margin: -76px 12px 0;
-  }
-
   /* Celular: dos por fila; si quedan impares, la primera ocupa todo el ancho */
   .inicio__tarjetas {
     grid-template-columns: 1fr 1fr;
@@ -600,9 +533,8 @@
 }
 
 /* --- Movimiento ---------------------------------------------------------
-   Secuencia al entrar: el banner (con la pantalla), su texto apenas después,
-   los números flotan hacia arriba sobre el borde del banner y las tarjetas
-   aparecen en cascada cuando el banner ya está. Todo con ease-out y en
+   Secuencia al entrar: el saludo en cascada, los números suben apenas
+   después y las tarjetas aparecen en cascada al final. Todo con ease-out y en
    menos de medio segundo; con "reducir movimiento" quedan solo fundidos. */
 
 .inicio__saludo > * {
@@ -634,17 +566,7 @@
   }
 }
 
-@keyframes inicio-aro {
-  to {
-    transform: rotate(1turn);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .inicio__saludo::before {
-    animation: none;
-  }
-
   .inicio__saludo > *,
   .inicio__saludo + .inicio__numeros {
     animation-name: aparecer;

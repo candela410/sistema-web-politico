@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router'
 import { Menu as IconoMenu } from 'lucide-react'
 import { salirDeCampana } from '../../api/campanas'
 import logo from '../../assets/logo.png'
+import Avisos from './Avisos'
 import BuscadorSecciones from './BuscadorSecciones'
 import Lateral from './Lateral'
 import MenuUsuario from './MenuUsuario'
@@ -95,6 +96,7 @@ function Menu({ usuario, onCambio, onSalir }) {
               <span className="campana-activa__nombre">{usuario.campana.nombre}</span>
             </span>
           )}
+          {usuario.campana && <Avisos usuario={usuario} />}
           <MenuUsuario
             usuario={usuario}
             onCambiarCampana={usuario.puede_elegir_campana ? cambiarCampana : null}

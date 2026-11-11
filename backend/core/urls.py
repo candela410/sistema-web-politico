@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import (
     asignaciones_views,
+    avisos_views,
     campanas_views,
     categorias_views,
     contrasenas_views,
@@ -21,6 +22,7 @@ urlpatterns = [
     path("auth/logout/", views.logout_view, name="auth-logout"),
     path("auth/me/", views.me, name="auth-me"),
     path("auth/restablecer/<str:uid>/<str:token>/", contrasenas_views.restablecer, name="auth-restablecer"),
+    path("avisos/", avisos_views.avisos, name="avisos"),
     path("campanas/", campanas_views.campanas, name="campanas"),
     path("campanas/disponibles/", campanas_views.disponibles, name="campanas-disponibles"),
     path("campanas/activa/", campanas_views.activa, name="campana-activa"),

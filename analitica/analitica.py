@@ -61,7 +61,9 @@ GRILLA = "#ecebf0"
 VERDE, ROJO = "#1baf7a", "#e34948"
 DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
 
-plt.rcParams.update({
+# Estilo de los gráficos. Se aplica solo mientras se dibujan (plt.rc_context),
+# así no cambia los gráficos de Estadísticas cuando el sistema usa este módulo.
+ESTILO = {
     "font.size": 10,
     "axes.edgecolor": GRILLA,
     "axes.labelcolor": TINTA_SUAVE,
@@ -73,7 +75,16 @@ plt.rcParams.update({
     "xtick.color": TINTA_SUAVE,
     "ytick.color": TINTA_SUAVE,
     "figure.facecolor": "white",
-})
+}
+
+# Gráficos que se generan: clave → nombre del archivo PNG
+GRAFICOS = {
+    "barras": "1_barras_equipos.png",
+    "donut": "2_donut_equipos.png",
+    "evolucion": "3_evolucion_meta.png",
+    "heatmap": "4_heatmap_dia_hora.png",
+    "dashboard": "5_dashboard.png",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -406,6 +417,47 @@ def dashboard(df, por_dia, acumulado, tendencia, meta, por_militante, medidas, c
     return fig
 
 
+def figura(clave, todas, desde, hasta, meta=None, nombre="Todas las campañas"):
+    """Arma uno de los GRAFICOS (Figure de matplotlib) con las encuestas de
+    `todas` que caen en el período. None si en el período no hay encuestas.
+    La usan este script y la pantalla Analítica del sistema."""
+    df = filtrar(todas, desde, hasta)
+    if df.empty:
+        return None
+    # Hoy (o el final del período, si ya pasó): lo real se dibuja hasta acá
+    hoy = pd.Timestamp(min(datetime.now(ZONA).date(), hasta))
+    por_dia, acumulado = serie_diaria(df, desde, hasta)
+    tendencia = proyeccion(por_dia, acumulado, hoy)
+    colores = colores_de(todas["equipo"].unique())
+    pie = f"{nombre} · {desde:%d/%m/%Y} al {hasta:%d/%m/%Y} · generado el {datetime.now(ZONA):%d/%m/%Y %H:%M}"
+
+    with plt.rc_context(ESTILO):
+        if clave == "barras":
+            fig, ax = plt.subplots(figsize=(12, 5))
+            grafico_barras(df, desde, hasta, colores, ax)
+            fig.text(0.01, -0.02, pie, color=TINTA_SUAVE, fontsize=8)
+        elif clave == "donut":
+            fig, ax = plt.subplots(figsize=(7, 6))
+            grafico_donut(df, colores, ax)
+            fig.text(0.01, 0.01, pie, color=TINTA_SUAVE, fontsize=8)
+        elif clave == "evolucion":
+            fig, ax = plt.subplots(figsize=(12, 5))
+            grafico_evolucion(acumulado, tendencia, meta, hoy, ax)
+            fig.text(0.01, -0.02, pie, color=TINTA_SUAVE, fontsize=8)
+        elif clave == "heatmap":
+            fig, ax = plt.subplots(figsize=(12, 4.5))
+            grafico_heatmap(df, fig, ax)
+            fig.text(0.01, -0.04, pie, color=TINTA_SUAVE, fontsize=8)
+        elif clave == "dashboard":
+            por_militante, medidas = medidas_por_militante(df)
+            fig = dashboard(df, por_dia, acumulado, tendencia, meta, por_militante, medidas, colores,
+                            f"Tablero de campaña · {nombre}", hoy)
+            fig.text(0.06, 0.01, pie, color=TINTA_SUAVE, fontsize=8)
+        else:
+            raise ValueError(f"No existe el gráfico {clave!r}")
+    return fig
+
+
 # ---------------------------------------------------------------------------
 # Programa
 # ---------------------------------------------------------------------------
@@ -427,41 +479,17 @@ def main():
     if df.empty:
         sys.exit("No hay encuestas en ese período: no se generó ningún gráfico.")
 
-    # Hoy (o el final del período, si ya pasó): lo real se dibuja hasta acá
+    args.salida.mkdir(parents=True, exist_ok=True)
+    archivos = [
+        guardar(figura(clave, todas, desde, hasta, args.meta, nombre), args.salida, archivo)
+        for clave, archivo in GRAFICOS.items()
+    ]
+
+    # Para el resumen en consola
     hoy = pd.Timestamp(min(datetime.now(ZONA).date(), hasta))
     por_dia, acumulado = serie_diaria(df, desde, hasta)
     tendencia = proyeccion(por_dia, acumulado, hoy)
-    por_militante, medidas = medidas_por_militante(df)
-    colores = colores_de(todas["equipo"].unique())
-
-    args.salida.mkdir(parents=True, exist_ok=True)
-    pie = f"{nombre} · {periodo} · generado el {datetime.now(ZONA):%d/%m/%Y %H:%M}"
-    archivos = []
-
-    fig, ax = plt.subplots(figsize=(12, 5))
-    grafico_barras(df, desde, hasta, colores, ax)
-    fig.text(0.01, -0.02, pie, color=TINTA_SUAVE, fontsize=8)
-    archivos.append(guardar(fig, args.salida, "1_barras_equipos.png"))
-
-    fig, ax = plt.subplots(figsize=(7, 6))
-    grafico_donut(df, colores, ax)
-    fig.text(0.01, 0.01, pie, color=TINTA_SUAVE, fontsize=8)
-    archivos.append(guardar(fig, args.salida, "2_donut_equipos.png"))
-
-    fig, ax = plt.subplots(figsize=(12, 5))
-    grafico_evolucion(acumulado, tendencia, args.meta, hoy, ax)
-    fig.text(0.01, -0.02, pie, color=TINTA_SUAVE, fontsize=8)
-    archivos.append(guardar(fig, args.salida, "3_evolucion_meta.png"))
-
-    fig, ax = plt.subplots(figsize=(12, 4.5))
-    grafico_heatmap(df, fig, ax)
-    fig.text(0.01, -0.04, pie, color=TINTA_SUAVE, fontsize=8)
-    archivos.append(guardar(fig, args.salida, "4_heatmap_dia_hora.png"))
-
-    fig = dashboard(df, por_dia, acumulado, tendencia, args.meta, por_militante, medidas, colores,
-                    f"Tablero de campaña · {nombre}", hoy)
-    fig.text(0.06, 0.01, pie, color=TINTA_SUAVE, fontsize=8)
-    archivos.append(guardar(fig, args.salida, "5_dashboard.png"))
+    _, medidas = medidas_por_militante(df)
 
     # Resumen en consola
     print(f"Encuestas: {len(df)} · Militantes: {medidas['militantes']}")

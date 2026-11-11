@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { ArrowRight, ClipboardList, FilePlus2, Flag, GraduationCap, Mail } from 'lucide-react'
+import { ArrowRight, Flag, Mail } from 'lucide-react'
 import { obtenerCuestionarios } from '../../api/cuestionarios'
-import { obtenerParaResponder } from '../../api/encuestas'
+import { obtenerEncuestasPorDia, obtenerParaResponder } from '../../api/encuestas'
 import { obtenerRutas, obtenerZonas } from '../../api/mapa'
 import { tiene } from '../../permisos'
 import { inicialDe, nombreDe, rolDe } from '../menu/usuario'
@@ -60,6 +60,10 @@ async function cargarResumen(usuario) {
   }
 }
 
+// Fecha local como AAAA-MM-DD (toISOString la pasaría a UTC y podría cambiar de día)
+const isoLocal = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 function semanaActual() {
   const hoy = new Date()
   const lunes = new Date(hoy)
@@ -67,11 +71,44 @@ function semanaActual() {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(lunes)
     d.setDate(lunes.getDate() + i)
-    return { dia: DIAS[i], numero: d.getDate(), esHoy: d.toDateString() === hoy.toDateString() }
+    return {
+      dia: DIAS[i],
+      numero: d.getDate(),
+      fecha: isoLocal(d),
+      esHoy: d.toDateString() === hoy.toDateString(),
+      futuro: d > hoy,
+    }
   })
 }
 
 const fechaCorta = (iso) => new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+
+// Número del tablero que cuenta desde 0 hasta su valor (700ms, frenando al final).
+// Con "reducir movimiento" (o si es 0) se muestra el valor directamente.
+const DURACION_CONTEO = 700
+const sinMovimiento = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+function Contador({ valor }) {
+  const [conteo, setConteo] = useState({ valor: null, mostrado: 0 })
+  const animar = valor > 0 && !sinMovimiento()
+
+  useEffect(() => {
+    if (!animar) return
+    let cuadro
+    const inicio = performance.now()
+    const paso = (ahora) => {
+      const t = Math.min(1, (ahora - inicio) / DURACION_CONTEO)
+      const frenado = 1 - (1 - t) ** 3
+      setConteo({ valor, mostrado: Math.round(valor * frenado) })
+      if (t < 1) cuadro = requestAnimationFrame(paso)
+    }
+    cuadro = requestAnimationFrame(paso)
+    return () => cancelAnimationFrame(cuadro)
+  }, [valor, animar])
+
+  const numero = !animar ? valor : conteo.valor === valor ? conteo.mostrado : 0
+  return numero.toLocaleString('es-AR')
+}
 
 // Pantalla de inicio: saludo, números generales y accesos a las secciones del menú
 function Inicio({ usuario }) {
@@ -82,17 +119,23 @@ function Inicio({ usuario }) {
     return opcion && { ...opcion, color: t.color }
   }).filter(Boolean)
   const anchos = ANCHOS[tarjetas.length] ?? []
-  const accesos = [
-    { ruta: '/cuestionarios/nuevo', texto: 'Nuevo cuestionario', icono: FilePlus2, permiso: 'core.add_cuestionario' },
-    { ruta: '/responder', texto: 'Cargar encuesta', icono: ClipboardList, permiso: 'core.add_encuesta' },
-    { ruta: '/tutorial', texto: 'Ver tutoriales', icono: GraduationCap },
-  ].filter((a) => !a.permiso || tiene(usuario, a.permiso))
 
   useEffect(() => {
     cargarResumen(usuario).then(setResumen)
   }, [usuario])
 
   const [semana] = useState(semanaActual)
+  // Encuestas cargadas cada día de esta semana (solo si puede verlas): { fecha: cantidad }
+  const verEncuestas = tiene(usuario, 'core.view_encuesta')
+  const [porDia, setPorDia] = useState(null)
+  useEffect(() => {
+    if (!verEncuestas) return
+    obtenerEncuestasPorDia(semana[0].fecha, semana[6].fecha)
+      .then((dias) => setPorDia(Object.fromEntries(dias.map((d) => [d.fecha, d.encuestas]))))
+      .catch(() => setPorDia(null))
+  }, [verEncuestas, semana])
+  const maximo = porDia ? Math.max(1, ...Object.values(porDia)) : 1
+  const totalSemana = porDia ? Object.values(porDia).reduce((t, n) => t + n, 0) : 0
   const [mes] = useState(() => {
     const texto = new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
     return texto.charAt(0).toUpperCase() + texto.slice(1)
@@ -117,17 +160,27 @@ function Inicio({ usuario }) {
           )}
         </section>
 
-        {accesos.length > 0 && (
+        {tiene(usuario, 'core.view_cuestionario') && (
           <section className="inicio__caja">
-            <h3>Accesos directos</h3>
-            <div className="inicio__accesos">
-              {accesos.map(({ ruta, texto, icono: Icono }) => (
-                <Link key={ruta} to={ruta}>
-                  <Icono size={18} aria-hidden="true" />
-                  {texto}
-                </Link>
-              ))}
-            </div>
+            <h3>Últimos cuestionarios</h3>
+            {resumen === null ? (
+              <p className="inicio__vacio">Cargando…</p>
+            ) : resumen.ultimos.length === 0 ? (
+              <p className="inicio__vacio">Cuando se creen cuestionarios, vas a ver acá los últimos.</p>
+            ) : (
+              <ul className="inicio__ultimos">
+                {resumen.ultimos.map((c) => (
+                  <li key={c.id}>
+                    <Link to={tiene(usuario, 'core.view_encuesta') ? `/cuestionarios/${c.id}/estadisticas` : `/cuestionarios/${c.id}`}>
+                      <strong>{c.titulo}</strong>
+                      <span>
+                        {fechaCorta(c.creado_en)} · {c.encuestas === 1 ? '1 encuesta' : `${c.encuestas} encuestas`}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         )}
       </aside>
@@ -155,7 +208,7 @@ function Inicio({ usuario }) {
           <section className="inicio__caja inicio__numeros" aria-label="Resumen">
             {(resumen?.numeros ?? [{ texto: 'Cargando…', valor: null }]).map((n, i) => (
               <div key={n.texto} className={`inicio__numero inicio__numero--${COLORES[(i + 1) % COLORES.length]}`}>
-                <strong>{resumen ? (n.valor ?? '–') : '·'}</strong>
+                <strong>{resumen ? n.valor == null ? '–' : <Contador valor={n.valor} /> : '·'}</strong>
                 <span>{n.texto}</span>
               </div>
             ))}
@@ -196,37 +249,30 @@ function Inicio({ usuario }) {
               <li key={i} className={d.esHoy ? 'hoy' : undefined} aria-current={d.esHoy ? 'date' : undefined}>
                 <span>{d.dia}</span>
                 <strong>{d.numero}</strong>
+                {porDia && (
+                  <span
+                    className="inicio__barra"
+                    title={d.futuro ? undefined : `${porDia[d.fecha] ?? 0} encuestas`}
+                    aria-hidden={d.futuro || undefined}
+                  >
+                    {!d.futuro && (
+                      <>
+                        <i style={{ '--alto': (porDia[d.fecha] ?? 0) / maximo, '--orden': i }} />
+                        <small>{porDia[d.fecha] ?? 0}</small>
+                      </>
+                    )}
+                  </span>
+                )}
               </li>
             ))}
           </ol>
+          {porDia && (
+            <p className="inicio__semana-total">
+              {totalSemana === 1 ? '1 encuesta cargada' : `${totalSemana} encuestas cargadas`} esta semana
+            </p>
+          )}
         </section>
       </div>
-
-      {tiene(usuario, 'core.view_cuestionario') && (
-        <aside className="inicio__columna">
-          <section className="inicio__caja">
-            <h3>Últimos cuestionarios</h3>
-            {resumen === null ? (
-              <p className="inicio__vacio">Cargando…</p>
-            ) : resumen.ultimos.length === 0 ? (
-              <p className="inicio__vacio">Cuando se creen cuestionarios, vas a ver acá los últimos.</p>
-            ) : (
-              <ul className="inicio__ultimos">
-                {resumen.ultimos.map((c) => (
-                  <li key={c.id}>
-                    <Link to={tiene(usuario, 'core.view_encuesta') ? `/cuestionarios/${c.id}/estadisticas` : `/cuestionarios/${c.id}`}>
-                      <strong>{c.titulo}</strong>
-                      <span>
-                        {fechaCorta(c.creado_en)} · {c.encuestas === 1 ? '1 encuesta' : `${c.encuestas} encuestas`}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </aside>
-      )}
     </main>
   )
 }

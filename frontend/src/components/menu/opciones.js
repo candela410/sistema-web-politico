@@ -1,4 +1,5 @@
 import {
+  ChartColumn,
   ClipboardList,
   ClipboardPen,
   Flag,
@@ -64,6 +65,13 @@ export const SECCIONES = [
         descripcion: 'Responder en territorio',
         icono: ClipboardPen,
         permiso: 'core.add_encuesta',
+      },
+      {
+        ruta: '/analitica',
+        texto: 'Analítica',
+        descripcion: 'Gráficos de la campaña',
+        icono: ChartColumn,
+        permiso: 'core.view_encuesta',
       },
     ],
   },

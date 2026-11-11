@@ -1,12 +1,18 @@
-/* Pantalla de inicio: tres columnas (perfil | centro | últimos) */
+/* Pantalla de inicio: dos columnas (perfil y últimos cuestionarios | centro) */
+
+/* Fondo lavanda suave detrás de la pantalla (en vez del blanco general) */
+.panel__contenido:has(> .inicio) {
+  background: #f4f1fa;
+}
 
 .inicio {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 240px;
+  grid-template-columns: 240px minmax(0, 1fr);
   align-content: start;
+  align-items: start;
   gap: 24px;
   width: 100%;
   max-width: 1280px;
@@ -25,9 +31,9 @@
 .inicio__caja {
   padding: 18px;
   background: #fff;
-  border: 1px solid #ebeaf0;
+  border: 1px solid #ece8f4;
   border-radius: 16px;
-  box-shadow: 0 1px 2px rgb(21 18 28 / 0.04);
+  box-shadow: 0 2px 10px rgb(81 49 143 / 0.05);
 }
 
 .inicio__caja h3 {
@@ -55,21 +61,31 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  padding-top: 0;
+  overflow: hidden;
   text-align: center;
 }
 
+/* Franja con el degradé del banner; el avatar queda montado sobre ella */
+.inicio__perfil::before {
+  content: '';
+  align-self: stretch;
+  height: 58px;
+  margin: 0 -18px -40px;
+  background: linear-gradient(120deg, #4a2a86, #5d35a3 60%, #b0287f);
+}
+
 .inicio__avatar {
+  position: relative;
   display: grid;
   place-items: center;
   width: 76px;
   height: 76px;
   margin-bottom: 6px;
-  border: 4px solid transparent;
+  border: 4px solid #fff;
   border-radius: 50%;
-  background:
-    linear-gradient(#f1edf8, #f1edf8) padding-box,
-    conic-gradient(var(--lla-violeta), var(--lla-celeste), var(--lla-magenta), var(--lla-naranja), var(--lla-violeta))
-      border-box;
+  background: #f1edf8;
+  box-shadow: 0 6px 16px rgb(52 28 96 / 0.25);
   color: var(--lla-violeta);
   font-size: 1.6rem;
   font-weight: 800;
@@ -110,35 +126,53 @@
   flex: none;
 }
 
-.inicio__accesos {
-  display: grid;
-  gap: 8px;
-}
-
-.inicio__accesos a {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid #ebeaf0;
-  border-radius: 12px;
-  color: var(--lla-texto);
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: border-color 150ms ease, background-color 150ms ease;
-}
-
-.inicio__accesos a svg {
-  color: var(--lla-violeta);
-}
-
-.inicio__accesos a:hover {
-  border-color: var(--lla-violeta);
-  background: rgb(81 49 143 / 0.05);
-}
-
 /* --- Saludo y números ------------------------------------------------- */
+
+/* Banner de bienvenida: degradé violeta → magenta con luces suaves y un aro decorativo */
+.inicio__saludo {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 30px 30px 26px;
+  border-radius: 22px;
+  color: #fff;
+  background:
+    radial-gradient(420px 220px at 92% -10%, rgb(255 255 255 / 0.22), transparent 70%),
+    radial-gradient(380px 260px at 70% 140%, rgb(47 180 233 / 0.45), transparent 70%),
+    linear-gradient(120deg, #4a2a86, #5d35a3 50%, #b0287f);
+}
+
+.inicio__saludo::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -60px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  border: 28px solid rgb(255 255 255 / 0.07);
+  border-radius: 50%;
+}
+
+/* Un arco de luz recorre el aro muy despacio (una vuelta cada 24 segundos) */
+.inicio__saludo::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -60px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: conic-gradient(transparent 0 55%, rgb(255 255 255 / 0.2) 75%, transparent 92%);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 28px), #000 calc(100% - 27px));
+  animation: inicio-aro 24s linear infinite;
+}
+
+/* Si debajo vienen los números, el banner deja lugar para que floten encima */
+.inicio__saludo:has(+ .inicio__numeros) {
+  padding-bottom: 84px;
+}
 
 .inicio__saludo h1 {
   margin: 0;
@@ -149,7 +183,12 @@
 
 .inicio__saludo p {
   margin: 6px 0 12px;
-  color: var(--lla-gris);
+  color: rgb(255 255 255 / 0.85);
+}
+
+/* La franjita de colores: el tramo violeta no se vería sobre el banner, va en blanco */
+.inicio__saludo .franja-corta i:first-child {
+  background: #fff;
 }
 
 .inicio__numeros {
@@ -157,6 +196,13 @@
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   padding: 0;
   overflow: hidden;
+}
+
+.inicio__saludo + .inicio__numeros {
+  position: relative;
+  margin: -76px 22px 0;
+  border: 0;
+  box-shadow: 0 12px 30px rgb(52 28 96 / 0.18);
 }
 
 .inicio__numero {
@@ -174,6 +220,7 @@
 
 .inicio__numero strong {
   font-size: 1.9rem;
+  font-variant-numeric: tabular-nums; /* el ancho no salta mientras cuenta */
   font-weight: 800;
   line-height: 1;
 }
@@ -386,6 +433,57 @@
   color: #fff;
 }
 
+/* Encuestas de cada día: barra que crece desde abajo + cantidad */
+.inicio__barra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  height: 64px;
+}
+
+.inicio__barra i {
+  width: 10px;
+  height: 44px;
+  border-radius: 5px 5px 2px 2px;
+  background: var(--lla-violeta);
+  opacity: 0.85;
+  transform: scaleY(max(var(--alto), 0.04));
+  transform-origin: bottom;
+  animation: inicio-barra 420ms var(--ease-out) both;
+  animation-delay: calc(var(--orden) * 30ms);
+}
+
+.inicio__semana .hoy .inicio__barra i {
+  opacity: 1;
+}
+
+.inicio__semana .inicio__barra small {
+  color: var(--lla-gris);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.inicio__semana-total {
+  margin: 12px 0 0;
+  color: var(--lla-gris);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+@keyframes inicio-barra {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inicio__barra i {
+    animation: none;
+  }
+}
+
 /* --- Últimos cuestionarios ------------------------------------------- */
 
 .inicio__vacio {
@@ -429,34 +527,13 @@
 
 /* --- Pantallas más chicas --------------------------------------------- */
 
-/* Sin lugar para tres columnas: "Últimos cuestionarios" pasa debajo del perfil */
-@media (max-width: 1440px) {
-  .inicio {
-    grid-template-columns: 230px minmax(0, 1fr);
-    align-items: start;
-  }
-
-  .inicio__centro {
-    grid-row: span 2;
-  }
-
-  .inicio__columna:last-child {
-    grid-column: 1;
-  }
-}
-
 @media (max-width: 760px) {
   .inicio {
     grid-template-columns: minmax(0, 1fr);
     padding: 20px 16px 32px;
   }
 
-  .inicio__columna:last-child {
-    grid-column: auto;
-  }
-
   .inicio__centro {
-    grid-row: auto;
     order: -1;
   }
 
@@ -466,6 +543,15 @@
 
   .inicio__numeros {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .inicio__saludo {
+    padding: 22px 20px 20px;
+    border-radius: 18px;
+  }
+
+  .inicio__saludo + .inicio__numeros {
+    margin: -76px 12px 0;
   }
 
   /* Celular: dos por fila; si quedan impares, la primera ocupa todo el ancho */
@@ -510,5 +596,58 @@
 
   .inicio__tarjeta-flecha {
     display: none;
+  }
+}
+
+/* --- Movimiento ---------------------------------------------------------
+   Secuencia al entrar: el banner (con la pantalla), su texto apenas después,
+   los números flotan hacia arriba sobre el borde del banner y las tarjetas
+   aparecen en cascada cuando el banner ya está. Todo con ease-out y en
+   menos de medio segundo; con "reducir movimiento" quedan solo fundidos. */
+
+.inicio__saludo > * {
+  animation: subir-y-aparecer 320ms var(--ease-out) backwards;
+}
+
+.inicio__saludo > :nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.inicio__saludo > :nth-child(3) {
+  animation-delay: 100ms;
+}
+
+.inicio__saludo + .inicio__numeros {
+  animation: inicio-flota 420ms var(--ease-out) 120ms backwards;
+}
+
+.inicio__tarjetas .inicio__tarjeta:nth-child(1) { animation-delay: 180ms; }
+.inicio__tarjetas .inicio__tarjeta:nth-child(2) { animation-delay: 220ms; }
+.inicio__tarjetas .inicio__tarjeta:nth-child(3) { animation-delay: 260ms; }
+.inicio__tarjetas .inicio__tarjeta:nth-child(4) { animation-delay: 300ms; }
+.inicio__tarjetas .inicio__tarjeta:nth-child(n + 5) { animation-delay: 340ms; }
+
+@keyframes inicio-flota {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
+
+@keyframes inicio-aro {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inicio__saludo::before {
+    animation: none;
+  }
+
+  .inicio__saludo > *,
+  .inicio__saludo + .inicio__numeros {
+    animation-name: aparecer;
+    animation-delay: 0ms;
   }
 }

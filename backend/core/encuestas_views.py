@@ -1,9 +1,12 @@
 """Carga de encuestas (vista del militante) y estadísticas por pregunta
 (vista de la administración)."""
 
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.db import IntegrityError, transaction
+from django.db.models import Count
+from django.db.models.functions import TruncDate
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
@@ -272,3 +275,30 @@ def mapa_encuestas(request):
             for e in encuestas
         ],
     })
+
+
+@require_http_methods(["GET"])
+@requiere_permiso("core.view_encuesta")
+def por_dia(request):
+    """Encuestas de la campaña cargadas cada día entre ?desde= y ?hasta=
+    (AAAA-MM-DD, hasta 62 días). Los días sin encuestas vienen en 0.
+    Lo usa el gráfico de la semana en la pantalla de Inicio."""
+    try:
+        desde = date.fromisoformat(request.GET["desde"])
+        hasta = date.fromisoformat(request.GET["hasta"])
+    except (KeyError, ValueError):
+        return error("Indicá desde y hasta como AAAA-MM-DD.")
+    if desde > hasta or (hasta - desde).days > 61:
+        return error("El rango tiene que ser de 1 a 62 días.")
+    conteo = dict(
+        Encuesta.objects.filter(
+            cuestionario__in=cuestionarios_de_campana(request.campana),
+            realizada_en__date__range=(desde, hasta),
+        )
+        .annotate(dia=TruncDate("realizada_en"))  # día en la hora local (TIME_ZONE)
+        .values("dia")
+        .annotate(cantidad=Count("pk"))
+        .values_list("dia", "cantidad")
+    )
+    dias = [desde + timedelta(days=i) for i in range((hasta - desde).days + 1)]
+    return JsonResponse({"dias": [{"fecha": d.isoformat(), "encuestas": conteo.get(d, 0)} for d in dias]})

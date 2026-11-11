@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { cerrarSesion, prepararCsrf, sesionDeEstaPestana, usuarioActual } from './api/auth'
 import Actividad from './components/actividad/Actividad'
+import Analitica from './components/analitica/Analitica'
 import Campanas from './components/campanas/Campanas'
 import ElegirCampana from './components/campanas/ElegirCampana'
 import Categorias from './components/categorias/Categorias'
@@ -14,7 +15,7 @@ import Inicio from './components/inicio/Inicio'
 import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
 import Login from './components/login/Login'
 import Restablecer from './components/login/Restablecer'
-import Tutorial from './components/tutorial/Tutorial'
+import Tutorial from './components/tutorial/tutorial'
 import Mapa from './components/mapa/Mapa'
 import Menu from './components/menu/Menu'
 import Permisos from './components/permisos/Permisos'
@@ -158,6 +159,7 @@ function Rutas() {
         <Route path="/cuestionarios/nuevo" element={s('core.add_cuestionario', <EditorCuestionario key="nuevo" />)} />
         <Route path="/cuestionarios/:id" element={s('core.view_cuestionario', <EditorCuestionario />)} />
         <Route path="/cuestionarios/:id/estadisticas" element={s('core.view_encuesta', <DetalleCuestionario />)} />
+        <Route path="/analitica" element={s('core.view_encuesta', <Analitica usuario={usuario} />)} />
         <Route path="/responder" element={s('core.add_encuesta', <ListaResponder />)} />
         <Route path="/responder/:id" element={s('core.add_encuesta', <ResponderCuestionario key="responder" />)} />
         <Route path="/usuarios" element={s('core.view_usuario', <Usuarios usuario={usuario} />)} />

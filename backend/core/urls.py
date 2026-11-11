@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import (
+    analitica_views,
     asignaciones_views,
     avisos_views,
     campanas_views,
@@ -58,4 +59,7 @@ urlpatterns = [
     path("mapa/rutas/", mapa_views.rutas, name="mapa-rutas"),
     path("mapa/rutas/<int:pk>/", mapa_views.ruta_detalle, name="mapa-ruta"),
     path("mapa/encuestas/", encuestas_views.mapa_encuestas, name="mapa-encuestas"),
+    path("encuestas/por-dia/", encuestas_views.por_dia, name="encuestas-por-dia"),
+    path("analitica/", analitica_views.resumen, name="analitica"),
+    path("analitica/<str:clave>.png", analitica_views.grafico, name="analitica-grafico"),
 ]

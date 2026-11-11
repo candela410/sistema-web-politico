@@ -2,6 +2,7 @@ import {
   ClipboardList,
   ClipboardPen,
   Flag,
+  GraduationCap,
   House,
   Map,
   Network,
@@ -98,6 +99,18 @@ export const SECCIONES = [
         icono: Flag,
         permiso: 'core.view_campana',
         sinCampana: true,
+      },
+    ],
+  },
+  {
+    titulo: 'Ayuda',
+    // Sin permiso: todos la ven, y cada uno ve solo los videos de sus funciones
+    opciones: [
+      {
+        ruta: '/tutorial',
+        texto: 'Tutorial',
+        descripcion: 'Videos paso a paso',
+        icono: GraduationCap,
       },
     ],
   },

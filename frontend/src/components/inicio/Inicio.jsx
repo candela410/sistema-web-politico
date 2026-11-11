@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { ArrowRight, ClipboardList, FilePlus2, Flag, Mail } from 'lucide-react'
+import { ArrowRight, ClipboardList, FilePlus2, Flag, GraduationCap, Mail } from 'lucide-react'
 import { obtenerCuestionarios } from '../../api/cuestionarios'
 import { obtenerParaResponder } from '../../api/encuestas'
 import { obtenerRutas, obtenerZonas } from '../../api/mapa'
@@ -85,7 +85,8 @@ function Inicio({ usuario }) {
   const accesos = [
     { ruta: '/cuestionarios/nuevo', texto: 'Nuevo cuestionario', icono: FilePlus2, permiso: 'core.add_cuestionario' },
     { ruta: '/responder', texto: 'Cargar encuesta', icono: ClipboardList, permiso: 'core.add_encuesta' },
-  ].filter((a) => tiene(usuario, a.permiso))
+    { ruta: '/tutorial', texto: 'Ver tutoriales', icono: GraduationCap },
+  ].filter((a) => !a.permiso || tiene(usuario, a.permiso))
 
   useEffect(() => {
     cargarResumen(usuario).then(setResumen)

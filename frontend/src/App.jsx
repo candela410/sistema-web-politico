@@ -14,6 +14,7 @@ import Inicio from './components/inicio/Inicio'
 import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
 import Login from './components/login/Login'
 import Restablecer from './components/login/Restablecer'
+import Tutorial from './components/tutorial/Tutorial'
 import Mapa from './components/mapa/Mapa'
 import Menu from './components/menu/Menu'
 import Permisos from './components/permisos/Permisos'
@@ -31,6 +32,7 @@ import logo from './assets/logo.png'
 //   /campana      elegir la campaña (superusuario o permiso "elegir_campana")
 //   /mapa, /cuestionarios(/nuevo|/:id|/:id/estadisticas), /categorias, /responder(/:id)
 //   /equipos, /usuarios, /grupos, /permisos, /actividad, /campanas
+//   /tutorial     videos de ayuda (todos; cada uno ve los de sus funciones)
 // Todo lo que no sea /login, /campana o /campanas necesita una campaña elegida.
 
 function RequiereSesion({ usuario, children }) {
@@ -162,6 +164,7 @@ function Rutas() {
         <Route path="/grupos" element={s('core.view_grupo', <Grupos />)} />
         <Route path="/permisos" element={s('auth.view_group', <Permisos />)} />
         <Route path="/actividad" element={s('admin.view_logentry', <Actividad usuario={usuario} />)} />
+        <Route path="/tutorial" element={s(null, <Tutorial usuario={usuario} />)} />
         <Route path="/campanas" element={s('core.view_campana', <Campanas usuario={usuario} />, true)} />
         <Route
           path="/sin-campana"

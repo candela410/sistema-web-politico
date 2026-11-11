@@ -15,6 +15,7 @@ from django.views.decorators.http import require_http_methods
 
 from .api import crud, error, leer_json, requiere_permiso
 from .models import Usuario
+from .validaciones import nombre_cosa
 
 # Grupo que el sistema usa por nombre (ver usuarios_views.GRUPO_MILITANTES)
 GRUPO_MILITANTES = "Militantes"
@@ -54,6 +55,10 @@ def validar_nombre(nombre, group=None):
 
     if len(nombre) > 120:
         return "El nombre no puede superar los 120 caracteres."
+
+    mensaje = nombre_cosa(nombre)
+    if mensaje:
+        return mensaje
 
     repetido = Group.objects.filter(name__iexact=nombre)
 

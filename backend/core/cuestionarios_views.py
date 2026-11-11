@@ -10,6 +10,7 @@ from django.views.decorators.http import require_http_methods
 from .api import crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, registrar
 from .models import Categoria, Cuestionario, Opcion, Pregunta
+from .validaciones import texto_libre
 
 MAX_PREGUNTAS = 15
 MAX_OPCIONES = 30
@@ -80,6 +81,10 @@ def _texto(valor, campo, maximo=None, obligatorio=True):
         raise DatosInvalidos(f"Falta {campo.lower()}.")
     if maximo and len(valor) > maximo:
         raise DatosInvalidos(f"{campo} es muy largo (máximo {maximo} caracteres).")
+    # La descripción (opcional) admite cualquier texto; título, preguntas y opciones no
+    mensaje = texto_libre(valor, campo) if obligatorio else None
+    if mensaje:
+        raise DatosInvalidos(mensaje)
     return valor
 
 

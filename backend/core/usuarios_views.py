@@ -20,6 +20,9 @@ from django.views.decorators.http import require_http_methods
 from .api import ADMINISTRAR, SOLO_SUPERUSUARIO, crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, leer, registrar
 from .models import Usuario
+from .validaciones import documento as validar_documento
+from .validaciones import espacios, nombre_persona
+from .validaciones import telefono as validar_telefono
 
 GRUPO_MILITANTES = "Militantes"
 ACCIONES = {"view": "Ver", "add": "Crear", "change": "Editar", "delete": "Borrar"}
@@ -97,10 +100,13 @@ def _limpiar(datos, usuario=None):
     if repetido.exists():
         return None, "Ya existe un usuario con ese email."
 
-    nombre = str(datos.get("nombre", usuario.first_name if usuario else "") or "").strip()[:150]
-    apellido = str(datos.get("apellido", usuario.last_name if usuario else "") or "").strip()[:150]
+    nombre = espacios(str(datos.get("nombre", usuario.first_name if usuario else "") or ""))[:150]
+    apellido = espacios(str(datos.get("apellido", usuario.last_name if usuario else "") or ""))[:150]
     if not nombre:
         return None, "Poné el nombre."
+    mensaje = nombre_persona(nombre) or nombre_persona(apellido, "El apellido")
+    if mensaje:
+        return None, mensaje
 
     password = datos.get("password") or ""
     if not usuario and not password:
@@ -139,6 +145,10 @@ def _limpiar(datos, usuario=None):
         return str(valor or "").strip()
 
     documento = dato("documento").replace(".", "").replace(" ", "")[:30]
+    telefono_ = espacios(dato("telefono"))[:40]
+    mensaje = validar_documento(documento) or validar_telefono(telefono_)
+    if mensaje:
+        return None, mensaje
     repetido = Usuario.objects.filter(documento=documento)
     if usuario:
         repetido = repetido.exclude(pk=usuario.pk)
@@ -154,7 +164,7 @@ def _limpiar(datos, usuario=None):
         "administra": administra,
         "activo": activo,
         "documento": documento or None,
-        "telefono": dato("telefono")[:40] or None,
+        "telefono": telefono_ or None,
         "direccion": dato("direccion") or None,
     }, None
 

@@ -22,6 +22,7 @@ from .api import crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, registrar
 from .mapa_views import rutas_de_campana
 from .models import Equipo, Usuario
+from .validaciones import nombre_cosa
 from .usuarios_views import GRUPO_MILITANTES
 
 ORDEN_USUARIOS = ("first_name", "last_name", "email")
@@ -97,6 +98,9 @@ def _validar(request, datos, equipo=None):
     nombre = nombre.strip()
     if len(nombre) > 120:
         return None, None, "El nombre es muy largo (máximo 120 caracteres)."
+    mensaje = nombre_cosa(nombre)
+    if mensaje:
+        return None, None, mensaje
 
     repetido = Equipo.objects.filter(nombre__iexact=nombre)
     if equipo:

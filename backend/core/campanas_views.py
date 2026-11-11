@@ -20,6 +20,7 @@ from .api import (
 )
 from .bitacora import diferencias, registrar
 from .models import Campana
+from .validaciones import nombre_cosa
 from .views import usuario_json
 
 
@@ -87,6 +88,9 @@ def _validar(datos, campana=None):
     if not isinstance(nombre, str) or not nombre.strip():
         return None, "Poné un nombre a la campaña."
     nombre = nombre.strip()[:150]
+    mensaje = nombre_cosa(nombre)
+    if mensaje:
+        return None, mensaje
     repetida = Campana.objects.filter(nombre__iexact=nombre)
     if campana:
         repetida = repetida.exclude(pk=campana.pk)

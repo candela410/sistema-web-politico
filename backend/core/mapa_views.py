@@ -29,6 +29,7 @@ from .geo import (
     punto_en_poligono,
 )
 from .models import Barrio, Calle, Ruta, Zona
+from .validaciones import nombre_cosa
 
 COLOR_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 MAX_PARADAS = 50  # límite de puntos por pedido de OpenRouteService
@@ -130,6 +131,9 @@ def _validar_zona(datos, zona=None):
         return "Poné un nombre a la zona."
     if len(nombre) > 100:
         return "El nombre es muy largo (máximo 100 caracteres)."
+    mensaje = nombre_cosa(nombre)
+    if mensaje:
+        return mensaje
     repetida = Zona.objects.filter(nombre__iexact=nombre)
     if zona:
         repetida = repetida.exclude(pk=zona.pk)
@@ -297,6 +301,9 @@ def _guardar_ruta(ruta, datos):
     nombre = (datos.get("nombre", ruta.nombre) or "").strip()
     if not nombre:
         return _error("Poné un nombre a la ruta.")
+    mensaje = nombre_cosa(nombre)
+    if mensaje:
+        return _error(mensaje)
     repetida = Ruta.objects.filter(nombre__iexact=nombre)
     if ruta.pk:
         repetida = repetida.exclude(pk=ruta.pk)

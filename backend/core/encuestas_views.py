@@ -13,6 +13,8 @@ from .cuestionarios_views import cuestionarios_de_campana
 from .api import error, leer_json, permisos_de, requiere_permiso
 from .bitacora import registrar
 from .models import AsignacionCuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada
+from .validaciones import documento as validar_documento
+from .validaciones import espacios, nombre_persona
 
 
 
@@ -72,12 +74,16 @@ def _limpiar_encuestado(datos):
     documento = str(datos.get("documento") or "").replace(".", "").replace(" ", "").strip()
     if not documento:
         raise RespuestaInvalida("Falta el documento de la persona encuestada.")
-    if len(documento) > 30:
-        raise RespuestaInvalida("El documento es muy largo.")
+    mensaje = validar_documento(documento)
+    if mensaje:
+        raise RespuestaInvalida(mensaje)
     limpio = {"documento": documento}
     # A la persona encuestada solo se le pide documento, nombre y apellido
-    for campo, maximo in (("nombre", 100), ("apellido", 100)):
-        valor = str(datos.get(campo) or "").strip()[:maximo]
+    for campo, etiqueta, maximo in (("nombre", "El nombre", 100), ("apellido", "El apellido", 100)):
+        valor = espacios(str(datos.get(campo) or ""))[:maximo]
+        mensaje = nombre_persona(valor, etiqueta)
+        if mensaje:
+            raise RespuestaInvalida(mensaje)
         if valor:
             limpio[campo] = valor
     return limpio

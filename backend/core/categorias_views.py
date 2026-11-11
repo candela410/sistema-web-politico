@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from .api import crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, registrar
 from .models import Categoria
+from .validaciones import nombre_cosa
 
 
 def _categoria_json(categoria):
@@ -33,6 +34,9 @@ def _validar(datos, categoria=None):
         return "Poné un nombre a la categoría."
     if len(nombre.strip()) > 120:
         return "El nombre es muy largo (máximo 120 caracteres)."
+    mensaje = nombre_cosa(nombre.strip())
+    if mensaje:
+        return mensaje
     descripcion = datos.get("descripcion")
     if descripcion is not None and not isinstance(descripcion, str):
         return "La descripción debe ser texto."

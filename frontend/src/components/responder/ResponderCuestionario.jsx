@@ -12,29 +12,6 @@ import './responder.css'
 
 const ENCUESTADO_VACIO = { documento: '', nombre: '', apellido: '' }
 
-// La ubicación del dispositivo es obligatoria, pero no se muestra en la
-// pantalla: se pide sola al abrir y, si al enviar todavía no está, se vuelve a
-// pedir en ese momento. Solo se avisa si no se pudo obtener.
-const ERRORES_UBICACION = {
-  1: 'El navegador no tiene permiso para usar la ubicación. Habilítelo en la configuración del sitio e intente nuevamente.',
-  2: 'Verifique que la ubicación (GPS) del dispositivo esté activada e intente nuevamente.',
-  3: 'La ubicación tardó demasiado en obtenerse. Intente nuevamente.',
-}
-
-function pedirUbicacion() {
-  return new Promise((resolver, rechazar) => {
-    if (!navigator.geolocation) {
-      rechazar(new Error('Este dispositivo o navegador no permite obtener la ubicación.'))
-      return
-    }
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolver({ latitud: p.coords.latitude, longitud: p.coords.longitude }),
-      (e) => rechazar(new Error(ERRORES_UBICACION[e.code] ?? ERRORES_UBICACION[2])),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
-    )
-  })
-}
-
 function Pregunta({ pregunta, numero, elegidas, error, onCambio }) {
   const multiple = pregunta.tipo === 'opcion_multiple'
   const nombre = `pregunta-${pregunta.id}`
@@ -97,7 +74,6 @@ function ResponderCuestionario() {
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
-  const [ubicacion, setUbicacion] = useState(null) // { latitud, longitud }
   // Campos de la persona que ya se tocaron (sus errores se muestran desde ahí)
   const [tocados, setTocados] = useState({})
   const erroresPersona = {
@@ -114,14 +90,6 @@ function ResponderCuestionario() {
       .then(setCuestionario)
       .catch((e) => setError(e.message))
   }, [id])
-
-  // Se pide al abrir y al empezar cada encuesta nueva
-  useEffect(() => {
-    if (enviado) return
-    pedirUbicacion()
-      .then(setUbicacion)
-      .catch(() => {})
-  }, [enviado])
 
   const cambiarEncuestado = (campo) => (e) => {
     // El documento admite solo números, hasta 8
@@ -164,26 +132,12 @@ function ResponderCuestionario() {
       return
     }
     setEnviando(true)
-    let lugar = ubicacion
-    if (!lugar) {
-      try {
-        lugar = await pedirUbicacion()
-        setUbicacion(lugar)
-      } catch (e) {
-        setError(`La ubicación es obligatoria para cargar la encuesta. ${e.message}`)
-        document.querySelector('.editor')?.scrollTo({ top: 0, behavior: 'smooth' })
-        setEnviando(false)
-        return
-      }
-    }
     try {
       await api.enviarRespuestas(id, {
         encuestado,
         respuestas: cuestionario.preguntas
           .filter((p) => respuestas[p.id]?.length > 0)
           .map((p) => ({ pregunta: p.id, opciones: respuestas[p.id] })),
-        latitud: lugar.latitud,
-        longitud: lugar.longitud,
       })
       setEnviado(true)
       window.scrollTo({ top: 0 })
@@ -199,7 +153,6 @@ function ResponderCuestionario() {
   function otraEncuesta() {
     setEncuestado(ENCUESTADO_VACIO)
     setTocados({})
-    setUbicacion(null)
     setRespuestas({})
     setErrores({})
     setError('')

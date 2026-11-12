@@ -18,6 +18,7 @@ import Perfil from './components/perfil/Perfil'
 import Restablecer from './components/login/Restablecer'
 import Tutorial from './components/tutorial/tutorial'
 import Mapa from './components/mapa/Mapa'
+import MiRuta from './components/mapa/MiRuta'
 import Menu from './components/menu/Menu'
 import Permisos from './components/permisos/Permisos'
 import ListaResponder from './components/responder/ListaResponder'
@@ -36,6 +37,7 @@ import logo from './assets/logo.png'
 //   /mapa, /cuestionarios(/nuevo|/:id|/:id/estadisticas), /categorias, /responder(/:id)
 //   /dashboard, /equipos, /usuarios, /grupos, /permisos, /actividad
 //   /tutorial     videos de ayuda (todos; cada uno ve los de sus funciones)
+//   /mi-ruta      la ruta del equipo del usuario (todos; pensada para el militante)
 //   /perfil       Mi perfil: datos propios y cambiar la contraseña por correo
 // Todo lo que no sea /login, /olvide, /restablecer o /campana necesita una campaña elegida.
 
@@ -157,6 +159,7 @@ function Rutas() {
       >
         <Route path="/inicio" element={s(null, <Inicio usuario={usuario} />)} />
         <Route path="/mapa" element={s('core.view_zona', <Mapa />)} />
+        <Route path="/mi-ruta" element={s(null, <MiRuta />)} />
         <Route path="/equipos" element={s('core.view_equipo', <Equipos usuario={usuario} />)} />
         <Route path="/categorias" element={s('core.view_categoria', <Categorias usuario={usuario} />)} />
         <Route path="/cuestionarios" element={s('core.view_cuestionario', <ListaCuestionarios usuario={usuario} />)} />

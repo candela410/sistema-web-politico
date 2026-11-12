@@ -60,6 +60,7 @@ urlpatterns = [
     path("mapa/zonas/<int:pk>/", mapa_views.zona_detalle, name="mapa-zona"),
     path("mapa/rutas/", mapa_views.rutas, name="mapa-rutas"),
     path("mapa/rutas/<int:pk>/", mapa_views.ruta_detalle, name="mapa-ruta"),
+    path("mi-ruta/", mapa_views.mi_ruta, name="mi-ruta"),
     path("mapa/encuestas/", encuestas_views.mapa_encuestas, name="mapa-encuestas"),
     path("encuestas/por-dia/", encuestas_views.por_dia, name="encuestas-por-dia"),
     path("analitica/", analitica_views.resumen, name="analitica"),

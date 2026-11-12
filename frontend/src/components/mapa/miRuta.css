@@ -1,0 +1,23 @@
+/* Pantalla "Mi ruta": ficha con los datos y, debajo, el mapa del recorrido */
+.mi-ruta__descripcion {
+  margin: 0;
+  color: var(--lla-gris);
+  font-size: 0.9rem;
+}
+
+.mi-ruta__mapa {
+  /* El mapa queda por debajo del menú y de las ventanas */
+  position: relative;
+  z-index: 0;
+  height: clamp(320px, 58vh, 560px);
+  border: 1px solid #ece8f4;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.mi-ruta__ayuda {
+  /* Pegada al mapa (la página separa sus bloques 20px) */
+  margin: -10px 0 0;
+  color: var(--lla-gris);
+  font-size: 0.85rem;
+}

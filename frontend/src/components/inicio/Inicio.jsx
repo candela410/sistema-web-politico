@@ -18,13 +18,14 @@ const TARJETAS = [
   { ruta: '/cuestionarios', color: 'violeta' },
   { ruta: '/responder', color: 'magenta' },
   { ruta: '/mapa', color: 'celeste' },
+  { ruta: '/mi-ruta', color: 'celeste' },
   { ruta: '/equipos', color: 'naranja' },
   { ruta: '/usuarios', color: 'violeta' },
 ]
 
 // Cuántas columnas (de 6) ocupa cada tarjeta según cuántas hay, para que
 // las filas queden completas: con 5, las dos primeras van más grandes.
-const ANCHOS = { 1: [6], 2: [3, 3], 3: [2, 2, 2], 4: [3, 3, 3, 3], 5: [3, 3, 2, 2, 2] }
+const ANCHOS = { 1: [6], 2: [3, 3], 3: [2, 2, 2], 4: [3, 3, 3, 3], 5: [3, 3, 2, 2, 2], 6: [2, 2, 2, 2, 2, 2] }
 const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 // Números del tablero según los permisos del usuario: solo se pide lo que puede ver.

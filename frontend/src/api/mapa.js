@@ -18,5 +18,8 @@ export const editarRuta = (id, datos) =>
   pedir(`/api/mapa/rutas/${id}/`, { method: 'PATCH', datos }).then((r) => r.ruta)
 export const borrarRuta = (id) => pedir(`/api/mapa/rutas/${id}/`, { method: 'DELETE' })
 
+// Ruta asignada al usuario que inició sesión (la de su equipo): { equipo, ruta }
+export const obtenerMiRuta = () => pedir('/api/mi-ruta/')
+
 // Dónde se hizo cada encuesta (solo las que tienen ubicación)
 export const obtenerEncuestas = () => pedir('/api/mapa/encuestas/')

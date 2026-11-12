@@ -6,6 +6,7 @@ import {
   House,
   Map,
   Network,
+  Route,
   ScrollText,
   ShieldCheck,
   Tags,
@@ -22,6 +23,7 @@ import { tiene } from '../../permisos'
 //   icono        ícono de lucide-react (https://lucide.dev/icons)
 //   permiso      permiso de Django que hace falta para verla (el mismo que pide App.jsx)
 //   sinCampana   true = se muestra aunque no haya una campaña elegida
+//   soloSi       función (usuario) => true/false para mostrarla según otro dato del usuario
 //   exacta       true = solo se marca activa en esa dirección exacta (no en sus subrutas)
 export const SECCIONES = [
   {
@@ -32,6 +34,15 @@ export const SECCIONES = [
     titulo: 'Territorio',
     opciones: [
       { ruta: '/mapa', texto: 'Mapa', descripcion: 'Barrios, zonas y rutas', icono: Map, permiso: 'core.view_zona' },
+      {
+        // La ruta del equipo del usuario. La ve quien tiene equipo y también
+        // quien no puede ver el Mapa (el militante), aunque todavía no tenga equipo
+        ruta: '/mi-ruta',
+        texto: 'Mi ruta',
+        descripcion: 'El recorrido de mi equipo',
+        icono: Route,
+        soloSi: (usuario) => Boolean(usuario.equipo) || !tiene(usuario, 'core.view_ruta'),
+      },
       {
         ruta: '/equipos',
         texto: 'Equipos',
@@ -121,7 +132,10 @@ export function seccionesPara(usuario) {
   return SECCIONES.map((s) => ({
     ...s,
     opciones: s.opciones.filter(
-      (o) => (!o.permiso || tiene(usuario, o.permiso)) && (usuario.campana || o.sinCampana),
+      (o) =>
+        (!o.permiso || tiene(usuario, o.permiso)) &&
+        (!o.soloSi || o.soloSi(usuario)) &&
+        (usuario.campana || o.sinCampana),
     ),
   })).filter((s) => s.opciones.length > 0)
 }

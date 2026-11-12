@@ -12,9 +12,9 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_GET, require_http_methods
 
-from .api import crud, requiere_permiso
+from .api import crud, requiere_permiso, requiere_sesion
 from .api import error as _error
 from .api import leer_json as _leer_json
 from .bitacora import diferencias, registrar
@@ -421,3 +421,26 @@ def ruta_detalle(request, pk):
     if cambios:
         registrar(request, ruta, "editar", cambios=cambios)
     return JsonResponse({"ruta": _ruta_json(ruta)})
+
+
+@require_GET
+@requiere_sesion
+def mi_ruta(request):
+    """Pantalla "Mi ruta": la ruta asignada al usuario que inició sesión, que
+    es la de su equipo (usuarios → equipos → rutas). No pide permisos porque
+    cada uno ve solo la suya; el Mapa completo sigue pidiendo "Ver rutas".
+
+    SQL equivalente:
+        SELECT r.* FROM rutas r
+        JOIN equipos e ON e.id_ruta = r.id_ruta
+        JOIN usuarios u ON u.id_equipo = e.id_equipo
+        WHERE u.id = %s AND e.activo
+    """
+    equipo = request.user.equipo
+    if equipo is None:
+        return JsonResponse({"equipo": None, "ruta": None})
+    return JsonResponse({
+        "equipo": {"nombre": equipo.nombre, "activo": equipo.activo},
+        # Un equipo desactivado no sale a recorrer: no se muestra su ruta
+        "ruta": _ruta_json(equipo.ruta) if equipo.activo else None,
+    })

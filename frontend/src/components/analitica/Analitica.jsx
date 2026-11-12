@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { FileDown } from 'lucide-react'
 import { obtenerResumenAnalitica, urlGraficoAnalitica } from '../../api/analitica'
+import Modal from '../comunes/Modal'
 import './analitica.css'
 
 // Dashboard: los gráficos del Módulo de Analítica de la campaña activa. Los
 // genera el servidor con pandas, numpy y matplotlib (las mismas funciones que
 // analitica/analitica.py), así que muestran los datos de este momento. Las
 // fechas se aplican con el botón, para no regenerar todas las imágenes en cada
-// tecla. Cada gráfico (o todos juntos) se descarga en PDF.
+// tecla. "Descargar PDF" abre un cartel para elegir qué gráficos incluir.
 
 const GRAFICOS = [
   {
@@ -33,20 +34,9 @@ const VACIOS = { desde: '', hasta: '' }
 const fecha = (iso) => new Date(`${iso}T00:00`).toLocaleDateString('es-AR')
 const nombreDe = (u) => [u.nombre, u.apellido].filter(Boolean).join(' ') || u.email
 
-function Grafico({ grafico, url, onPdf, mensajeError = 'No se pudo generar el gráfico.' }) {
+function Grafico({ grafico, url, mensajeError = 'No se pudo generar el gráfico.' }) {
   // El estado se reinicia solo cuando cambia la imagen (la clave del componente es la url)
   const [estado, setEstado] = useState('cargando')
-  const [descargando, setDescargando] = useState(false)
-
-  async function pdf() {
-    setDescargando(true)
-    try {
-      await onPdf()
-    } finally {
-      setDescargando(false)
-    }
-  }
-
   return (
     <figure className={`tarjeta-form analitica__grafico analitica__grafico--${grafico.clave}`}>
       <figcaption className="analitica__pie">
@@ -54,12 +44,6 @@ function Grafico({ grafico, url, onPdf, mensajeError = 'No se pudo generar el gr
           <strong>{grafico.titulo}</strong>
           <small>{grafico.pregunta}</small>
         </span>
-        {estado === 'listo' && (
-          <button type="button" className="boton boton--borde boton--chico" onClick={pdf} disabled={descargando}>
-            <FileDown size={15} aria-hidden="true" />
-            {descargando ? 'Generando…' : 'PDF'}
-          </button>
-        )}
       </figcaption>
       <div className={`analitica__imagen analitica__imagen--${estado}`}>
         {estado === 'error' && <p className="aviso-info">{mensajeError}</p>}
@@ -74,13 +58,68 @@ function Grafico({ grafico, url, onPdf, mensajeError = 'No se pudo generar el gr
   )
 }
 
+// Cartel para elegir qué gráficos van en el PDF (todos marcados al abrir)
+function ElegirGraficosPdf({ graficos, onDescargar, onCerrar }) {
+  const [elegidos, setElegidos] = useState(() => new Set(graficos.map((g) => g.clave)))
+  const [generando, setGenerando] = useState(false)
+  const todos = elegidos.size === graficos.length
+  const alternar = (clave) =>
+    setElegidos((actual) => {
+      const nuevo = new Set(actual)
+      if (nuevo.has(clave)) nuevo.delete(clave)
+      else nuevo.add(clave)
+      return nuevo
+    })
+
+  async function descargar() {
+    setGenerando(true)
+    await onDescargar(graficos.filter((g) => elegidos.has(g.clave)))
+    setGenerando(false)
+  }
+
+  return (
+    <Modal titulo="Descargar PDF" onCerrar={onCerrar}>
+      <p className="modal__texto">Seleccione los gráficos que desea incluir en el informe.</p>
+      <label className="casilla-texto pdf-elegir__todos">
+        <input
+          type="checkbox"
+          checked={todos}
+          onChange={() => setElegidos(todos ? new Set() : new Set(graficos.map((g) => g.clave)))}
+        />
+        <span>Todos los gráficos</span>
+      </label>
+      <ul className="pdf-elegir">
+        {graficos.map((g) => (
+          <li key={g.clave}>
+            <label className="casilla-texto">
+              <input type="checkbox" checked={elegidos.has(g.clave)} onChange={() => alternar(g.clave)} />
+              <span>
+                <b>{g.titulo}</b>
+                <small>{g.pregunta}</small>
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+      <div className="acciones">
+        <button type="button" className="boton boton--borde" onClick={onCerrar}>
+          Cancelar
+        </button>
+        <button type="button" className="boton" onClick={descargar} disabled={elegidos.size === 0 || generando}>
+          {generando ? 'Generando…' : `Descargar ${elegidos.size === 1 ? '1 gráfico' : `${elegidos.size} gráficos`}`}
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
 function Analitica({ usuario }) {
   const [filtros, setFiltros] = useState(VACIOS)
   const [aplicados, setAplicados] = useState({ ...VACIOS, version: 0 })
   const [resumen, setResumen] = useState(null)
   const [error, setError] = useState('')
   const [elegidos, setElegidos] = useState({ cuestionario: '', zona: '' })
-  const [descargandoTodo, setDescargandoTodo] = useState(false)
+  const [eligiendoPdf, setEligiendoPdf] = useState(false)
   const [errorPdf, setErrorPdf] = useState('')
 
   useEffect(() => {
@@ -145,10 +184,16 @@ function Analitica({ usuario }) {
     }
   }
 
-  async function descargarTodo() {
-    setDescargandoTodo(true)
-    await pdf(GRAFICOS.map((g) => ({ ...g, url: urlDe(g.clave) })), 'dashboard.pdf')
-    setDescargandoTodo(false)
+  // Gráficos que se pueden incluir en el PDF: los de encuestas (si hay en el
+  // período) y el de respuestas por zona (si se eligió un cuestionario)
+  const paraPdf = [
+    ...(resumen?.encuestas > 0 ? GRAFICOS.map((g) => ({ ...g, url: urlDe(g.clave) })) : []),
+    ...(urlRespuestas ? [{ ...graficoRespuestas, url: urlRespuestas }] : []),
+  ]
+
+  async function descargarElegidos(lista) {
+    await pdf(lista, lista.length === 1 ? `${lista[0].clave}.pdf` : 'dashboard.pdf')
+    setEligiendoPdf(false)
   }
 
   return (
@@ -164,10 +209,10 @@ function Analitica({ usuario }) {
             <i />
           </span>
         </div>
-        {resumen?.encuestas > 0 && (
-          <button type="button" className="boton pagina__accion" onClick={descargarTodo} disabled={descargandoTodo}>
+        {paraPdf.length > 0 && (
+          <button type="button" className="boton pagina__accion" onClick={() => setEligiendoPdf(true)}>
             <FileDown size={18} aria-hidden="true" />
-            {descargandoTodo ? 'Generando PDF…' : 'Descargar todo en PDF'}
+            Descargar PDF
           </button>
         )}
       </header>
@@ -220,12 +265,7 @@ function Analitica({ usuario }) {
               </p>
               <div className="analitica__graficos">
                 {GRAFICOS.map((g) => (
-                  <Grafico
-                    key={`${g.clave}-${version}`}
-                    grafico={g}
-                    url={urlDe(g.clave)}
-                    onPdf={() => pdf([{ ...g, url: urlDe(g.clave) }], `${g.clave}.pdf`)}
-                  />
+                  <Grafico key={`${g.clave}-${version}`} grafico={g} url={urlDe(g.clave)} />
                 ))}
               </div>
             </>
@@ -274,13 +314,15 @@ function Analitica({ usuario }) {
                     grafico={graficoRespuestas}
                     url={urlRespuestas}
                     mensajeError="No hay respuestas con ubicación para ese cuestionario en esa zona."
-                    onPdf={() => pdf([{ ...graficoRespuestas, url: urlRespuestas }], 'respuestas-por-zona.pdf')}
                   />
                 )}
               </>
             )}
           </section>
         </>
+      )}
+      {eligiendoPdf && (
+        <ElegirGraficosPdf graficos={paraPdf} onDescargar={descargarElegidos} onCerrar={() => setEligiendoPdf(false)} />
       )}
     </main>
   )

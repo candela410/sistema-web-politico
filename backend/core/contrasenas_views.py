@@ -5,6 +5,7 @@ El usuario elige su contraseña siempre desde un enlace que le llega por correo
 - Al crear un usuario se le envía una invitación (no se escribe contraseña).
 - Desde Gestión → Usuarios se le puede enviar un enlace para restablecerla.
 - Desde el login, "¿Olvidó su contraseña?" lo pide la misma persona.
+- Desde "Mi perfil", "Cambiar contraseña" se lo envía a su propio correo.
 
 El token es el de Django (PasswordResetTokenGenerator): vence a las
 PASSWORD_RESET_TIMEOUT segundos y deja de servir cuando cambia la contraseña o
@@ -119,6 +120,21 @@ def enviar_enlace(request, pk):
         return error(mensaje, 502 if mensaje == SIN_ENVIO else 409)
     registrar(request, usuario, "editar", detalle=f"Envió a {destino} un enlace para restablecer la contraseña")
     return JsonResponse({"ok": True, "email": destino, "redirigido": destino != usuario.email})
+
+
+@require_POST
+def cambiar_propia(request):
+    """"Cambiar contraseña" de Mi perfil: envía el enlace al correo del usuario
+    que inició sesión (siempre a su propio correo, nunca a otro)."""
+    if not request.user.is_authenticated:
+        return error("Debe iniciar sesión.", 401)
+    usuario = request.user
+    if not _es_real(usuario.email):
+        return error(f"{usuario.email} es un correo de prueba: no puede recibir el enlace.", 409)
+    destino, mensaje = enviar_enlace_a(usuario)
+    if mensaje:
+        return error(mensaje, 502 if mensaje == SIN_ENVIO else 409)
+    return JsonResponse({"ok": True, "email": destino})
 
 
 @require_POST

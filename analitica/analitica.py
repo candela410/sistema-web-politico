@@ -381,16 +381,19 @@ def grafico_periodo(df, desde, hasta, ax):
     valores = por_periodo.to_numpy()
     x = np.arange(len(valores))
     ax.bar(x, valores, color=VIOLETA, alpha=0.88, width=0.72)
-    if len(valores) <= 40:
+    # Con muchas barras (días de un mes) los números no entran: solo hasta 20
+    if len(valores) <= 20:
         for i, v in enumerate(valores):
             if v:
                 ax.text(i, v, f"{v}", ha="center", va="bottom", fontsize=8, color=TINTA)
     promedio = float(np.mean(valores))
     ax.axhline(promedio, color=COLORES[3], linestyle="--", linewidth=1.4,
                label=f"Promedio por {nombre}: {promedio:.1f}".replace(".", ","))
-    paso = max(1, len(valores) // 16)
+    # Como máximo 12 fechas en el eje, para que no se amontonen
+    paso = max(1, -(-len(valores) // 12))
     ax.set_xticks(x[::paso])
     ax.set_xticklabels([etiqueta_periodo(p.start_time, frecuencia) for p in periodos[::paso]])
+    ax.set_xlim(-0.6, len(valores) - 0.4)
     ax.set_xlabel({"día": "Día", "semana": "Semana (desde el lunes)", "mes": "Mes"}[nombre])
     ax.set_ylabel("Encuestas")
     ax.grid(axis="y", color=GRILLA)
@@ -427,6 +430,7 @@ def grafico_evolucion(acumulado, tendencia, hoy, ax):
     ax.grid(axis="y", color=GRILLA)
     ax.set_axisbelow(True)
     ax.legend(frameon=False, loc="upper left")
+    ax.xaxis.set_major_locator(matplotlib.dates.AutoDateLocator(maxticks=12))
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%d/%m"))
     ax.set_title("Evolución de las encuestas", loc="left")
 

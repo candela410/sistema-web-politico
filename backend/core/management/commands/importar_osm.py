@@ -189,6 +189,10 @@ class Command(BaseCommand):
                 batch_size=500,
             )
             aproximados = aproximar_puntos()
+            # Los barrios nuevos (o con contorno nuevo) toman la zona que les corresponde
+            from core.mapa_views import reasignar_barrios
+
+            reasignar_barrios()
         self.stdout.write(self.style.SUCCESS("Barrios y calles guardados."))
         if aproximados:
             self.stdout.write(f"{aproximados} barrio(s) sin contorno en OpenStreetMap quedaron con un contorno aproximado.")

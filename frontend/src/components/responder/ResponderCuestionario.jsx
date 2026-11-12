@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import * as api from '../../api/encuestas'
+import { errorDocumento, errorPersona } from '../../validaciones'
 import '../cuestionarios/cuestionarios.css'
 import './responder.css'
 
-// Vista del militante: carga una encuesta (datos de la persona + respuestas),
-// con el mismo formato de tarjetas que el editor.
+// Carga de una encuesta (datos de la persona + respuestas), con el mismo
+// formato de tarjetas que el editor. Los errores se marcan en el momento: el
+// documento y los nombres al salir del campo (y mientras se corrigen), y una
+// pregunta obligatoria sin responder apenas se responde una posterior.
 
 const ENCUESTADO_VACIO = { documento: '', nombre: '', apellido: '' }
 
@@ -72,6 +75,15 @@ function ResponderCuestionario() {
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [ubicacion, setUbicacion] = useState(null)
+  // Campos de la persona que ya se tocaron (sus errores se muestran desde ahí)
+  const [tocados, setTocados] = useState({})
+  const erroresPersona = {
+    documento: errorDocumento(encuestado.documento),
+    nombre: errorPersona(encuestado.nombre),
+    apellido: errorPersona(encuestado.apellido, 'El apellido'),
+  }
+  const errorDe = (campo) => (tocados[campo] ? erroresPersona[campo] : '')
+  const tocar = (campo) => () => setTocados((t) => ({ ...t, [campo]: true }))
 
   useEffect(() => {
     api
@@ -89,11 +101,25 @@ function ResponderCuestionario() {
     )
   }, [enviado])
 
-  const cambiarEncuestado = (campo) => (e) => setEncuestado((d) => ({ ...d, [campo]: e.target.value }))
+  const cambiarEncuestado = (campo) => (e) => {
+    // El documento admite solo números, hasta 8
+    const valor = campo === 'documento' ? e.target.value.replace(/\D/g, '').slice(0, 8) : e.target.value
+    setEncuestado((d) => ({ ...d, [campo]: valor }))
+    // Si hay letras o símbolos en un nombre, el error aparece mientras se escribe
+    if (campo !== 'documento' && errorPersona(valor)) setTocados((t) => ({ ...t, [campo]: true }))
+  }
 
   function responder(pregunta, valor) {
     setRespuestas((r) => ({ ...r, [pregunta]: valor }))
-    setErrores((e) => ({ ...e, [pregunta]: '' }))
+    // Las obligatorias anteriores que quedaron sin responder se marcan en el momento
+    const indice = cuestionario.preguntas.findIndex((p) => p.id === pregunta)
+    setErrores((e) => {
+      const nuevos = { ...e, [pregunta]: '' }
+      cuestionario.preguntas.slice(0, indice).forEach((p) => {
+        if (p.obligatoria && !(respuestas[p.id]?.length > 0)) nuevos[p.id] = 'Esta pregunta es obligatoria.'
+      })
+      return nuevos
+    })
     setError('')
   }
 
@@ -109,8 +135,10 @@ function ResponderCuestionario() {
   async function enviar(evento) {
     evento.preventDefault()
     setError('')
-    if (!validar()) {
-      setError('Revise las preguntas marcadas en rojo.')
+    setTocados({ documento: true, nombre: true, apellido: true })
+    const preguntasBien = validar()
+    if (!preguntasBien || Object.values(erroresPersona).some(Boolean)) {
+      setError('Revise los campos marcados en rojo.')
       return
     }
     setEnviando(true)
@@ -135,6 +163,7 @@ function ResponderCuestionario() {
 
   function otraEncuesta() {
     setEncuestado(ENCUESTADO_VACIO)
+    setTocados({})
     setRespuestas({})
     setErrores({})
     setError('')
@@ -212,14 +241,18 @@ function ResponderCuestionario() {
               <input
                 className="entrada"
                 inputMode="numeric"
+                pattern="[0-9]*"
                 autoComplete="off"
                 enterKeyHint="next"
                 value={encuestado.documento}
                 onChange={cambiarEncuestado('documento')}
-                placeholder="Sin puntos"
+                onBlur={tocar('documento')}
+                placeholder="Sin puntos, 7 u 8 números"
                 maxLength={10}
+                aria-invalid={Boolean(errorDe('documento'))}
                 required
               />
+              {errorDe('documento') && <small className="texto-error">{errorDe('documento')}</small>}
             </label>
             <label>
               Nombre
@@ -231,7 +264,10 @@ function ResponderCuestionario() {
                 maxLength={100}
                 value={encuestado.nombre}
                 onChange={cambiarEncuestado('nombre')}
+                onBlur={tocar('nombre')}
+                aria-invalid={Boolean(errorDe('nombre'))}
               />
+              {errorDe('nombre') && <small className="texto-error">{errorDe('nombre')}</small>}
             </label>
             <label>
               Apellido
@@ -243,7 +279,10 @@ function ResponderCuestionario() {
                 maxLength={100}
                 value={encuestado.apellido}
                 onChange={cambiarEncuestado('apellido')}
+                onBlur={tocar('apellido')}
+                aria-invalid={Boolean(errorDe('apellido'))}
               />
+              {errorDe('apellido') && <small className="texto-error">{errorDe('apellido')}</small>}
             </label>
           </div>
         </fieldset>
@@ -260,7 +299,7 @@ function ResponderCuestionario() {
         ))}
 
         <div className="acciones">
-          <button type="submit" className="boton boton--grande" disabled={enviando || !encuestado.documento.trim()}>
+          <button type="submit" className="boton boton--grande" disabled={enviando}>
             {enviando ? 'Enviando…' : 'Enviar encuesta'}
           </button>
         </div>

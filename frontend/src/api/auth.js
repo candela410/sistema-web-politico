@@ -45,6 +45,9 @@ export async function iniciarSesion(email, password, recordar = false) {
   return usuario
 }
 
+// Mi perfil → "Cambiar contraseña": el enlace llega al correo del usuario. Devuelve { email }
+export const pedirCambioDeContrasena = () => pedir('/api/auth/cambiar-contrasena/', { method: 'POST' })
+
 // "¿Olvidó su contraseña?": pide que le llegue el enlace por correo
 export const pedirEnlace = (email) => pedir('/api/auth/olvide/', { method: 'POST', datos: { email } })
 

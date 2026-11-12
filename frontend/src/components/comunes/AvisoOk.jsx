@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Fade from 'react-bootstrap/Fade'
 
-// Mensaje de "listo" de las listas ("Usuario guardado", "Rol borrado"…).
+// Mensaje de "listo" de las listas ("El usuario fue creado", "El rol fue eliminado"…).
 // Aparece con un desplazamiento corto y, cuando la pantalla lo borra, se
 // desvanece en lugar de desaparecer de golpe (ver .aviso-ok en movimiento.css).
 //   <AvisoOk>{aviso}</AvisoOk>   con aviso = '' no se muestra nada

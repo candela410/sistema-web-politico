@@ -36,4 +36,7 @@ class Command(BaseCommand):
 
     def handle(self, **opciones):
         n = aproximar_puntos()
+        from core.mapa_views import reasignar_barrios
+
+        reasignar_barrios()
         self.stdout.write(self.style.SUCCESS(f"Contorno aproximado para {n} barrio(s)."))

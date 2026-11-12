@@ -22,7 +22,7 @@ from .geo import (
     ErrorRuteo,
     calcular_ruta,
     calles_del_recorrido,
-    centro,
+    zona_de_poligono,
     es_poligono_valido,
     formato_distancia,
     formato_duracion,
@@ -112,18 +112,20 @@ def _foto_zona(z):
     }
 
 
-def _asignar_barrios(zona):
-    """Asigna a la zona los barrios cuyo centro cae dentro de su polígono.
-
-    No le quita barrios a otras zonas: si un barrio ya tiene zona, se mantiene.
-    """
-    Barrio.objects.filter(zona=zona).update(zona=None)
-    ids = []
-    for barrio in Barrio.objects.filter(zona__isnull=True).exclude(geometria=None):
-        punto = centro(barrio.geometria)
-        if punto and punto_en_poligono(punto[0], punto[1], zona.geometria):
-            ids.append(barrio.pk)
-    Barrio.objects.filter(pk__in=ids).update(zona=zona)
+def reasignar_barrios():
+    """Vuelve a calcular la zona de TODOS los barrios con las zonas actuales:
+    cada barrio queda en la zona que contiene su centro o, si el centro no cae
+    en ninguna, en la que cubre la mayor parte del barrio. Se llama cada vez
+    que se crea, cambia o borra una zona, así ningún barrio queda desactualizado
+    (antes solo se calculaba para la zona que se guardaba)."""
+    zonas = list(Zona.objects.exclude(geometria=None).values_list("pk", "geometria"))
+    nuevas = {}
+    for id_barrio, geometria, actual in Barrio.objects.exclude(geometria=None).values_list("pk", "geometria", "zona_id"):
+        zona = zona_de_poligono(geometria, zonas) if zonas else None
+        if zona != actual:
+            nuevas.setdefault(zona, []).append(id_barrio)
+    for zona, ids in nuevas.items():
+        Barrio.objects.filter(pk__in=ids).update(zona_id=zona)
 
 
 def _validar_zona(datos, zona=None):
@@ -176,7 +178,7 @@ def zonas(request):
             color=datos.get("color") or "#51318f",
             geometria=datos["geometria"],
         )
-        _asignar_barrios(zona)
+        reasignar_barrios()
     registrar(request, zona, "crear", detalle=f"Creó la zona {zona.nombre} con {zona.barrios.count()} barrio(s)")
     return JsonResponse({"zona": _zona_json(zona)}, status=201)
 
@@ -189,6 +191,7 @@ def zona_detalle(request, pk):
         with transaction.atomic():
             zona.barrios.update(zona=None)
             zona.delete()
+            reasignar_barrios()
         registrar(request, zona, "borrar", detalle=f"Borró la zona {zona.nombre}")
         return JsonResponse({"ok": True})
 
@@ -207,7 +210,7 @@ def zona_detalle(request, pk):
             zona.geometria = datos["geometria"]
         zona.save()
         if "geometria" in datos:
-            _asignar_barrios(zona)
+            reasignar_barrios()
     cambios = diferencias(antes, _foto_zona(zona))
     if "geometria" in datos:
         cambios.append({"campo": "Contorno", "antes": "(contorno anterior)", "despues": "(contorno nuevo)"})
@@ -241,15 +244,24 @@ def rutas_de_campana(campana):
 
 
 def zonas_de_ruta(ruta):
-    """Zonas por las que pasa la ruta, según sus calles.
+    """Zonas por las que pasa la ruta: las de sus calles (rutas → calles →
+    barrios → zonas) y, además, la zona donde están sus puntos. Lo segundo
+    cubre las rutas que comparten calles con otra ruta (una calle es de una
+    sola ruta) o que pasan por calles sin barrio.
 
-    SQL equivalente:
+    SQL equivalente de la primera parte:
         SELECT DISTINCT z.* FROM zonas z
         JOIN barrios b ON b.id_zona = z.id_zona
         JOIN calles c ON c.id_barrio = b.id_barrio
         WHERE c.id_ruta = %s
     """
-    return Zona.objects.filter(barrios__calles__ruta=ruta).distinct().order_by("nombre")
+    por_calles = set(Zona.objects.filter(barrios__calles__ruta=ruta).values_list("pk", flat=True))
+    por_puntos = {
+        z.pk
+        for z in Zona.objects.exclude(geometria=None)
+        if any(punto_en_poligono(lng, lat, z.geometria) for lng, lat in (ruta.paradas or []))
+    }
+    return Zona.objects.filter(pk__in=por_calles | por_puntos).order_by("nombre")
 
 
 def _asignar_calles(ruta):

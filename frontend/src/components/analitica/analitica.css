@@ -141,3 +141,32 @@
     animation: none;
   }
 }
+
+/* Cartel "Descargar PDF": lista de gráficos para elegir */
+.pdf-elegir__todos {
+  margin: 4px 0 8px;
+  font-weight: 700;
+}
+
+.pdf-elegir {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--lla-borde);
+  display: grid;
+  gap: 10px;
+}
+
+.pdf-elegir .casilla-texto {
+  align-items: flex-start;
+}
+
+.pdf-elegir span {
+  display: grid;
+  gap: 2px;
+}
+
+.pdf-elegir small {
+  color: var(--lla-gris);
+  font-size: 0.8rem;
+}

@@ -14,6 +14,7 @@ import Inicio from './components/inicio/Inicio'
 import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
 import Login from './components/login/Login'
 import Olvide from './components/login/Olvide'
+import Perfil from './components/perfil/Perfil'
 import Restablecer from './components/login/Restablecer'
 import Tutorial from './components/tutorial/tutorial'
 import Mapa from './components/mapa/Mapa'
@@ -35,6 +36,7 @@ import logo from './assets/logo.png'
 //   /mapa, /cuestionarios(/nuevo|/:id|/:id/estadisticas), /categorias, /responder(/:id)
 //   /dashboard, /equipos, /usuarios, /grupos, /permisos, /actividad
 //   /tutorial     videos de ayuda (todos; cada uno ve los de sus funciones)
+//   /perfil       Mi perfil: datos propios y cambiar la contraseña por correo
 // Todo lo que no sea /login, /olvide, /restablecer o /campana necesita una campaña elegida.
 
 function RequiereSesion({ usuario, children }) {
@@ -170,6 +172,7 @@ function Rutas() {
         <Route path="/permisos" element={s('auth.view_group', <Permisos />)} />
         <Route path="/actividad" element={s('admin.view_logentry', <Actividad usuario={usuario} />)} />
         <Route path="/tutorial" element={s(null, <Tutorial usuario={usuario} />)} />
+        <Route path="/perfil" element={s(null, <Perfil usuario={usuario} />)} />
         <Route
           path="/sin-campana"
           element={

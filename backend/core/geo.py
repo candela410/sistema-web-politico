@@ -165,6 +165,37 @@ class ErrorRuteo(Exception):
     pass
 
 
+SIN_RUTEO = "No se pudo calcular el recorrido. Comuníquese con el administrador del sistema."
+
+
+def zona_de_poligono(geometria, zonas, muestras=12):
+    """Zona a la que pertenece un polígono (un barrio): la que contiene su
+    centro o, si el centro no cae en ninguna, la que cubre la mayor parte de
+    su superficie (se prueba con una grilla de puntos dentro del polígono).
+    zonas: [(id, geometria)]. Devuelve el id o None."""
+    punto = centro(geometria)
+    if punto:
+        for id_zona, zona in zonas:
+            if punto_en_poligono(punto[0], punto[1], zona):
+                return id_zona
+    limites = caja(geometria)
+    if not limites:
+        return None
+    oeste, sur, este, norte = limites
+    cuenta = {}
+    for i in range(muestras):
+        for j in range(muestras):
+            lng = oeste + (este - oeste) * (i + 0.5) / muestras
+            lat = sur + (norte - sur) * (j + 0.5) / muestras
+            if not punto_en_poligono(lng, lat, geometria):
+                continue
+            for id_zona, zona in zonas:
+                if punto_en_poligono(lng, lat, zona):
+                    cuenta[id_zona] = cuenta.get(id_zona, 0) + 1
+                    break
+    return max(cuenta, key=cuenta.get) if cuenta else None
+
+
 def calcular_ruta(paradas, perfil):
     """Pide a OpenRouteService el recorrido que pasa por las paradas en orden.
 
@@ -172,9 +203,7 @@ def calcular_ruta(paradas, perfil):
     """
     clave = os.environ.get("ORS_API_KEY")
     if not clave:
-        raise ErrorRuteo(
-            "Falta configurar ORS_API_KEY en backend/.env para calcular rutas."
-        )
+        raise ErrorRuteo(SIN_RUTEO)
 
     cuerpo = json.dumps({"coordinates": paradas, "instructions": False}).encode()
     pedido = urllib.request.Request(
@@ -195,11 +224,10 @@ def calcular_ruta(paradas, perfil):
             mensaje = detalle.get("message") if isinstance(detalle, dict) else str(detalle)
         except ValueError:
             mensaje = None
+        # El detalle técnico del servicio de rutas no se muestra al usuario
         if mensaje and "routable point" in mensaje:
-            mensaje = "Uno de los puntos está lejos de una calle. Acercalo a una calle e intentá de nuevo."
-        if error.code in (401, 403):
-            mensaje = "La API key de OpenRouteService no es válida."
-        raise ErrorRuteo(mensaje or "No se pudo calcular el recorrido. Intente nuevamente más tarde.") from error
+            raise ErrorRuteo("Uno de los puntos está lejos de una calle. Acérquelo a una calle e intente nuevamente.") from error
+        raise ErrorRuteo(SIN_RUTEO) from error
     except (urllib.error.URLError, TimeoutError) as error:
         raise ErrorRuteo("No se pudo calcular el recorrido. Intente nuevamente más tarde.") from error
 

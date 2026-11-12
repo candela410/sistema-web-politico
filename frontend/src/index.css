@@ -318,9 +318,18 @@ body {
   font-weight: 500;
 }
 
-/* Error debajo de un campo de formulario */
-.formulario-modal small.texto-error {
+/* Error debajo de un campo de formulario, y el campo con borde rojo */
+.formulario-modal small.texto-error,
+label > small.texto-error {
   font-size: 0.8rem;
+}
+
+.entrada[aria-invalid='true'] {
+  border-color: #c0182f;
+}
+
+.entrada[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 3px rgb(192 24 47 / 0.14);
 }
 
 .aviso-info--chico {

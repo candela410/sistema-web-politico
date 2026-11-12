@@ -6,7 +6,8 @@ import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './usuarios.css'
 import Esqueleto from '../comunes/Esqueleto'
 import Interruptor from '../comunes/Interruptor'
-import { KeyRound, Pencil } from 'lucide-react'
+import { Eye, KeyRound, Pencil } from 'lucide-react'
+import FichaUsuario from '../perfil/FichaUsuario'
 import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
 import { emailValido, MENSAJE_EMAIL, useConCambios } from '../../validaciones'
@@ -160,7 +161,9 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
           </label>
         </div>
         <label>
-          Dirección
+          <span>
+            Dirección <span className="opcional">(opcional)</span>
+          </span>
           <input
             className="entrada"
             autoCapitalize="sentences"
@@ -206,6 +209,7 @@ function Usuarios({ usuario: yo }) {
   const [error, setError] = useState('')
   const [busqueda, setBusqueda] = useState('')
   const [editando, setEditando] = useState(null)
+  const [viendo, setViendo] = useState(null)
   const [aviso, setAviso] = useState('')
   const [enviandoA, setEnviandoA] = useState(null) // id del usuario al que se le está enviando el enlace
 
@@ -341,41 +345,44 @@ function Usuarios({ usuario: yo }) {
                     </span>
                   </span>
                 </div>
-                {puedeEditar && (
-                  <div className="tarjeta-fila__acciones acciones-iconos">
-                    {/* Uno no puede desactivarse a sí mismo: no se muestra el interruptor */}
-                    {u.id !== yo.id && (
-                      <Interruptor
-                        activo={u.activo}
-                        onCambiar={() => cambiarEstado(u)}
-                        etiqueta={`Usuario ${u.email} activo`}
-                        confirmacion={{
-                          titulo: 'Desactivar usuario',
-                          mensaje: (
-                            <>
-                              ¿Desea desactivar a <b>{`${u.nombre} ${u.apellido}`.trim() || u.email}</b>? No podrá
-                              iniciar sesión hasta que se vuelva a activar.
-                            </>
-                          ),
-                        }}
+                <div className="tarjeta-fila__acciones acciones-iconos">
+                  <BotonIcono icono={Eye} etiqueta="Ver datos" onClick={() => setViendo(u)} />
+                  {puedeEditar && (
+                    <>
+                      {/* Uno no puede desactivarse a sí mismo: no se muestra el interruptor */}
+                      {u.id !== yo.id && (
+                        <Interruptor
+                          activo={u.activo}
+                          onCambiar={() => cambiarEstado(u)}
+                          etiqueta={`Usuario ${u.email} activo`}
+                          confirmacion={{
+                            titulo: 'Desactivar usuario',
+                            mensaje: (
+                              <>
+                                ¿Desea desactivar a <b>{`${u.nombre} ${u.apellido}`.trim() || u.email}</b>? No podrá
+                                iniciar sesión hasta que se vuelva a activar.
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
+                      <BotonIcono
+                        icono={KeyRound}
+                        etiqueta="Restablecer contraseña"
+                        ayuda={
+                          u.activo
+                            ? enviandoA === u.id
+                              ? 'Enviando…'
+                              : `Enviar a ${u.email} un enlace para restablecer la contraseña`
+                            : 'Active el usuario para restablecer su contraseña'
+                        }
+                        disabled={!u.activo || enviandoA === u.id}
+                        onClick={() => enviarRestablecer(u)}
                       />
-                    )}
-                    <BotonIcono
-                      icono={KeyRound}
-                      etiqueta="Restablecer contraseña"
-                      ayuda={
-                        u.activo
-                          ? enviandoA === u.id
-                            ? 'Enviando…'
-                            : `Enviar a ${u.email} un enlace para restablecer la contraseña`
-                          : 'Active el usuario para restablecer su contraseña'
-                      }
-                      disabled={!u.activo || enviandoA === u.id}
-                      onClick={() => enviarRestablecer(u)}
-                    />
-                    <BotonIcono icono={Pencil} etiqueta="Editar" onClick={() => setEditando(u)} />
-                  </div>
-                )}
+                      <BotonIcono icono={Pencil} etiqueta="Editar" onClick={() => setEditando(u)} />
+                    </>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -383,6 +390,16 @@ function Usuarios({ usuario: yo }) {
         </>
       )}
 
+      {viendo && (
+        <Modal titulo="Datos del usuario" onCerrar={() => setViendo(null)}>
+          <FichaUsuario usuario={viendo} />
+          <div className="acciones">
+            <button type="button" className="boton" onClick={() => setViendo(null)} autoFocus>
+              Cerrar
+            </button>
+          </div>
+        </Modal>
+      )}
       {editando && (
         <FormularioUsuario
           usuario={editando === 'nuevo' ? null : editando}

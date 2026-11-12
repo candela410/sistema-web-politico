@@ -23,6 +23,7 @@ urlpatterns = [
     path("auth/logout/", views.logout_view, name="auth-logout"),
     path("auth/me/", views.me, name="auth-me"),
     path("auth/olvide/", contrasenas_views.olvide, name="auth-olvide"),
+    path("auth/cambiar-contrasena/", contrasenas_views.cambiar_propia, name="auth-cambiar-contrasena"),
     path("auth/restablecer/<str:uid>/<str:token>/", contrasenas_views.restablecer, name="auth-restablecer"),
     path("avisos/", avisos_views.avisos, name="avisos"),
     path("campanas/", campanas_views.campanas, name="campanas"),

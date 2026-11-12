@@ -23,6 +23,22 @@ export function errorContrasena(valor) {
   return contrasenaValida(valor) ? '' : MENSAJE_CONTRASENA
 }
 
+// Persona encuestada: DNI de 7 u 8 números y nombre o apellido solo con letras
+export const REGLA_DNI = /^\d{7,8}$/
+export const REGLA_PERSONA = /^\p{L}+(?:[ '-]\p{L}+)*$/u
+
+export function errorDocumento(valor) {
+  if (!valor) return 'Ingrese el documento.'
+  return REGLA_DNI.test(valor) ? '' : 'El documento debe tener 7 u 8 números, sin puntos.'
+}
+
+export function errorPersona(valor, campo = 'El nombre') {
+  const texto = String(valor ?? '').trim()
+  if (!texto) return ''
+  if (texto.length < 2) return `${campo} es muy corto.`
+  return REGLA_PERSONA.test(texto) ? '' : `${campo} solo admite letras y espacios.`
+}
+
 // Requisitos de la contraseña, para mostrarlos tildados mientras se escribe
 export const requisitosContrasena = (valor = '') => [
   { texto: 'Al menos 6 caracteres', ok: valor.length >= 6 },

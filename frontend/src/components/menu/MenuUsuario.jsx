@@ -1,5 +1,6 @@
 import Dropdown from 'react-bootstrap/Dropdown'
-import { ArrowLeftRight, ChevronDown, LogOut } from 'lucide-react'
+import { useNavigate } from 'react-router'
+import { ArrowLeftRight, ChevronDown, LogOut, UserRound } from 'lucide-react'
 import { inicialDe, nombreDe, rolDe } from './usuario'
 
 // El desplegable se ubica 8px debajo del botón, alineado a la derecha.
@@ -12,10 +13,12 @@ const UBICACION = {
   ],
 }
 
-// Usuario en la barra superior; al tocarlo despliega sus datos, la campaña activa y "Salir".
+// Usuario en la barra superior; al tocarlo despliega sus datos, "Mi perfil",
+// la campaña activa y "Salir".
 // Es un Dropdown de react-bootstrap: se cierra con Escape o clickeando afuera
 // y las opciones se recorren con las flechas del teclado.
 function MenuUsuario({ usuario, onCambiarCampana, onSalir }) {
+  const navegar = useNavigate()
   return (
     <Dropdown className="usuario" align="end">
       <Dropdown.Toggle as="button" type="button" bsPrefix="usuario__boton" aria-haspopup="menu">
@@ -31,6 +34,16 @@ function MenuUsuario({ usuario, onCambiarCampana, onSalir }) {
           <strong>{nombreDe(usuario)}</strong>
           <span>{usuario.email}</span>
         </p>
+        <Dropdown.Item
+          as="button"
+          type="button"
+          role="menuitem"
+          className="usuario__accion"
+          onClick={() => navegar('/perfil')}
+        >
+          <UserRound size={19} aria-hidden="true" />
+          Mi perfil
+        </Dropdown.Item>
         {usuario.campana && (
           <p className="usuario__campana">
             <span>Campaña activa</span>

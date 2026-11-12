@@ -29,6 +29,13 @@ def usuario_json(request):
         "permisos": sorted(permisos_de(usuario)),
         "puede_elegir_campana": puede_elegir_campana(usuario),
         "campana": {"id": campana.pk, "nombre": campana.nombre} if campana else None,
+        # Datos de "Mi perfil"
+        "documento": usuario.documento or "",
+        "telefono": usuario.telefono or "",
+        "direccion": usuario.direccion or "",
+        "equipo": usuario.equipo.nombre if usuario.equipo_id else None,
+        "ultimo_ingreso": usuario.last_login.isoformat() if usuario.last_login else None,
+        "alta": usuario.date_joined.isoformat(),
     }
 
 

@@ -1,12 +1,12 @@
 """API de equipos: listar, crear, editar, activar/desactivar y borrar.
 
 Un equipo tiene id, nombre, la ruta que recorre y sus usuarios. Reglas:
-- No se puede crear (ni editar) un equipo sin ruta.
+- No se puede crear (ni editar) un equipo sin ruta ni sin usuarios.
 - Todo equipo tiene ruta, así que no se borra: se desactiva (y se puede
   volver a activar).
 - Un usuario pertenece a un equipo por su campo equipo (usuarios.id_equipo).
-  Solo se pueden asignar usuarios de la campaña, activos, con el rol
-  Militantes y que no estén en otro equipo.
+  Solo se pueden asignar usuarios de la campaña, activos y que no estén en
+  otro equipo (cualquiera sea su rol).
 Los equipos no guardan campaña (como en el DER): la campaña de un equipo sale
 de sus usuarios. Una campaña ve los equipos que tienen usuarios suyos y los que
 todavía no tienen usuarios.
@@ -118,15 +118,21 @@ def _validar(request, datos, equipo=None):
     return nombre, ruta, None
 
 
+SIN_USUARIOS = "Seleccione al menos un usuario para el equipo."
+
+
 def _validar_usuarios(request, datos, equipo=None):
     """Devuelve (ids, mensaje). ids es None si "usuarios" no viene en los datos
     (en ese caso no se tocan los usuarios del equipo)."""
     ids = datos.get("usuarios")
     if ids is None:
-        return None, None
+        # Al crear, los usuarios son obligatorios; al editar, si no vienen no se tocan
+        return (None, SIN_USUARIOS) if equipo is None else (None, None)
     if not isinstance(ids, list) or not all(isinstance(i, int) and not isinstance(i, bool) for i in ids):
         return None, "La lista de usuarios no es válida."
     ids = set(ids)
+    if not ids:
+        return None, SIN_USUARIOS
 
     usuarios = list(
         Usuario.objects.filter(pk__in=ids, campana=request.campana)

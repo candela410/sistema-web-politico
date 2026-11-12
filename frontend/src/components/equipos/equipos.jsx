@@ -97,8 +97,12 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
                   </li>
                 ))}
               </ul>
-              <p className="equipo__ayuda">
-                {elegidos.length === 1 ? '1 usuario seleccionado.' : `${elegidos.length} usuarios seleccionados.`}
+              <p className={elegidos.length ? 'equipo__ayuda' : 'equipo__ayuda texto-error'}>
+                {elegidos.length === 0
+                  ? 'Seleccione al menos un usuario.'
+                  : elegidos.length === 1
+                    ? '1 usuario seleccionado.'
+                    : `${elegidos.length} usuarios seleccionados.`}
               </p>
             </>
           )}
@@ -114,7 +118,11 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
           <button type="button" className="boton boton--borde" onClick={onCerrar}>
             Cancelar
           </button>
-          <button type="submit" className="boton" disabled={guardando || !nombre.trim() || !ruta || !conCambios}>
+          <button
+            type="submit"
+            className="boton"
+            disabled={guardando || !nombre.trim() || !ruta || elegidos.length === 0 || !conCambios}
+          >
             {guardando ? 'Guardando…' : equipo ? 'Guardar cambios' : 'Crear equipo'}
           </button>
         </div>

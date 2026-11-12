@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import * as api from '../../api/categorias'
 import Modal from '../comunes/Modal'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
+import Buscador from '../comunes/Buscador'
+import { normalizar } from '../comunes/normalizar'
 import './categorias.css'
 import Esqueleto from '../comunes/Esqueleto'
 import { Pencil, Trash2 } from 'lucide-react'
@@ -137,10 +139,10 @@ function Categorias({ usuario }) {
   }, [])
 
   const visibles = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase()
+    const texto = normalizar(busqueda)
     if (!categorias || !texto) return categorias ?? []
     return categorias.filter(
-      (c) => c.nombre.toLowerCase().includes(texto) || c.descripcion.toLowerCase().includes(texto),
+      (c) => normalizar(c.nombre).includes(texto) || normalizar(c.descripcion).includes(texto),
     )
   }, [categorias, busqueda])
   const paginado = usePaginado(visibles)
@@ -188,19 +190,7 @@ function Categorias({ usuario }) {
         </button>
       </header>
 
-      <div className="buscador">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
-        <input
-          type="search"
-          placeholder="Buscar por nombre o descripción"
-          aria-label="Buscar categorías"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-      </div>
+      <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por nombre o descripción" etiqueta="Buscar categorías" />
 
       <AvisoOk>{aviso}</AvisoOk>
 

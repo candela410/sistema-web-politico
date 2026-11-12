@@ -4,6 +4,8 @@ import * as api from '../../api/cuestionarios'
 import { tiene } from '../../permisos'
 import Modal from '../comunes/Modal'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
+import Buscador from '../comunes/Buscador'
+import { normalizar } from '../comunes/normalizar'
 import AsignarCuestionario from './AsignarCuestionario'
 import VerCuestionario from './VerCuestionario'
 import { ChartColumn, Eye, Pencil, Trash2, UserPlus } from 'lucide-react'
@@ -85,10 +87,10 @@ function ListaCuestionarios({ usuario }) {
   }, [cuestionarios])
 
   const visibles = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase()
+    const texto = normalizar(busqueda)
     return (cuestionarios ?? []).filter(
       (c) =>
-        (!texto || c.titulo.toLowerCase().includes(texto) || c.categoria.nombre.toLowerCase().includes(texto)) &&
+        (!texto || normalizar(c.titulo).includes(texto) || normalizar(c.categoria.nombre).includes(texto)) &&
         (!filtros.categoria || String(c.categoria.id) === filtros.categoria) &&
         (filtros.estado === 'todos' || c.activo === (filtros.estado === 'activos')),
     )
@@ -117,19 +119,7 @@ function ListaCuestionarios({ usuario }) {
         )}
       </header>
 
-      <div className="buscador">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
-        <input
-          type="search"
-          placeholder="Buscar por título"
-          aria-label="Buscar cuestionarios"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-      </div>
+      <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por título" etiqueta="Buscar cuestionarios" />
 
       <div className="cuestionarios-filtros" role="group" aria-label="Filtros">
         <label>

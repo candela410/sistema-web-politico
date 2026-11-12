@@ -37,6 +37,16 @@ const nombreDe = (u) => [u.nombre, u.apellido].filter(Boolean).join(' ') || u.em
 function Grafico({ grafico, url, mensajeError = 'No se pudo generar el gráfico.' }) {
   // El estado se reinicia solo cuando cambia la imagen (la clave del componente es la url)
   const [estado, setEstado] = useState('cargando')
+  const [motivo, setMotivo] = useState('')
+
+  // Si la imagen no se pudo generar, se pide de nuevo para leer el motivo que da el servidor
+  function fallo() {
+    setEstado('error')
+    fetch(url, { credentials: 'same-origin' })
+      .then((r) => r.json())
+      .then((r) => r.error && setMotivo(r.error))
+      .catch(() => {})
+  }
   return (
     <figure className={`tarjeta-form analitica__grafico analitica__grafico--${grafico.clave}`}>
       <figcaption className="analitica__pie">
@@ -46,12 +56,12 @@ function Grafico({ grafico, url, mensajeError = 'No se pudo generar el gráfico.
         </span>
       </figcaption>
       <div className={`analitica__imagen analitica__imagen--${estado}`}>
-        {estado === 'error' && <p className="aviso-info">{mensajeError}</p>}
+        {estado === 'error' && <p className="aviso-info">{motivo || mensajeError}</p>}
         <img
           src={url}
           alt={`${grafico.titulo}: ${grafico.pregunta}`}
           onLoad={() => setEstado('listo')}
-          onError={() => setEstado('error')}
+          onError={fallo}
         />
       </div>
     </figure>
@@ -313,7 +323,7 @@ function Analitica({ usuario }) {
                     key={urlRespuestas}
                     grafico={graficoRespuestas}
                     url={urlRespuestas}
-                    mensajeError="No hay respuestas con ubicación para ese cuestionario en esa zona."
+                    mensajeError="No hay respuestas con ubicación para ese cuestionario en esa zona. Las respuestas cargadas antes de que se guardara la ubicación no se cuentan."
                   />
                 )}
               </>

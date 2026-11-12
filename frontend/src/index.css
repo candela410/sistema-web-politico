@@ -299,6 +299,43 @@ body {
   color: #a3a1ab;
 }
 
+/* Botón "Limpiar" dentro del buscador (el ✕ nativo del navegador se oculta) */
+.buscador input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.buscador__limpiar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #f1eef8;
+  color: var(--lla-violeta);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.buscador__limpiar:hover {
+  background: #e6e0f3;
+}
+
+.buscador__limpiar:focus-visible {
+  outline: 2px solid var(--lla-violeta);
+  outline-offset: 2px;
+}
+
+.buscador .buscador__limpiar svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+}
+
 .vacio-tarjeta {
   display: flex;
   flex-direction: column;

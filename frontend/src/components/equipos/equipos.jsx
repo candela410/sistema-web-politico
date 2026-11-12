@@ -9,6 +9,8 @@ import { Pencil } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
+import Buscador from '../comunes/Buscador'
+import { normalizar } from '../comunes/normalizar'
 import { useConCambios } from '../../validaciones'
 
 function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) {
@@ -164,13 +166,13 @@ function Equipos({ usuario }) {
   }, [cargar])
 
   const visibles = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase()
+    const texto = normalizar(busqueda)
     if (!equipos || !texto) return equipos ?? []
     return equipos.filter(
       (e) =>
-        e.nombre.toLowerCase().includes(texto) ||
-        (e.ruta_nombre ?? '').toLowerCase().includes(texto) ||
-        e.usuarios.some((u) => u.nombre.toLowerCase().includes(texto)),
+        normalizar(e.nombre).includes(texto) ||
+        normalizar(e.ruta_nombre).includes(texto) ||
+        e.usuarios.some((u) => normalizar(u.nombre).includes(texto)),
     )
   }, [equipos, busqueda])
   const paginado = usePaginado(visibles)
@@ -211,19 +213,7 @@ function Equipos({ usuario }) {
         )}
       </header>
 
-      <div className="buscador">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
-        <input
-          type="search"
-          placeholder="Buscar por nombre, ruta o usuario"
-          aria-label="Buscar equipos"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-      </div>
+      <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por nombre, ruta o usuario" etiqueta="Buscar equipos" />
 
       <AvisoOk>{aviso}</AvisoOk>
 

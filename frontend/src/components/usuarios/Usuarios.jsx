@@ -3,6 +3,8 @@ import * as api from '../../api/usuarios'
 import { tiene } from '../../permisos'
 import Modal from '../comunes/Modal'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
+import Buscador from '../comunes/Buscador'
+import { normalizar } from '../comunes/normalizar'
 import './usuarios.css'
 import Esqueleto from '../comunes/Esqueleto'
 import Interruptor from '../comunes/Interruptor'
@@ -227,10 +229,10 @@ function Usuarios({ usuario: yo }) {
   }, [aviso])
 
   const visibles = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase()
+    const texto = normalizar(busqueda)
     const lista = datos?.usuarios ?? []
     if (!texto) return lista
-    return lista.filter((u) => `${u.nombre} ${u.apellido} ${u.email}`.toLowerCase().includes(texto))
+    return lista.filter((u) => normalizar(`${u.nombre} ${u.apellido} ${u.email}`).includes(texto))
   }, [datos, busqueda])
   const paginado = usePaginado(visibles)
 
@@ -288,19 +290,7 @@ function Usuarios({ usuario: yo }) {
         )}
       </header>
 
-      <div className="buscador">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
-        <input
-          type="search"
-          placeholder="Buscar por nombre o correo electrónico"
-          aria-label="Buscar usuarios"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-      </div>
+      <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por nombre o correo electrónico" etiqueta="Buscar usuarios" />
 
       <AvisoOk>{aviso}</AvisoOk>
       {error && (

@@ -7,6 +7,8 @@ import { Pencil, Trash2 } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
+import Buscador from '../comunes/Buscador'
+import { normalizar } from '../comunes/normalizar'
 import { useConCambios } from '../../validaciones'
 
 const ordenar = (lista) =>
@@ -237,14 +239,13 @@ function Grupos() {
   }, [])
 
   const visibles = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase()
+    const texto = normalizar(busqueda)
 
     if (!grupos || !texto) return grupos ?? []
 
+    // Por nombre del rol o por nombre o correo de sus usuarios, sin distinguir acentos
     return grupos.filter((grupo) =>
-      `${grupo.nombre} ${grupo.usuarios.map((u) => u.nombre).join(' ')}`
-        .toLowerCase()
-        .includes(texto),
+      normalizar(`${grupo.nombre} ${grupo.usuarios.map((u) => `${u.nombre} ${u.email}`).join(' ')}`).includes(texto),
     )
   }, [grupos, busqueda])
   const paginado = usePaginado(visibles)
@@ -278,20 +279,7 @@ function Grupos() {
         </button>
       </header>
 
-      <div className="buscador">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
-
-        <input
-          type="search"
-          placeholder="Buscar por nombre o usuario"
-          aria-label="Buscar roles"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-      </div>
+      <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por nombre o usuario" etiqueta="Buscar roles" />
 
       <AvisoOk>{aviso}</AvisoOk>
 
@@ -309,9 +297,12 @@ function Grupos() {
               <span>Cree el primero con «+ Nuevo rol».</span>
             </>
           ) : (
-            <span>
-              No hay roles que coincidan con «{busqueda}».
-            </span>
+            <>
+              <span>No hay roles que coincidan con «{busqueda}».</span>
+              <button type="button" className="enlace-boton" onClick={() => setBusqueda('')}>
+                Limpiar búsqueda
+              </button>
+            </>
           )}
         </div>
       ) : (

@@ -121,6 +121,12 @@ def _limpiar_respuestas(cuestionario, respuestas):
     return limpias
 
 
+SIN_UBICACION = (
+    "No se pudo obtener la ubicación del dispositivo. Active la ubicación y permita "
+    "que el navegador la use para poder cargar la encuesta."
+)
+
+
 def _coordenada(valor, minimo, maximo):
     try:
         numero = round(Decimal(str(valor)), 6)
@@ -147,10 +153,12 @@ def responder(request, pk):
     if not respuestas:
         return error("Responda al menos una pregunta.")
 
+    # La ubicación del dispositivo es obligatoria (se guarda en la encuesta y en
+    # cada respuesta: con ella se sabe en qué zona se respondió)
     latitud = _coordenada(datos.get("latitud"), -90, 90)
     longitud = _coordenada(datos.get("longitud"), -180, 180)
     if latitud is None or longitud is None:
-        latitud = longitud = None
+        return error(SIN_UBICACION)
 
     documento = encuestado_datos.pop("documento")
     try:

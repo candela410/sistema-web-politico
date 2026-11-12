@@ -137,6 +137,8 @@ class Command(BaseCommand):
             for c in cuestionarios for p in c.preguntas.all()
         }
         puntos = [c for c in (centro(b.geometria) for b in Barrio.objects.exclude(geometria=None)) if c]
+        if not puntos:
+            raise CommandError("No hay barrios cargados para ubicar las encuestas (corra importar_osm).")
         ahora = timezone.localtime()
         usados = set(Encuestado.objects.filter(documento__regex=r"^9\d{7}$").values_list("documento", flat=True))
         documento = DOCUMENTO_INICIAL
@@ -151,10 +153,9 @@ class Command(BaseCommand):
             dia = (ahora - timedelta(days=int(dias * (1 - random.random() ** 0.8)))).date()
             horas = HORAS_FINDE if dia.weekday() >= 5 else HORAS_SEMANA
             momento = timezone.make_aware(datetime.combine(dia, time(random.choice(horas), random.randint(0, 59))))
-            lat = lng = None
-            if puntos and random.random() < 0.85:
-                lng, lat = random.choice(puntos)
-                lng, lat = round(lng + random.uniform(-0.003, 0.003), 6), round(lat + random.uniform(-0.003, 0.003), 6)
+            # Como en la carga real, toda encuesta tiene ubicación (cerca de un barrio)
+            lng, lat = random.choice(puntos)
+            lng, lat = round(lng + random.uniform(-0.003, 0.003), 6), round(lat + random.uniform(-0.003, 0.003), 6)
             if momento > ahora:  # hoy, en un horario que todavía no llegó: pasa al día anterior
                 momento -= timedelta(days=1)
             plan.append((usuario, cuestionario, momento, lat, lng))

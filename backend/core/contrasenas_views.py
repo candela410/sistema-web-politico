@@ -15,9 +15,10 @@ from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.http import require_http_methods, require_POST
@@ -44,39 +45,69 @@ def _enlace(usuario):
     return f"{settings.FRONTEND_URL}/restablecer/{uid}/{token}"
 
 
-def _cuerpo(usuario, enlace, invitacion):
-    nombre = usuario.first_name or usuario.email
+def _contenido(usuario, enlace, invitacion, pedido_por=None):
+    """Textos del correo (los mismos para la versión con diseño y la de texto).
+    pedido_por: el correo del usuario es de prueba y el enlace le llega a quien
+    lo pidió."""
+    if pedido_por is not None:
+        accion = "elegir la contraseña" if invitacion else "restablecer la contraseña"
+        return {
+            "etiqueta": "Enlace solicitado",
+            "titulo": "Enlace para otro usuario",
+            "saludo": f"Estimado/a {pedido_por.first_name or pedido_por.email}:",
+            "parrafos": [
+                f"Usted solicitó {accion} del usuario {usuario.email}.",
+                "Como ese correo electrónico es de prueba, le enviamos el enlace a usted. "
+                "Con él podrá elegir la contraseña de ese usuario.",
+            ],
+            "boton": "Elegir la contraseña",
+            "aviso": "",
+        }
+    saludo = f"Estimado/a {usuario.first_name or usuario.email}:"
     if invitacion:
-        motivo = (
-            "Se creó su usuario en el Panel de gestión.\n"
-            "Para elegir su contraseña e ingresar, abra este enlace:\n\n"
-        )
-    else:
-        motivo = (
-            "Recibimos un pedido para restablecer la contraseña de su cuenta del Panel de gestión.\n"
-            "Para elegir una contraseña nueva, abra este enlace:\n\n"
-        )
-    pie = "" if invitacion else (
-        "Si usted no realizó este pedido, puede ignorar este correo: su contraseña no cambia.\n"
-    )
-    return (
-        f"Estimado/a {nombre}:\n\n"
-        f"{motivo}{enlace}\n\n"
-        f"El enlace vence en {_horas_de_validez()} horas y sirve una sola vez.\n"
-        f"{pie}"
-    )
+        return {
+            "etiqueta": "Bienvenida",
+            "titulo": "Su usuario fue creado",
+            "saludo": saludo,
+            "parrafos": [
+                "Le damos la bienvenida al Panel de gestión. La administración creó un usuario a su nombre "
+                f"con el correo electrónico {usuario.email}.",
+                "Para comenzar, elija su contraseña desde el siguiente botón. Luego podrá ingresar al "
+                "sistema con su correo electrónico y la contraseña elegida.",
+            ],
+            "boton": "Elegir mi contraseña",
+            "aviso": "",
+        }
+    return {
+        "etiqueta": "Seguridad de la cuenta",
+        "titulo": "Restablecimiento de contraseña",
+        "saludo": saludo,
+        "parrafos": [
+            "Recibimos una solicitud para restablecer la contraseña de su cuenta en el Panel de gestión.",
+            "Para elegir una contraseña nueva, presione el siguiente botón.",
+        ],
+        "boton": "Restablecer contraseña",
+        "aviso": " Si usted no realizó esta solicitud, puede ignorar este mensaje: su contraseña actual no cambiará.",
+    }
 
 
-def _cuerpo_redirigido(usuario, pedido_por, enlace, invitacion):
-    nombre = pedido_por.first_name or pedido_por.email
-    accion = "elegir la contraseña" if invitacion else "restablecer la contraseña"
-    return (
-        f"Estimado/a {nombre}:\n\n"
-        f"Usted solicitó {accion} de {usuario.email}. Ese correo es de prueba, por eso\n"
-        "el enlace le llega a usted. Con él se elige la contraseña de ese usuario:\n\n"
-        f"{enlace}\n\n"
-        f"El enlace vence en {_horas_de_validez()} horas y sirve una sola vez.\n"
+def _correo(asunto, contenido, enlace, destino):
+    """Arma el correo con dos versiones: con diseño (HTML) y en texto plano, para
+    los programas de correo que no muestran HTML."""
+    contexto = {**contenido, "asunto": asunto, "enlace": enlace, "horas": _horas_de_validez(),
+                "resumen": contenido["parrafos"][0]}
+    texto = (
+        f"{contenido['saludo']}\n\n"
+        + "\n\n".join(contenido["parrafos"])
+        + f"\n\n{contenido['boton']}:\n{enlace}\n\n"
+        + f"El enlace vence en {contexto['horas']} horas y puede utilizarse una sola vez."
+        + (contenido["aviso"] or "")
+        + "\n\nAtentamente,\nAdministración del Panel de gestión\n\n"
+        + "Este es un mensaje automático. Por favor, no responda a este correo.\n"
     )
+    mensaje = EmailMultiAlternatives(asunto, texto, None, [destino])
+    mensaje.attach_alternative(render_to_string("correos/enlace.html", contexto), "text/html")
+    return mensaje
 
 
 def _es_real(email):
@@ -89,17 +120,17 @@ def enviar_enlace_a(usuario, pedido_por=None, invitacion=False):
     prueba (no está en CORREOS_REALES) le llega a quien lo pidió.
     Devuelve (correo de destino, None) o (None, mensaje de error)."""
     enlace = _enlace(usuario)
-    asunto = "Bienvenido/a al Panel de gestión" if invitacion else "Restablecer su contraseña"
+    asunto = "Bienvenido/a al Panel de gestión" if invitacion else "Restablecimiento de contraseña"
     if _es_real(usuario.email):
-        destino, cuerpo = usuario.email, _cuerpo(usuario, enlace, invitacion)
+        destino, contenido = usuario.email, _contenido(usuario, enlace, invitacion)
     elif pedido_por is not None and _es_real(pedido_por.email):
         destino = pedido_por.email
         asunto = f"{asunto} ({usuario.email})"
-        cuerpo = _cuerpo_redirigido(usuario, pedido_por, enlace, invitacion)
+        contenido = _contenido(usuario, enlace, invitacion, pedido_por)
     else:
         return None, f"{usuario.email} es un correo de prueba: no hay a dónde enviar el enlace."
     try:
-        send_mail(asunto, cuerpo, None, [destino])
+        _correo(asunto, contenido, enlace, destino).send()
     except OSError:
         # smtplib.SMTPException es un OSError: clave equivocada, sin conexión, etc.
         return None, SIN_ENVIO

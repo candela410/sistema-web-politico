@@ -2,11 +2,12 @@
 import { pedir } from './cliente'
 
 export const obtenerUsuarios = () => pedir('/api/usuarios/')
-export const crearUsuario = (datos) => pedir('/api/usuarios/', { method: 'POST', datos }).then((r) => r.usuario)
+// Devuelve { usuario, invitacion (correo al que se envió), aviso_invitacion (si falló el envío) }
+export const crearUsuario = (datos) => pedir('/api/usuarios/', { method: 'POST', datos })
 export const editarUsuario = (id, datos) =>
   pedir(`/api/usuarios/${id}/`, { method: 'PATCH', datos }).then((r) => r.usuario)
 export const desactivarUsuario = (id) => pedir(`/api/usuarios/${id}/`, { method: 'DELETE' }).then((r) => r.usuario)
-// Envía al email del usuario un enlace para restablecer su contraseña
+// Envía al correo del usuario un enlace para restablecer su contraseña
 export const enviarRestablecer = (id) => pedir(`/api/usuarios/${id}/restablecer/`, { method: 'POST' })
 
 export const obtenerPermisos = () => pedir('/api/permisos/')

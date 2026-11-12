@@ -126,7 +126,7 @@ function Avisos({ usuario }) {
         ) : avisos.length === 0 ? (
           <div className="avisos__vacio">
             <BellOff size={28} strokeWidth={1.5} aria-hidden="true" />
-            <span>No tenés avisos por ahora.</span>
+            <span>No tiene avisos por ahora.</span>
           </div>
         ) : (
           <ul className="avisos__lista">

@@ -165,7 +165,7 @@
 }
 .login__eye svg { stroke: #555; }
 
-/* ===== FILA "Recordar" + "¿Olvidaste tu contraseña?" ===== */
+/* ===== FILA "Recordar" + "¿Olvidó su contraseña?" ===== */
 .login__row {
   display: flex;
   align-items: center;
@@ -197,6 +197,68 @@
 }
 .login__row a { color: var(--purple); font-weight: 600; text-decoration: none; }
 .login__row a:hover { text-decoration: underline; }
+
+/* Campo con error: borde rojo y el mensaje justo debajo */
+.login__field--error {
+  border-color: #c42a63;
+}
+.login__field--error:focus-within {
+  border-color: #c42a63;
+  box-shadow: 0 0 0 3px rgba(196, 42, 99, 0.15);
+}
+.login__ayuda {
+  margin: -14px 0 18px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.login__ayuda--error {
+  color: #a1134f;
+}
+
+/* Requisitos de la contraseña nueva: se tildan mientras se escribe */
+.login__requisitos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin: -12px 0 20px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--muted);
+}
+.login__requisitos li::before {
+  content: '○';
+  margin-right: 6px;
+}
+.login__requisitos .login__requisito--ok {
+  color: #15803d;
+}
+.login__requisitos .login__requisito--ok::before {
+  content: '✓';
+}
+
+/* Aviso de que se envió el correo (caja verde) */
+.login__ok {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  color: #166534;
+  background: #e8f7ee;
+  border: 1px solid #b7e4c7;
+}
+
+/* "Volver a iniciar sesión" debajo del botón */
+.login__volver {
+  margin-top: 18px;
+  align-self: center;
+  color: var(--purple);
+  font-weight: 600;
+  text-decoration: none;
+}
+.login__volver:hover {
+  text-decoration: underline;
+}
 
 /* ===== MENSAJE DE ERROR (caja rosada) ===== */
 .login__error {

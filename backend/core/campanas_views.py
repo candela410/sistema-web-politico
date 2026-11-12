@@ -1,7 +1,5 @@
-"""Campañas: elegir con cuál trabajar (superusuario o quien tenga permiso) y
-administrarlas."""
-
-from datetime import date
+"""Campañas: elegir con cuál trabajar (superusuario o quien puede ver
+campañas) y crearlas o desactivarlas desde esa misma pantalla."""
 
 from django.db.models import Count, ProtectedError
 from django.http import JsonResponse
@@ -28,8 +26,6 @@ def _foto(c):
     return {
         "Nombre": c.nombre,
         "Descripción": c.descripcion or "",
-        "Fecha de inicio": c.fecha_inicio,
-        "Fecha de fin": c.fecha_fin,
         "Activa": "Sí" if c.activa else "No",
     }
 
@@ -39,8 +35,6 @@ def _campana_json(c):
         "id": c.pk,
         "nombre": c.nombre,
         "descripcion": c.descripcion or "",
-        "fecha_inicio": c.fecha_inicio.isoformat() if c.fecha_inicio else None,
-        "fecha_fin": c.fecha_fin.isoformat() if c.fecha_fin else None,
         "activa": c.activa,
         "cuestionarios": getattr(c, "n_cuestionarios", None),
         "usuarios": getattr(c, "n_usuarios", None),
@@ -61,7 +55,7 @@ def _con_conteos(consulta):
 @require_http_methods(["GET"])
 @requiere_sesion
 def disponibles(request):
-    """Campañas a las que puede entrar el usuario (pantalla "Elegí la campaña")."""
+    """Campañas a las que puede entrar el usuario (pantalla "Seleccione la campaña")."""
     lista = _con_conteos(campanas_disponibles(request.user)).order_by("nombre")
     return JsonResponse({"campanas": [_campana_json(c) for c in lista]})
 
@@ -71,14 +65,14 @@ def disponibles(request):
 def activa(request):
     """POST {campana}: entra a esa campaña. DELETE: vuelve a la pantalla de elegir."""
     if not puede_elegir_campana(request.user):
-        return error("No tenés permiso para cambiar de campaña.", 403)
+        return error("No tiene permiso para cambiar de campaña.", 403)
     if request.method == "DELETE":
         request.session.pop(SESION_CAMPANA, None)
         return JsonResponse({"usuario": usuario_json(request)})
     datos = leer_json(request) or {}
     campana = campanas_disponibles(request.user).filter(pk=datos.get("campana")).first()
     if campana is None:
-        return error("Esa campaña no existe o no está activa.")
+        return error("La campaña no existe o no está activa.")
     request.session[SESION_CAMPANA] = campana.pk
     return JsonResponse({"usuario": usuario_json(request)})
 
@@ -86,7 +80,7 @@ def activa(request):
 def _validar(datos, campana=None):
     nombre = datos.get("nombre", campana.nombre if campana else "")
     if not isinstance(nombre, str) or not nombre.strip():
-        return None, "Poné un nombre a la campaña."
+        return None, "Ingrese el nombre de la campaña."
     nombre = nombre.strip()[:150]
     mensaje = nombre_cosa(nombre)
     if mensaje:
@@ -96,29 +90,14 @@ def _validar(datos, campana=None):
         repetida = repetida.exclude(pk=campana.pk)
     if repetida.exists():
         return None, "Ya existe una campaña con ese nombre."
-    fechas = {}
-    for campo in ("fecha_inicio", "fecha_fin"):
-        valor = datos.get(campo, getattr(campana, campo) if campana else None)
-        if isinstance(valor, str):
-            if not valor:
-                valor = None
-            else:
-                try:
-                    valor = date.fromisoformat(valor)
-                except ValueError:
-                    return None, "Las fechas deben tener el formato AAAA-MM-DD."
-        fechas[campo] = valor
-    if fechas["fecha_inicio"] and fechas["fecha_fin"] and fechas["fecha_fin"] < fechas["fecha_inicio"]:
-        return None, "La fecha de fin no puede ser anterior a la de inicio."
     activa_ = datos.get("activa", campana.activa if campana else True)
     if not isinstance(activa_, bool):
-        return None, "El estado debe ser verdadero o falso."
+        return None, "El estado no es válido."
     descripcion = datos.get("descripcion", campana.descripcion if campana else "") or ""
     return {
         "nombre": nombre,
         "descripcion": str(descripcion).strip() or None,
         "activa": activa_,
-        **fechas,
     }, None
 
 
@@ -131,7 +110,7 @@ def campanas(request):
 
     datos = leer_json(request)
     if datos is None:
-        return error("JSON inválido.")
+        return error("Los datos enviados no son válidos.")
     limpios, mensaje = _validar(datos)
     if mensaje:
         return error(mensaje)
@@ -149,7 +128,7 @@ def campana_detalle(request, pk):
             campana.delete()
         except ProtectedError:
             return error(
-                "No se puede borrar: la campaña tiene datos (usuarios o cuestionarios). Podés desactivarla.",
+                "No se puede eliminar la campaña porque tiene datos cargados. Puede desactivarla.",
                 409,
             )
         registrar(request, campana, "borrar", campana=None, detalle=f"Borró la campaña {campana.nombre}")
@@ -157,7 +136,7 @@ def campana_detalle(request, pk):
 
     datos = leer_json(request)
     if datos is None:
-        return error("JSON inválido.")
+        return error("Los datos enviados no son válidos.")
     limpios, mensaje = _validar(datos, campana)
     if mensaje:
         return error(mensaje)

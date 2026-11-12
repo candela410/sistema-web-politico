@@ -184,6 +184,20 @@
   column-gap: 16px;
 }
 
+/* Rutas agrupadas por zona */
+.grupo-zona + .grupo-zona {
+  margin-top: 6px;
+}
+
+.grupo-zona__titulo {
+  margin: 4px 0 6px;
+  color: var(--lla-gris);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .datos {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -385,18 +399,9 @@
   border-radius: 3px;
 }
 
-.ref--barrio {
-  border: 1.6px solid rgb(81 49 143 / 0.75);
-  background: rgb(81 49 143 / 0.08);
-}
-
-.ref--aproximado {
-  border: 1.6px dashed rgb(81 49 143 / 0.75);
-  background: rgb(81 49 143 / 0.05);
-}
-
 .ref--zona {
-  border: 2.5px dashed var(--lla-magenta);
+  border: 2.5px solid var(--lla-magenta);
+  background: rgb(195 38 140 / 0.15);
 }
 
 .ref--ruta {

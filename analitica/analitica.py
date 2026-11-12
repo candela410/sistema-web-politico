@@ -1,4 +1,5 @@
-"""Módulo de Analítica (Parcial Nº 2 - M1).
+"""Módulo de Analítica (Parcial Nº 2 - M1), que el sistema muestra en la
+pantalla Dashboard.
 
 Lee la base del proyecto (la misma Postgres de Neon que usa Django) con su
 conector nativo (psycopg), transforma los datos con pandas, calcula con numpy
@@ -8,30 +9,35 @@ Uso (desde la raíz del proyecto, con el venv del backend activado):
 
     python analitica/analitica.py
     python analitica/analitica.py --desde 2026-10-01 --hasta 2026-11-30
-    python analitica/analitica.py --campana "Campaña Salta 2027" --meta 600
+    python analitica/analitica.py --campana "Campaña Salta 2027" --cuestionario 3 --zona "Zona Norte"
 
 Parámetros (todos opcionales):
-    --desde / --hasta   rango de fechas (AAAA-MM-DD). Sin --desde se toma el
-                        inicio de la campaña o la primera encuesta; sin --hasta,
-                        el fin de la campaña o la última encuesta.
+    --desde / --hasta   rango de fechas (AAAA-MM-DD). Sin ellos se toma desde la
+                        primera hasta la última encuesta.
     --campana           nombre o id de la campaña. Sin este parámetro: todas.
-    --meta              encuestas que se quieren tener al final del período
-                        (para el gráfico de evolución). Sin meta, ese gráfico
-                        muestra solo lo real y la proyección.
+    --cuestionario      id del cuestionario para el gráfico de respuestas por zona.
+    --zona              nombre o id de la zona (sin este parámetro: todas las zonas).
     --salida            carpeta donde se guardan los PNG.
 
 La conexión sale de DATABASE_URL (variable de entorno o backend/.env).
 
 Gráficos que genera (cada uno responde una pregunta de negocio):
-    1. Barras agrupadas: ¿cuántas encuestas carga cada equipo por semana?
-    2. Donut:           ¿qué parte del total aportó cada equipo?
-    3. Líneas:          ¿vamos a llegar a la meta de encuestas? (con proyección)
-    4. Heatmap:         ¿en qué días y horarios se encuesta más?
-    5. Dashboard:       resumen ejecutivo con los números clave.
+    1. Barras:     ¿cuántas encuestas se cargan por período (día, semana o mes)?
+    2. Donut:      ¿qué parte del total aportó cada equipo?
+    3. Líneas:     ¿cómo crecen las encuestas y a cuánto se llegaría? (proyección)
+    4. Heatmap:    ¿en qué días y horarios se encuesta más?
+    5. Tablero:    resumen con los números clave.
+    6. Respuestas: ¿qué se respondió en un cuestionario dentro de una zona?
+
+Medidas (encuestas por militante, solo de quienes cargaron en el período):
+    media = suma / cantidad; mediana = valor central; desvío estándar muestral
+    (n - 1); percentiles 25, 75 y 90 con interpolación lineal (numpy).
 """
 
 import argparse
+import json
 import os
+import textwrap
 import sys
 from datetime import date, datetime, time
 from pathlib import Path
@@ -46,6 +52,8 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import psycopg  # noqa: E402
 from matplotlib.gridspec import GridSpec  # noqa: E402
+from matplotlib.path import Path as Trazo  # noqa: E402
+from matplotlib.ticker import MaxNLocator  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parent.parent
 # La base guarda las fechas en UTC: se pasan a la hora de Argentina para
@@ -60,6 +68,7 @@ TINTA_SUAVE = "#5d5a66"
 GRILLA = "#ecebf0"
 VERDE, ROJO = "#1baf7a", "#e34948"
 DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
 # Estilo de los gráficos. Se aplica solo mientras se dibujan (plt.rc_context),
 # así no cambia los gráficos de Estadísticas cuando el sistema usa este módulo.
@@ -77,14 +86,16 @@ ESTILO = {
     "figure.facecolor": "white",
 }
 
-# Gráficos que se generan: clave → nombre del archivo PNG
+# Gráficos de encuestas: clave → nombre del archivo PNG
 GRAFICOS = {
-    "barras": "1_barras_equipos.png",
-    "donut": "2_donut_equipos.png",
-    "evolucion": "3_evolucion_meta.png",
-    "heatmap": "4_heatmap_dia_hora.png",
-    "dashboard": "5_dashboard.png",
+    "periodo": "1_encuestas_por_periodo.png",
+    "donut": "2_participacion_equipos.png",
+    "evolucion": "3_evolucion.png",
+    "heatmap": "4_dias_y_horarios.png",
+    "dashboard": "5_tablero.png",
 }
+# Gráfico de respuestas de un cuestionario en una zona
+RESPUESTAS = "6_respuestas_por_zona.png"
 
 
 # ---------------------------------------------------------------------------
@@ -97,13 +108,12 @@ def leer_parametros():
     p.add_argument("--desde", type=date.fromisoformat, help="fecha inicial, AAAA-MM-DD")
     p.add_argument("--hasta", type=date.fromisoformat, help="fecha final, AAAA-MM-DD")
     p.add_argument("--campana", help="nombre o id de la campaña (por defecto: todas)")
-    p.add_argument("--meta", type=int, help="encuestas a alcanzar al final del período")
+    p.add_argument("--cuestionario", type=int, help="id del cuestionario para el gráfico de respuestas por zona")
+    p.add_argument("--zona", help="nombre o id de la zona (por defecto: todas)")
     p.add_argument("--salida", type=Path, default=RAIZ / "analitica" / "salida", help="carpeta de los PNG")
     args = p.parse_args()
     if args.desde and args.hasta and args.desde > args.hasta:
         p.error("--desde no puede ser posterior a --hasta")
-    if args.meta is not None and args.meta <= 0:
-        p.error("--meta tiene que ser mayor que 0")
     return args
 
 
@@ -139,7 +149,7 @@ def buscar_campana(conn, valor):
     """Campaña por id o por nombre (sin distinguir mayúsculas). None = todas."""
     if valor is None:
         return None
-    campanas = consulta(conn, "SELECT id_campana, nombre, fecha_inicio, fecha_fin FROM campanas")
+    campanas = consulta(conn, "SELECT id_campana, nombre FROM campanas")
     if valor.isdigit():
         elegida = campanas[campanas["id_campana"] == int(valor)]
     else:
@@ -175,13 +185,100 @@ def leer_encuestas(conn, campana):
     return df
 
 
-def rango_de_fechas(args, campana, df):
-    """Rango del análisis: lo que se pidió, si no la campaña, si no los datos."""
+def leer_respuestas(conn, id_cuestionario):
+    """Una fila por opción de cada pregunta del cuestionario y, si la eligieron,
+    una por cada respuesta cargada (con la ubicación del celular). Las opciones
+    sin respuestas quedan con id_respuesta vacío, para mostrarlas en 0.
+
+    La respuesta llega a su cuestionario por respuesta_cargada → opciones →
+    preguntas → cuestionarios."""
+    df = consulta(
+        conn,
+        """
+        SELECT p.id_pregunta, p.orden AS orden_pregunta, p.enunciado,
+               o.id_opcion, o.orden AS orden_opcion, o.texto AS opcion,
+               r.id_respuesta, r.latitud, r.longitud
+        FROM preguntas p
+        JOIN opciones o ON o.id_pregunta = p.id_pregunta
+        LEFT JOIN respuesta_cargada r ON r.id_opcion = o.id_opcion
+        WHERE p.id_cuestionario = %(cuestionario)s
+        ORDER BY p.orden, o.orden
+        """,
+        {"cuestionario": int(id_cuestionario)},
+    )
+    for columna in ("latitud", "longitud"):
+        df[columna] = pd.to_numeric(df[columna], errors="coerce")
+    return df
+
+
+def leer_zonas(conn):
+    """Zonas del mapa con su polígono (GeoJSON)."""
+    zonas = consulta(conn, "SELECT id_zona, nombre, geometria FROM zonas ORDER BY nombre")
+    # Según el conector, el JSON llega como texto o ya convertido
+    zonas["geometria"] = zonas["geometria"].map(lambda g: json.loads(g) if isinstance(g, str) else g)
+    return zonas
+
+
+def buscar_zona(zonas, valor):
+    """Zona por id o por nombre (sin distinguir mayúsculas). None = todas."""
+    if valor is None:
+        return None
+    valor = str(valor).strip()
+    if valor.isdigit():
+        elegida = zonas[zonas["id_zona"] == int(valor)]
+    else:
+        elegida = zonas[zonas["nombre"].str.lower() == valor.lower()]
+    if elegida.empty:
+        raise ValueError(f'No existe la zona "{valor}".')
+    return elegida.iloc[0]
+
+
+def dentro_de(geometria, latitudes, longitudes):
+    """Máscara de los puntos que caen dentro del polígono GeoJSON (Polygon o
+    MultiPolygon, con sus huecos). Usa matplotlib.path para no sumar otra
+    librería."""
+    if geometria and geometria.get("type") == "Feature":
+        geometria = geometria.get("geometry")
+    if not geometria:
+        return np.zeros(len(latitudes), dtype=bool)
+    poligonos = (
+        [geometria["coordinates"]] if geometria["type"] == "Polygon"
+        else geometria["coordinates"] if geometria["type"] == "MultiPolygon" else []
+    )
+    puntos = np.column_stack([longitudes, latitudes])
+    mascara = np.zeros(len(puntos), dtype=bool)
+    for anillos in poligonos:
+        adentro = Trazo(np.asarray(anillos[0])[:, :2]).contains_points(puntos)
+        for hueco in anillos[1:]:
+            adentro &= ~Trazo(np.asarray(hueco)[:, :2]).contains_points(puntos)
+        mascara |= adentro
+    return mascara
+
+
+def numero(texto):
+    """"4", "4,5" o "4.5" → número; None si no es un número (como el sistema)."""
+    try:
+        return float(str(texto).strip().replace(",", "."))
+    except ValueError:
+        return None
+
+
+def medidas_de_valores(valores, cantidades):
+    """Media, mediana y desvío de una variable cuantitativa a partir de cuántas
+    veces se eligió cada valor."""
+    datos = np.repeat(np.asarray(valores, dtype=float), np.asarray(cantidades, dtype=int))
+    if datos.size == 0:
+        return None
+    return {
+        "media": float(np.mean(datos)),
+        "mediana": float(np.median(datos)),
+        "desvio": float(np.std(datos, ddof=1)) if datos.size > 1 else 0.0,
+    }
+
+
+def rango_de_fechas(args, df):
+    """Rango del análisis: lo que se pidió o, si no, de la primera a la última encuesta."""
     desde, hasta = args.desde, args.hasta
-    if desde is None:
-        desde = campana["fecha_inicio"] if campana is not None and pd.notna(campana["fecha_inicio"]) else None
-    if hasta is None:
-        hasta = campana["fecha_fin"] if campana is not None and pd.notna(campana["fecha_fin"]) else None
     if not df.empty:
         desde = desde or df["momento"].min().date()
         hasta = hasta or df["momento"].max().date()
@@ -257,28 +354,49 @@ def guardar(fig, carpeta, nombre):
     return ruta
 
 
-def grafico_barras(df, desde, hasta, colores, ax):
-    """1. Barras agrupadas: encuestas por semana (o por mes si el período es
-    largo) de cada equipo."""
-    mensual = (hasta - desde).days > 120
-    periodo = df["momento"].dt.tz_localize(None).dt.to_period("M" if mensual else "W-SUN").dt.start_time
-    tabla = df.assign(periodo=periodo).pivot_table(
-        index="periodo", columns="equipo", values="id_encuesta", aggfunc="count", fill_value=0
+def periodicidad(desde, hasta):
+    """Día si el período es de hasta un mes, semana hasta seis meses y si no mes."""
+    dias = (hasta - desde).days + 1
+    if dias <= 31:
+        return "D", "día"
+    if dias <= 183:
+        return "W-SUN", "semana"
+    return "M", "mes"
+
+
+def etiqueta_periodo(inicio, frecuencia):
+    if frecuencia == "M":
+        return f"{MESES[inicio.month - 1]} {inicio:%Y}"
+    return f"{inicio:%d/%m}"
+
+
+def grafico_periodo(df, desde, hasta, ax):
+    """1. Barras: encuestas cargadas en cada período (día, semana o mes según
+    el largo del rango), con los períodos sin encuestas en 0 y el promedio."""
+    frecuencia, nombre = periodicidad(desde, hasta)
+    periodos = pd.period_range(desde, hasta, freq=frecuencia)
+    por_periodo = (
+        df["momento"].dt.tz_localize(None).dt.to_period(frecuencia).value_counts().reindex(periodos, fill_value=0)
     )
-    equipos = list(tabla.columns)
-    ancho = 0.8 / len(equipos)
-    x = np.arange(len(tabla))
-    for i, equipo in enumerate(equipos):
-        ax.bar(x + (i - (len(equipos) - 1) / 2) * ancho, tabla[equipo], ancho * 0.92,
-               label=equipo, color=colores[equipo])
-    ax.set_xticks(x)
-    ax.set_xticklabels([p.strftime("%b %Y" if mensual else "%d/%m") for p in tabla.index])
-    ax.set_xlabel("Mes" if mensual else "Semana (desde el lunes)")
+    valores = por_periodo.to_numpy()
+    x = np.arange(len(valores))
+    ax.bar(x, valores, color=VIOLETA, alpha=0.88, width=0.72)
+    if len(valores) <= 40:
+        for i, v in enumerate(valores):
+            if v:
+                ax.text(i, v, f"{v}", ha="center", va="bottom", fontsize=8, color=TINTA)
+    promedio = float(np.mean(valores))
+    ax.axhline(promedio, color=COLORES[3], linestyle="--", linewidth=1.4,
+               label=f"Promedio por {nombre}: {promedio:.1f}".replace(".", ","))
+    paso = max(1, len(valores) // 16)
+    ax.set_xticks(x[::paso])
+    ax.set_xticklabels([etiqueta_periodo(p.start_time, frecuencia) for p in periodos[::paso]])
+    ax.set_xlabel({"día": "Día", "semana": "Semana (desde el lunes)", "mes": "Mes"}[nombre])
     ax.set_ylabel("Encuestas")
     ax.grid(axis="y", color=GRILLA)
     ax.set_axisbelow(True)
-    ax.legend(frameon=False, ncol=min(len(equipos), 4))
-    ax.set_title("Encuestas por equipo, " + ("por mes" if mensual else "por semana"), loc="left")
+    ax.legend(frameon=False, loc="upper left")
+    ax.set_title(f"Encuestas por {nombre}", loc="left")
 
 
 def grafico_donut(df, colores, ax):
@@ -296,29 +414,21 @@ def grafico_donut(df, colores, ax):
     ax.set_title("Participación de cada equipo en el total", loc="left")
 
 
-def grafico_evolucion(acumulado, tendencia, meta, hoy, ax):
-    """3. Líneas: encuestas acumuladas contra la meta (sombreado verde si se
-    está por encima, rojo si por debajo) y la proyección de la tendencia."""
+def grafico_evolucion(acumulado, tendencia, hoy, ax):
+    """3. Líneas: encuestas acumuladas día a día y la proyección hasta el final
+    del período al ritmo de los últimos 14 días."""
     reales = acumulado[acumulado.index <= hoy]
+    ax.fill_between(reales.index, reales, color=VIOLETA, alpha=0.12)
     ax.plot(reales.index, reales, color=VIOLETA, linewidth=2.4, label="Encuestas acumuladas")
     if tendencia is not None:
         ax.plot(tendencia.index, tendencia, color=VIOLETA, linestyle=":", linewidth=1.6,
                 label=f"Proyección al ritmo de los últimos 14 días (≈ {tendencia.iloc[-1]:,.0f})".replace(",", "."))
-    if meta:
-        objetivo = pd.Series(np.linspace(meta / len(acumulado), meta, len(acumulado)), index=acumulado.index)
-        ax.plot(objetivo.index, objetivo, color=COLORES[3], linestyle="--", linewidth=1.6,
-                label=f"Meta ({meta:,})".replace(",", "."))
-        obj = objetivo[reales.index]
-        ax.fill_between(reales.index, reales, obj, where=reales >= obj, color=VERDE, alpha=0.18,
-                        interpolate=True, label="Sobre la meta")
-        ax.fill_between(reales.index, reales, obj, where=reales < obj, color=ROJO, alpha=0.15,
-                        interpolate=True, label="Debajo de la meta")
     ax.set_ylabel("Encuestas acumuladas")
     ax.grid(axis="y", color=GRILLA)
     ax.set_axisbelow(True)
     ax.legend(frameon=False, loc="upper left")
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%d/%m"))
-    ax.set_title("Evolución de las encuestas" + (" contra la meta" if meta else ""), loc="left")
+    ax.set_title("Evolución de las encuestas", loc="left")
 
 
 def grafico_heatmap(df, fig, ax):
@@ -349,8 +459,8 @@ def grafico_heatmap(df, fig, ax):
     ax.set_title("¿Cuándo se encuesta? Encuestas por día y hora", loc="left")
 
 
-def dashboard(df, por_dia, acumulado, tendencia, meta, por_militante, medidas, colores, titulo, hoy):
-    """5. Dashboard: números clave + acumulado + avance de la meta + top militantes."""
+def dashboard(df, por_dia, acumulado, tendencia, por_militante, medidas, colores, titulo, hoy):
+    """5. Tablero: números clave + acumulado + encuestas por equipo + top militantes."""
     fig = plt.figure(figsize=(14, 8.5))
     grilla = GridSpec(3, 3, figure=fig, height_ratios=[0.55, 1.6, 1.6], hspace=0.55, wspace=0.3)
     fig.suptitle(titulo, x=0.06, ha="left", fontsize=17, fontweight="bold", color=TINTA)
@@ -380,21 +490,13 @@ def dashboard(df, por_dia, acumulado, tendencia, meta, por_militante, medidas, c
     ax.grid(axis="y", color=GRILLA)
     ax.set_title("Encuestas acumuladas", loc="left", fontsize=11)
 
-    # Avance de la meta (o participación por equipo si no hay meta)
+    # Encuestas por equipo
     ax = fig.add_subplot(grilla[1, 2])
-    if meta:
-        avance = min(len(df) / meta, 1)
-        ax.pie([avance, 1 - avance], colors=[VIOLETA, GRILLA], startangle=90, counterclock=False,
-               wedgeprops={"width": 0.3})
-        ax.text(0, 0, f"{len(df) / meta:.0%}".replace("%", " %"), ha="center", va="center", fontsize=22, fontweight="bold",
-                color=TINTA)
-        ax.set_title(f"Avance de la meta ({meta:,})".replace(",", "."), loc="left", fontsize=11)
-    else:
-        por_equipo = df["equipo"].value_counts()
-        ax.pie(por_equipo, colors=[colores[e] for e in por_equipo.index], startangle=90,
-               counterclock=False, wedgeprops={"width": 0.3, "edgecolor": "white"})
-        ax.legend(por_equipo.index, frameon=False, loc="center", fontsize=8)
-        ax.set_title("Encuestas por equipo", loc="left", fontsize=11)
+    por_equipo = df["equipo"].value_counts()
+    ax.pie(por_equipo, colors=[colores[e] for e in por_equipo.index], startangle=90,
+           counterclock=False, wedgeprops={"width": 0.3, "edgecolor": "white"})
+    ax.legend(por_equipo.index, frameon=False, loc="center", fontsize=8)
+    ax.set_title("Encuestas por equipo", loc="left", fontsize=11)
 
     # Top 5 militantes
     ax = fig.add_subplot(grilla[2, :2])
@@ -417,10 +519,10 @@ def dashboard(df, por_dia, acumulado, tendencia, meta, por_militante, medidas, c
     return fig
 
 
-def figura(clave, todas, desde, hasta, meta=None, nombre="Todas las campañas"):
+def figura(clave, todas, desde, hasta, nombre="Todas las campañas"):
     """Arma uno de los GRAFICOS (Figure de matplotlib) con las encuestas de
     `todas` que caen en el período. None si en el período no hay encuestas.
-    La usan este script y la pantalla Analítica del sistema."""
+    La usan este script y la pantalla Dashboard del sistema."""
     df = filtrar(todas, desde, hasta)
     if df.empty:
         return None
@@ -432,9 +534,9 @@ def figura(clave, todas, desde, hasta, meta=None, nombre="Todas las campañas"):
     pie = f"{nombre} · {desde:%d/%m/%Y} al {hasta:%d/%m/%Y} · generado el {datetime.now(ZONA):%d/%m/%Y %H:%M}"
 
     with plt.rc_context(ESTILO):
-        if clave == "barras":
+        if clave == "periodo":
             fig, ax = plt.subplots(figsize=(12, 5))
-            grafico_barras(df, desde, hasta, colores, ax)
+            grafico_periodo(df, desde, hasta, ax)
             fig.text(0.01, -0.02, pie, color=TINTA_SUAVE, fontsize=8)
         elif clave == "donut":
             fig, ax = plt.subplots(figsize=(7, 6))
@@ -442,7 +544,7 @@ def figura(clave, todas, desde, hasta, meta=None, nombre="Todas las campañas"):
             fig.text(0.01, 0.01, pie, color=TINTA_SUAVE, fontsize=8)
         elif clave == "evolucion":
             fig, ax = plt.subplots(figsize=(12, 5))
-            grafico_evolucion(acumulado, tendencia, meta, hoy, ax)
+            grafico_evolucion(acumulado, tendencia, hoy, ax)
             fig.text(0.01, -0.02, pie, color=TINTA_SUAVE, fontsize=8)
         elif clave == "heatmap":
             fig, ax = plt.subplots(figsize=(12, 4.5))
@@ -450,11 +552,71 @@ def figura(clave, todas, desde, hasta, meta=None, nombre="Todas las campañas"):
             fig.text(0.01, -0.04, pie, color=TINTA_SUAVE, fontsize=8)
         elif clave == "dashboard":
             por_militante, medidas = medidas_por_militante(df)
-            fig = dashboard(df, por_dia, acumulado, tendencia, meta, por_militante, medidas, colores,
+            fig = dashboard(df, por_dia, acumulado, tendencia, por_militante, medidas, colores,
                             f"Tablero de campaña · {nombre}", hoy)
             fig.text(0.06, 0.01, pie, color=TINTA_SUAVE, fontsize=8)
         else:
             raise ValueError(f"No existe el gráfico {clave!r}")
+    return fig
+
+
+def figura_respuestas(respuestas, titulo, zona=None, nombre="Todas las campañas"):
+    """6. Barras por pregunta: cuántas veces se eligió cada opción del
+    cuestionario en la zona (o en todas). Solo cuentan las respuestas con la
+    ubicación del celular. En las preguntas cuantitativas (opciones numéricas)
+    se agregan media, mediana y desvío. None si no hay respuestas para mostrar."""
+    cargadas = respuestas[respuestas["id_respuesta"].notna()]
+    con_ubicacion = cargadas[cargadas["latitud"].notna() & cargadas["longitud"].notna()]
+    if zona is not None:
+        con_ubicacion = con_ubicacion[
+            dentro_de(zona["geometria"], con_ubicacion["latitud"].to_numpy(), con_ubicacion["longitud"].to_numpy())
+        ]
+    if con_ubicacion.empty:
+        return None
+
+    preguntas = respuestas.drop_duplicates("id_pregunta")[["id_pregunta", "orden_pregunta", "enunciado"]]
+    opciones = respuestas.drop_duplicates("id_opcion")
+    conteo = con_ubicacion["id_opcion"].value_counts()
+    altos = [max(1.4, 0.38 * (opciones["id_pregunta"] == p).sum() + 0.9) for p in preguntas["id_pregunta"]]
+    lugar = f"en {zona['nombre']}" if zona is not None else "en todas las zonas"
+
+    with plt.rc_context(ESTILO):
+        fig = plt.figure(figsize=(11, sum(altos) + 1.3))
+        grilla = GridSpec(len(altos), 1, figure=fig, height_ratios=altos, hspace=0.75)
+        fig.suptitle(f"Respuestas de «{titulo}» {lugar}", x=0.02, ha="left",
+                     fontsize=15, fontweight="bold", color=TINTA)
+        for i, (_, pregunta) in enumerate(preguntas.iterrows()):
+            ax = fig.add_subplot(grilla[i])
+            suyas = opciones[opciones["id_pregunta"] == pregunta["id_pregunta"]]
+            cantidades = suyas["id_opcion"].map(conteo).fillna(0).astype(int).to_numpy()
+            total = int(cantidades.sum())
+            textos = [textwrap.shorten(str(t), 42, placeholder="…") for t in suyas["opcion"]]
+            y = np.arange(len(textos))[::-1]
+            ax.barh(y, cantidades, color=VIOLETA, alpha=0.88, height=0.62)
+            for yy, c in zip(y, cantidades):
+                porcentaje = f"{c / total:.0%}".replace("%", " %") if total else "0 %"
+                ax.text(c, yy, f"  {c} ({porcentaje})", va="center", fontsize=9, color=TINTA)
+            ax.set_yticks(y)
+            ax.set_yticklabels(textos)
+            ax.set_xlim(0, max(1, cantidades.max()) * 1.25)
+            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+            ax.grid(axis="x", color=GRILLA)
+            ax.set_axisbelow(True)
+            enunciado = textwrap.shorten(str(pregunta["enunciado"]), 90, placeholder="…")
+            ax.set_title(f"{int(pregunta['orden_pregunta'])}. {enunciado}", loc="left", fontsize=11)
+            valores = [numero(t) for t in suyas["opcion"]]
+            detalle = f"{total} respuesta{'s' if total != 1 else ''}"
+            if all(v is not None for v in valores) and total:
+                m = medidas_de_valores(valores, cantidades)
+                detalle += (
+                    f" · media {m['media']:.2f} · mediana {m['mediana']:.2f} · desvío {m['desvio']:.2f}"
+                ).replace(".", ",")
+            ax.set_title(detalle, loc="right", fontsize=9, color=TINTA_SUAVE)
+        sin_ubicacion = len(cargadas) - int(cargadas["latitud"].notna().sum())
+        pie = f"{nombre} · todas las fechas · generado el {datetime.now(ZONA):%d/%m/%Y %H:%M}"
+        if sin_ubicacion:
+            pie += f" · {sin_ubicacion} respuestas anteriores sin ubicación no se cuentan"
+        fig.text(0.02, 0.005, pie, color=TINTA_SUAVE, fontsize=8)
     return fig
 
 
@@ -469,7 +631,7 @@ def main():
         campana = buscar_campana(conn, args.campana)
         todas = leer_encuestas(conn, campana)
 
-    desde, hasta = rango_de_fechas(args, campana, todas)
+    desde, hasta = rango_de_fechas(args, todas)
     if desde is None:
         sys.exit("No hay encuestas cargadas para analizar.")
     df = filtrar(todas, desde, hasta)
@@ -481,9 +643,25 @@ def main():
 
     args.salida.mkdir(parents=True, exist_ok=True)
     archivos = [
-        guardar(figura(clave, todas, desde, hasta, args.meta, nombre), args.salida, archivo)
+        guardar(figura(clave, todas, desde, hasta, nombre), args.salida, archivo)
         for clave, archivo in GRAFICOS.items()
     ]
+    if args.cuestionario:
+        with conectar() as conn:
+            respuestas = leer_respuestas(conn, args.cuestionario)
+            titulo = consulta(conn, "SELECT titulo FROM cuestionarios WHERE id_cuestionario = %(c)s",
+                              {"c": args.cuestionario})
+            try:
+                zona = buscar_zona(leer_zonas(conn), args.zona)
+            except ValueError as e:
+                sys.exit(str(e))
+        if titulo.empty:
+            sys.exit(f"No existe el cuestionario {args.cuestionario}.")
+        fig = figura_respuestas(respuestas, titulo.iloc[0]["titulo"], zona, nombre)
+        if fig is None:
+            print("No hay respuestas con ubicación para ese cuestionario y zona.")
+        else:
+            archivos.append(guardar(fig, args.salida, RESPUESTAS))
 
     # Para el resumen en consola
     hoy = pd.Timestamp(min(datetime.now(ZONA).date(), hasta))
@@ -499,8 +677,7 @@ def main():
         f"{medidas['p25']:.0f}/{medidas['p75']:.0f}/{medidas['p90']:.0f}"
     )
     if tendencia is not None:
-        print(f"Proyección al {hasta:%d/%m/%Y}: ≈ {tendencia.iloc[-1]:.0f} encuestas"
-              + (f" (meta {args.meta})" if args.meta else ""))
+        print(f"Proyección al {hasta:%d/%m/%Y}: ≈ {tendencia.iloc[-1]:.0f} encuestas")
     for (militante, equipo), cantidad in medidas["inusuales"].items():
         print(f"Carga inusual (más de 2 desvíos sobre la media): {militante} ({equipo}) con {cantidad}")
     print("Gráficos generados:")

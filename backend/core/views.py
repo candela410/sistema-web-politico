@@ -7,6 +7,8 @@ from django.views.decorators.http import require_GET, require_POST
 
 from .api import campana_activa, permisos_de, puede_elegir_campana
 from .bitacora import registrar
+from .validaciones import contrasena as validar_contrasena
+from .validaciones import email as validar_email
 
 # API de autenticación con las sesiones de Django (tablas usuarios y
 # django_session). El frontend manda la cookie de sesión y el token CSRF.
@@ -22,7 +24,6 @@ def usuario_json(request):
         "nombre": usuario.first_name,
         "apellido": usuario.last_name,
         "es_superusuario": usuario.is_superuser,
-        "es_militante": usuario.groups.filter(name="Militantes").exists(),
         "grupos": list(usuario.groups.values_list("name", flat=True)),
         # Permisos de Django ("core.add_cuestionario", …): el frontend arma el menú con esto
         "permisos": sorted(permisos_de(usuario)),
@@ -43,16 +44,20 @@ def login_view(request):
     try:
         datos = json.loads(request.body or "{}")
     except json.JSONDecodeError:
-        return JsonResponse({"error": "JSON inválido."}, status=400)
+        return JsonResponse({"error": "Los datos enviados no son válidos."}, status=400)
 
-    email = (datos.get("email") or "").strip()
+    email = str(datos.get("email") or "").strip()
     password = datos.get("password") or ""
     if not email or not password:
-        return JsonResponse({"error": "Ingresá email y contraseña."}, status=400)
+        return JsonResponse({"error": "Ingrese su correo electrónico y su contraseña."}, status=400)
+    # Mismas reglas que el formulario del frontend (validaciones.js)
+    mensaje = validar_email(email) or validar_contrasena(password)
+    if mensaje:
+        return JsonResponse({"error": mensaje}, status=400)
 
     usuario = authenticate(request, email=email, password=password)
     if usuario is None:
-        return JsonResponse({"error": "Email o contraseña incorrectos."}, status=401)
+        return JsonResponse({"error": "El correo electrónico o la contraseña son incorrectos."}, status=401)
 
     login(request, usuario)
     if not datos.get("recordar"):
@@ -73,5 +78,5 @@ def logout_view(request):
 @require_GET
 def me(request):
     if not request.user.is_authenticated:
-        return JsonResponse({"error": "No autenticado."}, status=401)
+        return JsonResponse({"error": "Debe iniciar sesión."}, status=401)
     return JsonResponse({"usuario": usuario_json(request)})

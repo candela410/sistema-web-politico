@@ -111,7 +111,7 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
           rows={1}
           value={pregunta.enunciado}
           onChange={(e) => cambiar({ enunciado: e.target.value })}
-          placeholder="Escribí la pregunta"
+          placeholder="Escriba la pregunta"
           aria-label={`Texto de la pregunta ${numero}`}
           disabled={bloqueado}
         />
@@ -181,7 +181,7 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
             <button type="button" className="boton-icono" onClick={onDuplicar} aria-label="Duplicar pregunta" title="Duplicar">
               <Icono d={ICONOS.duplicar} />
             </button>
-            <button type="button" className="boton-icono boton-icono--peligro" onClick={onBorrar} disabled={total === 1} aria-label="Borrar pregunta" title="Borrar">
+            <button type="button" className="boton-icono boton-icono--peligro" onClick={onBorrar} disabled={total === 1} aria-label="Eliminar pregunta" title="Eliminar">
               <Icono d={ICONOS.borrar} />
             </button>
           </div>
@@ -200,12 +200,15 @@ function EditorCuestionario() {
     esNuevo ? { titulo: '', descripcion: '', categoria: '', activo: true, preguntas: [nuevaPregunta()] } : null,
   )
   const [bloqueado, setBloqueado] = useState(false)
-  const [encuestas, setEncuestas] = useState(0)
   const [categorias, setCategorias] = useState(null)
   const [activa, setActiva] = useState(null)
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
-  const [sinGuardar, setSinGuardar] = useState(false)
+  // Lo que se cargó del servidor (o el formulario vacío): "Guardar" se habilita
+  // solo cuando el formulario es distinto de esto
+  const [original, setOriginal] = useState(() =>
+    esNuevo ? JSON.stringify(paraServidor({ titulo: '', descripcion: '', categoria: '', activo: true, preguntas: [nuevaPregunta()] })) : null,
+  )
   const refsPreguntas = useRef({})
 
   useEffect(() => {
@@ -216,13 +219,16 @@ function EditorCuestionario() {
       api
         .obtenerCuestionario(id)
         .then((c) => {
-          setForm(desdeServidor(c))
+          const cargado = desdeServidor(c)
+          setForm(cargado)
+          setOriginal(JSON.stringify(paraServidor(cargado)))
           setBloqueado(c.bloqueado)
-          setEncuestas(c.encuestas)
         })
         .catch((e) => setError(e.message))
     }
   }, [id, esNuevo])
+
+  const sinGuardar = Boolean(form && original !== null && JSON.stringify(paraServidor(form)) !== original)
 
   // Avisa antes de cerrar la pestaña si hay cambios sin guardar
   useEffect(() => {
@@ -234,7 +240,6 @@ function EditorCuestionario() {
 
   function actualizar(cambios) {
     setForm((f) => ({ ...f, ...cambios }))
-    setSinGuardar(true)
   }
 
   const cambiarPregunta = (p) => actualizar({ preguntas: form.preguntas.map((x) => (x.clave === p.clave ? p : x)) })
@@ -270,9 +275,11 @@ function EditorCuestionario() {
     try {
       const datos = paraServidor(form)
       const guardado = esNuevo ? await api.crearCuestionario(datos) : await api.guardarCuestionario(id, datos)
-      setSinGuardar(false)
+      setOriginal(JSON.stringify(datos))
       navegar('/cuestionarios', {
-        state: { aviso: esNuevo ? `Cuestionario “${guardado.titulo}” creado.` : 'Cambios guardados.' },
+        state: {
+          aviso: esNuevo ? `El cuestionario «${guardado.titulo}» fue creado.` : 'Los cambios se guardaron correctamente.',
+        },
       })
     } catch (e) {
       setError(e.message)
@@ -281,6 +288,10 @@ function EditorCuestionario() {
       document.querySelector('.editor')?.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
+
+  // Una categoría desactivada solo admite cuestionarios inactivos
+  const categoriaElegida = categorias?.find((c) => String(c.id) === String(form?.categoria))
+  const categoriaInactiva = Boolean(categoriaElegida && !categoriaElegida.activa)
 
   if (!form) {
     return <main className="editor">{error ? <p className="texto-error">{error}</p> : <p className="vacio-tarjeta">Cargando…</p>}</main>
@@ -293,7 +304,7 @@ function EditorCuestionario() {
           ← Cuestionarios
         </Link>
         <span className="editor__estado">{sinGuardar ? 'Cambios sin guardar' : ''}</span>
-        <button type="submit" className="boton" disabled={guardando}>
+        <button type="submit" className="boton" disabled={guardando || !sinGuardar}>
           {guardando ? 'Guardando…' : esNuevo ? 'Crear cuestionario' : 'Guardar cambios'}
         </button>
       </div>
@@ -302,12 +313,6 @@ function EditorCuestionario() {
         {error && (
           <p className="aviso-error" role="alert">
             {error}
-          </p>
-        )}
-        {bloqueado && (
-          <p className="aviso-info">
-            Este cuestionario ya tiene {encuestas === 1 ? '1 encuesta cargada' : `${encuestas} encuestas cargadas`}.
-            Podés cambiar el título, la descripción, la categoría y si está activo, pero no las preguntas.
           </p>
         )}
 
@@ -319,6 +324,7 @@ function EditorCuestionario() {
             placeholder="Título del cuestionario"
             aria-label="Título del cuestionario"
             maxLength={180}
+            autoCapitalize="sentences"
             required
           />
           <textarea
@@ -326,8 +332,9 @@ function EditorCuestionario() {
             rows={2}
             value={form.descripcion}
             onChange={(e) => actualizar({ descripcion: e.target.value })}
-            placeholder="Descripción (opcional)"
+            placeholder="Descripción"
             aria-label="Descripción"
+            maxLength={1000}
           />
           <div className="tarjeta-titulo__ajustes">
             <label className="tarjeta-titulo__campo">
@@ -335,26 +342,41 @@ function EditorCuestionario() {
               <select
                 className="entrada"
                 value={form.categoria}
-                onChange={(e) => actualizar({ categoria: e.target.value })}
+                onChange={(e) => {
+                  const elegida = categorias?.find((c) => String(c.id) === e.target.value)
+                  // En una categoría desactivada el cuestionario queda inactivo
+                  actualizar({ categoria: e.target.value, ...(elegida && !elegida.activa && { activo: false }) })
+                }}
                 required
               >
-                <option value="">Elegí una categoría</option>
-                {categorias?.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
+                <option value="">Seleccione una categoría</option>
+                {categorias
+                  ?.filter((c) => c.activa || String(c.id) === String(form.categoria))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                      {!c.activa && ' (desactivada)'}
+                    </option>
+                  ))}
               </select>
             </label>
             <label className="interruptor">
-              <input type="checkbox" checked={form.activo} onChange={(e) => actualizar({ activo: e.target.checked })} />
+              <input
+                type="checkbox"
+                checked={form.activo}
+                onChange={(e) => actualizar({ activo: e.target.checked })}
+                disabled={categoriaInactiva}
+              />
               <span className="interruptor__pista" aria-hidden="true" />
               Activo
             </label>
           </div>
+          {categoriaInactiva && (
+            <p className="texto-suave">La categoría está desactivada: el cuestionario debe quedar inactivo.</p>
+          )}
           {categorias?.length === 0 && (
             <p className="texto-suave">
-              No hay categorías todavía. <Link to="/categorias">Creá una en Categorías</Link>.
+              Todavía no hay categorías. <Link to="/categorias">Cree una en Categorías</Link>.
             </p>
           )}
         </section>
@@ -386,7 +408,7 @@ function EditorCuestionario() {
               + Agregar pregunta ({form.preguntas.length} de {MAX_PREGUNTAS})
             </button>
           ) : (
-            <p className="aviso-info">Llegaste al máximo de {MAX_PREGUNTAS} preguntas por cuestionario.</p>
+            <p className="aviso-info">Se alcanzó el máximo de {MAX_PREGUNTAS} preguntas por cuestionario.</p>
           ))}
       </div>
     </form>

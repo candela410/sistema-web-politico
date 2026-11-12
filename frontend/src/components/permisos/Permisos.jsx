@@ -1,19 +1,29 @@
 import { useEffect, useState } from 'react'
+import { Check, Minus } from 'lucide-react'
 import { obtenerPermisos } from '../../api/usuarios'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './permisos.css'
 
-// Permisos de Django por grupo, solo para consultar. Se asignan desde el
-// admin de Django; en la app se eligen grupos al crear o editar un usuario.
-const ACCIONES = ['Ver', 'Crear', 'Editar', 'Borrar']
+// Permisos de Django por rol, solo para consultar: se elige un rol y se ve qué
+// puede hacer en cada sección. Los permisos se cambian en Gestión → Roles.
+const ACCIONES = [
+  { clave: 'Ver', texto: 'Ver' },
+  { clave: 'Crear', texto: 'Crear' },
+  { clave: 'Editar', texto: 'Editar' },
+  { clave: 'Borrar', texto: 'Eliminar' },
+]
 
 function Permisos() {
   const [datos, setDatos] = useState(null)
   const [error, setError] = useState('')
+  const [elegido, setElegido] = useState(null)
 
   useEffect(() => {
     obtenerPermisos()
-      .then(setDatos)
+      .then((d) => {
+        setDatos(d)
+        setElegido(d.grupos[0]?.id ?? null)
+      })
       .catch((e) => setError(e.message))
   }, [])
 
@@ -33,30 +43,14 @@ function Permisos() {
       </main>
     )
 
-  // Columnas: el permiso propio "Administrar la campaña" y cada grupo
-  const columnas = [
-    {
-      id: 'administrar',
-      nombre: 'Administrar la campaña',
-      detalle: `Permiso · ${datos.propios.find((p) => p.codigo === 'core.administrar_campana')?.usuarios ?? 0} usuario(s)`,
-      permisos: datos.administrar,
-    },
-    ...datos.grupos.map((g) => ({
-      id: g.id,
-      nombre: g.nombre,
-      detalle: `Grupo · ${g.usuarios} usuario${g.usuarios === 1 ? '' : 's'}`,
-      permisos: g.permisos,
-    })),
-  ]
-  const permisosDe = (columna, seccion) => columna.permisos.find((p) => p.seccion === seccion)?.acciones ?? []
-  const secciones = datos.secciones.filter((s) => columnas.some((c) => permisosDe(c, s.seccion).length))
+  const rol = datos.grupos.find((g) => g.id === elegido)
 
   return (
-    <main className="pagina pagina--ancha">
+    <main className="pagina">
       <header className="pagina__encabezado">
         <div>
           <h1>Permisos</h1>
-          <p>Qué permite cada permiso y cada grupo. Son las tablas de Django (permisos, grupos y grupos por permisos): acá solo se consultan.</p>
+          <p>Qué puede hacer cada rol en cada sección del sistema.</p>
           <span className="franja-corta" aria-hidden="true">
             <i />
             <i />
@@ -66,85 +60,84 @@ function Permisos() {
         </div>
       </header>
 
-      <p className="aviso-info">
-        {datos.superusuario} Para darle permisos a una persona, marcalos en Gestión → Usuarios. Los grupos y sus permisos
-        se cambian desde el admin de Django (/admin).
-      </p>
-
-      <div className="tabla-envoltura-ancha">
-        <table className="matriz">
-          <caption className="sr-solo">Permisos por grupo y sección</caption>
-          <thead>
-            <tr>
-              <th scope="col">Sección</th>
-              {columnas.map((c) => (
-                <th key={c.id} scope="col">
-                  {c.nombre}
-                  <small>{c.detalle} en la campaña</small>
-                </th>
+      {datos.grupos.length === 0 ? (
+        <p className="vacio-tarjeta">Todavía no hay roles.</p>
+      ) : (
+        <>
+          <label className="permisos__elegir">
+            Rol
+            <select className="entrada" value={elegido ?? ''} onChange={(e) => setElegido(Number(e.target.value))}>
+              {datos.grupos.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.nombre} ({g.usuarios} usuario{g.usuarios === 1 ? '' : 's'})
+                </option>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {secciones.map((s) => (
-              <tr key={s.seccion}>
-                <th scope="row">{s.seccion}</th>
-                {columnas.map((c) => {
-                  const tiene = permisosDe(c, s.seccion)
-                  return (
-                    <td key={c.id}>
-                      {tiene.length === 0 ? (
-                        <span className="matriz__nada" aria-label="Sin permisos">
-                          —
-                        </span>
-                      ) : (
-                        <span className="matriz__acciones">
-                          {[...ACCIONES, ...tiene.filter((a) => !ACCIONES.includes(a))]
-                            .filter((a) => tiene.includes(a))
-                            .map((a) => (
-                              <span key={a} className={`permiso permiso--${ACCIONES.indexOf(a)}`}>
-                                {a}
-                              </span>
-                            ))}
-                        </span>
-                      )}
-                    </td>
-                  )
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </select>
+          </label>
+
+          {rol && rol.permisos.length === 0 ? (
+            <p className="vacio-tarjeta">El rol {rol.nombre} no tiene permisos asignados.</p>
+          ) : (
+            rol && (
+              <div className="tabla-envoltura-ancha">
+                <table className="matriz">
+                  <caption className="sr-solo">Permisos del rol {rol.nombre}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Sección</th>
+                      {ACCIONES.map((a) => (
+                        <th key={a.clave} scope="col" className="matriz__columna">
+                          {a.texto}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rol.permisos.map((s) => (
+                      <tr key={s.seccion}>
+                        <th scope="row">{s.seccion}</th>
+                        {ACCIONES.map((a) => (
+                          <td key={a.clave} className="matriz__columna">
+                            {s.acciones.includes(a.clave) ? (
+                              <Check size={18} className="matriz__si" aria-label="Sí" />
+                            ) : (
+                              <Minus size={16} className="matriz__nada" aria-label="No" />
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          )}
+        </>
+      )}
 
       <h2 className="permisos__titulo">Usuarios de la campaña</h2>
       {datos.usuarios.length === 0 ? (
         <p className="vacio-tarjeta">No hay usuarios activos en esta campaña.</p>
       ) : (
         <>
-        <ul className="permisos__usuarios">
-          {paginado.items.map((u) => (
-            <li key={u.id}>
-              <b>{u.nombre}</b>
-              <span className="texto-suave">{u.email}</span>
-              <span className="permisos__grupos">
-                {u.directos.some((d) => d.acciones.includes('Puede administrar la campaña')) && (
-                  <span className="etiqueta etiqueta--violeta">Administra la campaña</span>
-                )}
-                {u.grupos.length ? (
-                  u.grupos.map((g) => (
+          <ul className="permisos__usuarios">
+            {paginado.items.map((u) => (
+              <li key={u.id}>
+                <b>{u.nombre}</b>
+                <span className="texto-suave">{u.email}</span>
+                <span className="permisos__grupos">
+                  {u.superusuario && <span className="etiqueta etiqueta--violeta">Superusuario</span>}
+                  {u.grupos.map((g) => (
                     <span key={g} className="etiqueta etiqueta--magenta">
                       {g}
                     </span>
-                  ))
-                ) : (
-                  !u.directos.length && <span className="etiqueta">Sin permisos</span>
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <Paginacion {...paginado} />
+                  ))}
+                  {!u.superusuario && !u.grupos.length && <span className="etiqueta">Sin rol</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <Paginacion {...paginado} />
         </>
       )}
     </main>

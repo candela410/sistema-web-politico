@@ -5,8 +5,7 @@ export const nombreDe = (usuario) =>
 
 export function rolDe(usuario) {
   if (usuario.es_superusuario) return 'Superusuario'
-  if (usuario.permisos?.includes('core.administrar_campana')) return 'Administración'
-  return usuario.grupos?.[0] ?? (usuario.es_militante ? 'Militante' : 'Usuario')
+  return usuario.grupos?.[0] ?? 'Usuario'
 }
 
 export const inicialDe = (usuario) => nombreDe(usuario).trim().charAt(0).toUpperCase()

@@ -2,8 +2,95 @@ import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import Confirmacion from '../comunes/Confirmacion'
+import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import * as api from '../../api/mapa'
+import { useConCambios } from '../../validaciones'
 import { PERFILES, distancia, duracion } from './formato'
+
+// Agrupa las rutas por zona (rutas → calles → barrios → zonas). Una ruta que
+// pasa por dos zonas aparece en las dos; las que no pasan por ninguna, al final.
+function porZona(rutas) {
+  const grupos = new Map()
+  for (const r of rutas) {
+    for (const zona of r.zonas.length ? r.zonas : [null]) {
+      if (!grupos.has(zona)) grupos.set(zona, [])
+      grupos.get(zona).push(r)
+    }
+  }
+  return [...grupos].sort(([a], [b]) => (a === null) - (b === null) || String(a).localeCompare(String(b)))
+}
+
+function FormularioRuta({ modo, setModo, form, cambiar, guardando, onGuardar }) {
+  const conCambios = useConCambios({ ...form, paradas: modo.paradas })
+  const quitar = (i) => setModo((m) => ({ ...m, paradas: m.paradas.filter((_, j) => j !== i) }))
+  const faltan = Math.max(0, 2 - modo.paradas.length)
+  return (
+    <form className="formulario" onSubmit={onGuardar}>
+      <h2>{modo.id ? 'Editar ruta' : 'Nueva ruta'}</h2>
+      <p className="paso">Marque en el mapa los puntos por donde pasa la ruta, en orden.</p>
+
+      {modo.paradas.length > 0 && (
+        <ol className="paradas">
+          {modo.paradas.map(([lng, lat], i) => (
+            <li key={`${i}-${lng}-${lat}`}>
+              <span className="paradas__numero">{i + 1}</span>
+              <span className="paradas__coord">
+                {lat.toFixed(5)}, {lng.toFixed(5)}
+              </span>
+              <button type="button" className="enlace-boton" onClick={() => quitar(i)} aria-label={`Quitar punto ${i + 1}`}>
+                Quitar
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+      {faltan > 0 && (
+        <p className="texto-suave">{faltan === 2 ? 'Faltan al menos 2 puntos.' : 'Falta al menos 1 punto.'}</p>
+      )}
+
+      <label htmlFor="ruta-nombre">Nombre</label>
+      <input
+        id="ruta-nombre"
+        className="entrada"
+        value={form.nombre}
+        onChange={cambiar('nombre')}
+        placeholder="Ej.: Recorrido del sábado"
+        maxLength={120}
+        autoCapitalize="sentences"
+        enterKeyHint="next"
+        required
+      />
+
+      <label htmlFor="ruta-perfil">Cómo se recorre</label>
+      <select id="ruta-perfil" className="entrada" value={form.perfil} onChange={cambiar('perfil')}>
+        {PERFILES.map(([valor, texto]) => (
+          <option key={valor} value={valor}>
+            {texto}
+          </option>
+        ))}
+      </select>
+
+      <label htmlFor="ruta-descripcion">Notas</label>
+      <textarea
+        id="ruta-descripcion"
+        className="entrada"
+        rows={2}
+        maxLength={500}
+        value={form.descripcion}
+        onChange={cambiar('descripcion')}
+      />
+
+      <div className="acciones">
+        <button type="button" className="boton boton--borde" onClick={() => setModo(null)}>
+          Cancelar
+        </button>
+        <button type="submit" className="boton" disabled={guardando || faltan > 0 || !form.nombre.trim() || !conCambios}>
+          {guardando ? 'Calculando…' : 'Calcular y guardar'}
+        </button>
+      </div>
+    </form>
+  )
+}
 
 function PanelRutas({ rutas, modo, setModo, seleccionada, onSeleccionar, onGuardada, onBorrada, onError }) {
   const [form, setForm] = useState({ nombre: '', perfil: 'foot-walking', descripcion: '' })
@@ -51,81 +138,19 @@ function PanelRutas({ rutas, modo, setModo, seleccionada, onSeleccionar, onGuard
     }
   }
 
-  if (marcando) {
-    const quitar = (i) => setModo((m) => ({ ...m, paradas: m.paradas.filter((_, j) => j !== i) }))
-    const faltan = Math.max(0, 2 - modo.paradas.length)
+  const paginado = usePaginado(rutas)
+
+  if (marcando)
     return (
-      <form className="formulario" onSubmit={guardar}>
-        <h2>{modo.id ? 'Editar ruta' : 'Nueva ruta'}</h2>
-        <p className="paso">
-          Marcá en el mapa los puntos por donde pasa la ruta, en orden. OpenRouteService calcula el recorrido por
-          las calles.
-        </p>
-
-        {modo.paradas.length > 0 && (
-          <ol className="paradas">
-            {modo.paradas.map(([lng, lat], i) => (
-              <li key={`${i}-${lng}-${lat}`}>
-                <span className="paradas__numero">{i + 1}</span>
-                <span className="paradas__coord">
-                  {lat.toFixed(5)}, {lng.toFixed(5)}
-                </span>
-                <button
-                  type="button"
-                  className="enlace-boton"
-                  onClick={() => quitar(i)}
-                  aria-label={`Quitar punto ${i + 1}`}
-                >
-                  Quitar
-                </button>
-              </li>
-            ))}
-          </ol>
-        )}
-        {faltan > 0 && (
-          <p className="texto-suave">{faltan === 2 ? 'Faltan 2 puntos como mínimo.' : 'Falta 1 punto como mínimo.'}</p>
-        )}
-
-        <label htmlFor="ruta-nombre">Nombre</label>
-        <input
-          id="ruta-nombre"
-          className="entrada"
-          value={form.nombre}
-          onChange={cambiar('nombre')}
-          placeholder="Ej.: Recorrido del sábado"
-          maxLength={120}
-          required
-        />
-
-        <label htmlFor="ruta-perfil">Cómo se recorre</label>
-        <select id="ruta-perfil" className="entrada" value={form.perfil} onChange={cambiar('perfil')}>
-          {PERFILES.map(([valor, texto]) => (
-            <option key={valor} value={valor}>
-              {texto}
-            </option>
-          ))}
-        </select>
-
-        <label htmlFor="ruta-descripcion">Notas</label>
-        <textarea
-          id="ruta-descripcion"
-          className="entrada"
-          rows={2}
-          value={form.descripcion}
-          onChange={cambiar('descripcion')}
-        />
-
-        <div className="acciones">
-          <button type="button" className="boton boton--borde" onClick={() => setModo(null)}>
-            Cancelar
-          </button>
-          <button type="submit" className="boton" disabled={guardando || faltan > 0 || !form.nombre.trim()}>
-            {guardando ? 'Calculando…' : 'Calcular y guardar'}
-          </button>
-        </div>
-      </form>
+      <FormularioRuta
+        modo={modo}
+        setModo={setModo}
+        form={form}
+        cambiar={cambiar}
+        guardando={guardando}
+        onGuardar={guardar}
+      />
     )
-  }
 
   return (
     <div className="listado">
@@ -134,29 +159,37 @@ function PanelRutas({ rutas, modo, setModo, seleccionada, onSeleccionar, onGuard
       </button>
 
       {rutas.length === 0 ? (
-        <p className="vacio">Todavía no hay rutas. Creá una marcando los puntos sobre el mapa.</p>
+        <p className="vacio">Todavía no hay rutas. Cree una marcando los puntos sobre el mapa.</p>
       ) : (
-        <ul className="items">
-          {rutas.map((r) => (
-            <li key={r.id}>
-              <button
-                type="button"
-                className="item"
-                aria-pressed={r.id === seleccionada}
-                onClick={() => onSeleccionar(r)}
-              >
-                <span className="item__color item__color--ruta" />
-                <span className="item__texto">
-                  <b>{r.nombre}</b>
-                  <small>
-                    {distancia(r.distancia_m)} · {duracion(r.duracion_s)} ·{' '}
-                    {PERFILES.find(([v]) => v === r.perfil)?.[1].toLowerCase()}
-                  </small>
-                </span>
-              </button>
-            </li>
+        <>
+          {porZona(paginado.items).map(([zona, lista]) => (
+            <section key={zona ?? 'sin-zona'} className="grupo-zona">
+              <h3 className="grupo-zona__titulo">{zona ? `Zona ${zona}` : 'Sin zona'}</h3>
+              <ul className="items">
+                {lista.map((r) => (
+                  <li key={r.id}>
+                    <button
+                      type="button"
+                      className="item"
+                      aria-pressed={r.id === seleccionada}
+                      onClick={() => onSeleccionar(r)}
+                    >
+                      <span className="item__color item__color--ruta" />
+                      <span className="item__texto">
+                        <b>{r.nombre}</b>
+                        <small>
+                          {distancia(r.distancia_m)} · {duracion(r.duracion_s)} ·{' '}
+                          {PERFILES.find(([v]) => v === r.perfil)?.[1].toLowerCase()}
+                        </small>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+          <Paginacion {...paginado} contenedor=".mapa__lateral" />
+        </>
       )}
 
       {rutaActiva && (
@@ -184,16 +217,16 @@ function PanelRutas({ rutas, modo, setModo, seleccionada, onSeleccionar, onGuard
           {rutaActiva.descripcion && <p className="texto-suave">{rutaActiva.descripcion}</p>}
           <div className="acciones acciones-iconos">
             <BotonIcono icono={Pencil} etiqueta="Editar ruta" onClick={() => empezar(rutaActiva)} />
-            <BotonIcono icono={Trash2} etiqueta="Borrar ruta" variante="peligro" onClick={() => setABorrar(rutaActiva)} />
+            <BotonIcono icono={Trash2} etiqueta="Eliminar ruta" variante="peligro" onClick={() => setABorrar(rutaActiva)} />
           </div>
           {aBorrar && (
             <Confirmacion
-              titulo="Borrar ruta"
-              textoConfirmar="Borrar"
+              titulo="Eliminar ruta"
+              textoConfirmar="Eliminar"
               onCerrar={() => setABorrar(null)}
               onConfirmar={() => borrar(aBorrar)}
             >
-              ¿Seguro que querés borrar la ruta <b>{aBorrar.nombre}</b>?
+              ¿Desea eliminar la ruta <b>{aBorrar.nombre}</b>?
             </Confirmacion>
           )}
         </section>

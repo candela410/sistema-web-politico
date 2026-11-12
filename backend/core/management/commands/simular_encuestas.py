@@ -175,7 +175,8 @@ class Command(BaseCommand):
                         elegidas.add(random.choices(opciones, weights=tendencia[p.pk])[0])
                 else:
                     elegidas = random.choices(opciones, weights=tendencia[p.pk])
-                respuestas += [RespuestaCargada(opcion=o) for o in elegidas]
+                # Como en la carga real: la respuesta guarda la ubicación de la encuesta
+                respuestas += [RespuestaCargada(opcion=o, latitud=lat, longitud=lng) for o in elegidas]
 
         creado = {"campana": campana.pk, "encuestas": [], "encuestados": [], "respuestas": [], "asignaciones": []}
         with transaction.atomic():

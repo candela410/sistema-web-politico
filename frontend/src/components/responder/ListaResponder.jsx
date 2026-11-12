@@ -24,7 +24,7 @@ function ListaResponder() {
       <header className="pagina__encabezado">
         <div>
           <h1>Encuestas</h1>
-          <p>Elegí el cuestionario que vas a cargar.</p>
+          <p>Seleccione el cuestionario que va a cargar.</p>
           <span className="franja-corta" aria-hidden="true">
             <i />
             <i />
@@ -43,7 +43,7 @@ function ListaResponder() {
       ) : cuestionarios.length === 0 ? (
         <div className="vacio-tarjeta">
           <b>No hay cuestionarios activos.</b>
-          <span>Cuando la administración active uno, va a aparecer acá.</span>
+          <span>Cuando la administración active uno, aparecerá aquí.</span>
         </div>
       ) : (
         <>

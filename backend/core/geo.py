@@ -199,9 +199,9 @@ def calcular_ruta(paradas, perfil):
             mensaje = "Uno de los puntos está lejos de una calle. Acercalo a una calle e intentá de nuevo."
         if error.code in (401, 403):
             mensaje = "La API key de OpenRouteService no es válida."
-        raise ErrorRuteo(mensaje or f"OpenRouteService respondió {error.code}.") from error
+        raise ErrorRuteo(mensaje or "No se pudo calcular el recorrido. Intente nuevamente más tarde.") from error
     except (urllib.error.URLError, TimeoutError) as error:
-        raise ErrorRuteo("No se pudo conectar con OpenRouteService.") from error
+        raise ErrorRuteo("No se pudo calcular el recorrido. Intente nuevamente más tarde.") from error
 
     feature = datos["features"][0]
     resumen = feature["properties"].get("summary", {})

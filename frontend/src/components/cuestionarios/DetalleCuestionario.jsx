@@ -65,7 +65,7 @@ function EstadisticaPregunta({ cuestionario, pregunta, numero, elegido, onCambio
       </header>
 
       {pregunta.respondidas === 0 ? (
-        <p className="texto-suave">Nadie respondió esta pregunta todavía.</p>
+        <p className="texto-suave">Todavía no hay respuestas para esta pregunta.</p>
       ) : (
         <>
           <div className="selector-graficos" role="radiogroup" aria-label="Tipo de gráfico a mostrar">
@@ -152,13 +152,13 @@ function DescargarPdf({ datos, eleccion, nodos, onCerrar }) {
   return (
     <Modal titulo="Descargar PDF" onCerrar={onCerrar}>
       <p className="modal__texto">
-        El informe siempre empieza con los datos del cuestionario (nombre, categoría, campaña, fecha). Marcá qué más querés
-        incluir: aparece el gráfico que estás viendo en cada pregunta.
+        El informe siempre comienza con los datos del cuestionario (nombre, categoría, campaña y fecha). Marque qué más
+        desea incluir: se agrega el gráfico que se muestra en cada pregunta.
       </p>
       <div className="pdf-lista">
         <label className="casilla-texto">
           <input type="checkbox" checked={!!incluir.resumen} onChange={() => alternar('resumen')} />
-          <span>Resumen general (encuestas, militantes, preguntas y última encuesta)</span>
+          <span>Resumen general (encuestas, usuarios que cargaron, preguntas y última encuesta)</span>
         </label>
         {preguntas.map((p) => (
           <fieldset key={p.id} className="pdf-lista__pregunta">
@@ -259,22 +259,12 @@ function DetalleCuestionario() {
         <Link to="/cuestionarios" className="enlace-volver">
           ← Cuestionarios
         </Link>
-        <span className="editor__estado">
-          {datos && (
-            <span className="en-vivo">
-              <span className="en-vivo__punto" aria-hidden="true" />
-              Se actualiza solo
-            </span>
-          )}
-        </span>
+        <span className="editor__estado" />
         {datos && datos.total_encuestas > 0 && (
           <button type="button" className="boton" onClick={() => setPdfAbierto(true)}>
             Descargar PDF
           </button>
         )}
-        <Link to={`/cuestionarios/${id}`} className="boton boton--borde">
-          Editar
-        </Link>
       </div>
 
       <div className="editor__columna">
@@ -291,7 +281,7 @@ function DetalleCuestionario() {
               <h1 className="detalle__titulo">{datos.cuestionario.titulo}</h1>
               <div className="datos-grilla">
                 <Dato etiqueta="Encuestas" valor={f(datos.total_encuestas)} />
-                <Dato etiqueta="Militantes que cargaron" valor={f(datos.militantes)} />
+                <Dato etiqueta="Usuarios que cargaron" valor={f(datos.militantes)} />
                 <Dato
                   etiqueta="Última encuesta"
                   valor={datos.ultima_encuesta ? formatoFecha.format(new Date(datos.ultima_encuesta)) : '—'}
@@ -302,8 +292,8 @@ function DetalleCuestionario() {
             <h2 className="detalle__seccion">Estadísticas</h2>
             {datos.total_encuestas === 0 && (
               <p className="aviso-info">
-                Todavía no hay encuestas cargadas. Cuando los militantes respondan este cuestionario, acá vas a ver los
-                resultados de cada pregunta.
+                Todavía no hay encuestas cargadas. Los resultados de cada pregunta se mostrarán cuando se responda este
+                cuestionario.
               </p>
             )}
             {datos.preguntas.map((p, i) => (

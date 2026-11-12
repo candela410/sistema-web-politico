@@ -199,7 +199,7 @@ export async function descargarPdf(informe) {
     tituloSeccion('Resumen general')
     indicadores([
       ['Encuestas realizadas', f(resumen.encuestas)],
-      ['Militantes que cargaron', f(resumen.militantes)],
+      ['Usuarios que cargaron', f(resumen.militantes)],
       ['Preguntas con respuestas', `${f(resumen.conRespuestas)} de ${f(resumen.preguntas)}`],
       ['Última encuesta', resumen.ultima ? soloFecha.format(new Date(resumen.ultima)) : '-'],
     ])

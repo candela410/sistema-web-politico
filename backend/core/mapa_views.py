@@ -78,7 +78,7 @@ def calles(request):
     elif request.GET.get("zona"):
         consulta = consulta.filter(barrio__zona_id=request.GET["zona"])
     else:
-        return _error("Indicá ?barrio=ID o ?zona=ID.")
+        return _error("Indique ?barrio=ID o ?zona=ID.")
     return JsonResponse(
         _coleccion([
             _feature(c.geometria, {"id": c.pk, "nombre": c.nombre, "barrio": c.barrio.nombre})
@@ -129,9 +129,9 @@ def _asignar_barrios(zona):
 def _validar_zona(datos, zona=None):
     nombre = (datos.get("nombre") or "").strip()
     if not nombre:
-        return "Poné un nombre a la zona."
+        return "Ingrese el nombre de la zona."
     if len(nombre) > 100:
-        return "El nombre es muy largo (máximo 100 caracteres)."
+        return "El nombre admite hasta 100 caracteres."
     mensaje = nombre_cosa(nombre)
     if mensaje:
         return mensaje
@@ -144,7 +144,7 @@ def _validar_zona(datos, zona=None):
         return "El color debe tener el formato #RRGGBB."
     if "geometria" in datos:
         if not es_poligono_valido(datos["geometria"]):
-            return "Dibujá la zona como un polígono en el mapa."
+            return "Dibuje la zona como un polígono en el mapa."
         # Las zonas no se pueden pisar: así cada ruta queda dentro de una sola
         otras = Zona.objects.exclude(geometria=None)
         if zona:
@@ -164,9 +164,9 @@ def zonas(request):
 
     datos = _leer_json(request)
     if datos is None:
-        return _error("JSON inválido.")
+        return _error("Los datos enviados no son válidos.")
     if "geometria" not in datos:
-        return _error("Dibujá la zona como un polígono en el mapa.")
+        return _error("Dibuje la zona como un polígono en el mapa.")
     error = _validar_zona(datos)
     if error:
         return _error(error)
@@ -194,7 +194,7 @@ def zona_detalle(request, pk):
 
     datos = _leer_json(request)
     if datos is None:
-        return _error("JSON inválido.")
+        return _error("Los datos enviados no son válidos.")
     datos.setdefault("nombre", zona.nombre)
     error = _validar_zona(datos, zona)
     if error:
@@ -279,7 +279,7 @@ def _ruta_json(ruta):
 
 def _validar_paradas(paradas):
     if not isinstance(paradas, list) or len(paradas) < 2:
-        return "Marcá al menos 2 puntos en el mapa."
+        return "Marque al menos 2 puntos en el mapa."
     if len(paradas) > MAX_PARADAS:
         return f"Una ruta puede tener hasta {MAX_PARADAS} puntos."
     for p in paradas:
@@ -298,7 +298,7 @@ def _validar_paradas_en_zona(paradas):
     Devuelve el mensaje de error o None."""
     zonas = list(Zona.objects.exclude(geometria=None))
     if not zonas:
-        return "Primero dibujá una zona: las rutas se hacen dentro de una zona."
+        return "Primero dibuje una zona: las rutas se crean dentro de una zona."
     candidatas = zonas
     for i, (lng, lat) in enumerate(paradas, start=1):
         contienen = [z for z in zonas if punto_en_poligono(lng, lat, z.geometria)]
@@ -326,7 +326,7 @@ def _guardar_ruta(ruta, datos):
     """Valida, calcula el recorrido con OpenRouteService y guarda."""
     nombre = (datos.get("nombre", ruta.nombre) or "").strip()
     if not nombre:
-        return _error("Poné un nombre a la ruta.")
+        return _error("Ingrese el nombre de la ruta.")
     mensaje = nombre_cosa(nombre)
     if mensaje:
         return _error(mensaje)
@@ -338,7 +338,7 @@ def _guardar_ruta(ruta, datos):
 
     perfil = datos.get("perfil", ruta.perfil)
     if perfil not in Ruta.Perfil.values:
-        return _error("Elegí cómo se recorre: a pie, en auto o en bicicleta.")
+        return _error("Seleccione cómo se recorre: a pie, en auto o en bicicleta.")
 
     paradas = datos.get("paradas", ruta.paradas)
     error = _validar_paradas(paradas)
@@ -375,7 +375,7 @@ def rutas(request):
 
     datos = _leer_json(request)
     if datos is None:
-        return _error("JSON inválido.")
+        return _error("Los datos enviados no son válidos.")
     ruta = Ruta(paradas=[])
     error = _guardar_ruta(ruta, datos)
     if error:
@@ -390,7 +390,7 @@ def ruta_detalle(request, pk):
     ruta = get_object_or_404(rutas_de_campana(request.campana), pk=pk)
     if request.method == "DELETE":
         if ruta.equipos.exists():
-            return _error("La ruta tiene equipos asignados. Cambiales la ruta antes de borrarla.", 409)
+            return _error("No se puede eliminar la ruta porque tiene equipos asignados.", 409)
         with transaction.atomic():
             ruta.calles.update(ruta=None)
             ruta.delete()
@@ -399,7 +399,7 @@ def ruta_detalle(request, pk):
 
     datos = _leer_json(request)
     if datos is None:
-        return _error("JSON inválido.")
+        return _error("Los datos enviados no son válidos.")
     antes = _foto_ruta(ruta)
     error = _guardar_ruta(ruta, datos)
     if error:

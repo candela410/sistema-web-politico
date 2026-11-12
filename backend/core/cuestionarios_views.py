@@ -75,12 +75,12 @@ def _texto(valor, campo, maximo=None, obligatorio=True):
     if valor is None:
         valor = ""
     if not isinstance(valor, str):
-        raise DatosInvalidos(f"{campo} debe ser texto.")
+        raise DatosInvalidos(f"{campo} no es válido.")
     valor = valor.strip()
     if obligatorio and not valor:
-        raise DatosInvalidos(f"Falta {campo.lower()}.")
+        raise DatosInvalidos(f"Ingrese {campo[0].lower() + campo[1:]}.")
     if maximo and len(valor) > maximo:
-        raise DatosInvalidos(f"{campo} es muy largo (máximo {maximo} caracteres).")
+        raise DatosInvalidos(f"{campo} admite hasta {maximo} caracteres.")
     # La descripción (opcional) admite cualquier texto; título, preguntas y opciones no
     mensaje = texto_libre(valor, campo) if obligatorio else None
     if mensaje:
@@ -92,17 +92,20 @@ def _limpiar_cabecera(datos):
     titulo = _texto(datos.get("titulo"), "El título", 180)
     descripcion = _texto(datos.get("descripcion"), "La descripción", obligatorio=False)
     categoria_id = datos.get("categoria")
-    if not categoria_id or not Categoria.objects.filter(pk=categoria_id).exists():
-        raise DatosInvalidos("Elegí una categoría.")
+    categoria = Categoria.objects.filter(pk=categoria_id).first() if categoria_id else None
+    if categoria is None:
+        raise DatosInvalidos("Seleccione una categoría.")
     activo = datos.get("activo", True)
     if not isinstance(activo, bool):
-        raise DatosInvalidos("El estado activo debe ser verdadero o falso.")
+        raise DatosInvalidos("El estado no es válido.")
+    if activo and not categoria.activa:
+        raise DatosInvalidos("La categoría está desactivada: el cuestionario no puede estar activo.")
     return {"titulo": titulo, "descripcion": descripcion or None, "categoria_id": categoria_id, "activo": activo}
 
 
 def _limpiar_preguntas(preguntas):
     if not isinstance(preguntas, list) or not preguntas:
-        raise DatosInvalidos("Agregá al menos una pregunta.")
+        raise DatosInvalidos("Agregue al menos una pregunta.")
     if len(preguntas) > MAX_PREGUNTAS:
         raise DatosInvalidos(f"Un cuestionario puede tener hasta {MAX_PREGUNTAS} preguntas.")
     limpias = []
@@ -178,7 +181,7 @@ def cuestionarios(request):
 
     datos = leer_json(request)
     if datos is None:
-        return error("JSON inválido.")
+        return error("Los datos enviados no son válidos.")
     try:
         cabecera = _limpiar_cabecera(datos)
         preguntas = _limpiar_preguntas(datos.get("preguntas"))
@@ -204,9 +207,9 @@ def cuestionario_detalle(request, pk):
 
     if request.method == "DELETE":
         if cuestionario.encuestas.exists():
-            return error("No se puede borrar: ya tiene encuestas cargadas. Podés desactivarlo.", 409)
+            return error("No se puede eliminar el cuestionario porque tiene encuestas cargadas. Puede desactivarlo.", 409)
         if cuestionario.usuarios.exists():
-            return error("No se puede borrar: está asignado a usuarios. Quitá las asignaciones primero.", 409)
+            return error("No se puede eliminar el cuestionario porque está asignado a usuarios.", 409)
         cuestionario.delete()  # preguntas y opciones se borran en cascada
         registrar(request, cuestionario, "borrar", detalle=f"Borró el cuestionario {cuestionario.titulo}")
         return JsonResponse({"ok": True})
@@ -214,7 +217,7 @@ def cuestionario_detalle(request, pk):
     # PUT: reemplaza el cuestionario completo
     datos = leer_json(request)
     if datos is None:
-        return error("JSON inválido.")
+        return error("Los datos enviados no son válidos.")
     bloqueado = cuestionario.encuestas.exists()
     try:
         cabecera = _limpiar_cabecera(datos)

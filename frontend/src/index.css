@@ -318,6 +318,16 @@ body {
   font-weight: 500;
 }
 
+/* Error debajo de un campo de formulario */
+.formulario-modal small.texto-error {
+  font-size: 0.8rem;
+}
+
+.aviso-info--chico {
+  padding: 8px 12px;
+  font-size: 0.84rem;
+}
+
 .aviso-ok {
   margin: 0;
   padding: 10px 14px;

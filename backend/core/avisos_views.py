@@ -50,8 +50,8 @@ def _asignaciones(request, desde):
         {
             "id": f"asignacion-{a.cuestionario_id}",
             "tipo": "asignacion",
-            "titulo": "Te asignaron un cuestionario",
-            "texto": f"{a.cuestionario.titulo}: ya podés cargar encuestas.",
+            "titulo": "Se le asignó un cuestionario",
+            "texto": f"{a.cuestionario.titulo}: ya puede cargar encuestas.",
             "fecha": a.asignado_en.isoformat(),
             "enlace": f"/responder/{a.cuestionario_id}",
         }

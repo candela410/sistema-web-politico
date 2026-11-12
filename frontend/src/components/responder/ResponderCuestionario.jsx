@@ -30,7 +30,7 @@ function Pregunta({ pregunta, numero, elegidas, error, onCambio }) {
               *
             </span>
           )}
-          {multiple && <span className="respuesta__ayuda">Podés elegir varias opciones</span>}
+          {multiple && <span className="respuesta__ayuda">Puede elegir varias opciones</span>}
         </span>
       </legend>
 
@@ -110,7 +110,7 @@ function ResponderCuestionario() {
     evento.preventDefault()
     setError('')
     if (!validar()) {
-      setError('Revisá las preguntas marcadas en rojo.')
+      setError('Revise las preguntas marcadas en rojo.')
       return
     }
     setEnviando(true)
@@ -212,20 +212,38 @@ function ResponderCuestionario() {
               <input
                 className="entrada"
                 inputMode="numeric"
+                autoComplete="off"
+                enterKeyHint="next"
                 value={encuestado.documento}
                 onChange={cambiarEncuestado('documento')}
                 placeholder="Sin puntos"
-                maxLength={30}
+                maxLength={10}
                 required
               />
             </label>
             <label>
               Nombre
-              <input className="entrada" value={encuestado.nombre} onChange={cambiarEncuestado('nombre')} />
+              <input
+                className="entrada"
+                autoCapitalize="words"
+                autoComplete="off"
+                enterKeyHint="next"
+                maxLength={100}
+                value={encuestado.nombre}
+                onChange={cambiarEncuestado('nombre')}
+              />
             </label>
             <label>
               Apellido
-              <input className="entrada" value={encuestado.apellido} onChange={cambiarEncuestado('apellido')} />
+              <input
+                className="entrada"
+                autoCapitalize="words"
+                autoComplete="off"
+                enterKeyHint="next"
+                maxLength={100}
+                value={encuestado.apellido}
+                onChange={cambiarEncuestado('apellido')}
+              />
             </label>
           </div>
         </fieldset>

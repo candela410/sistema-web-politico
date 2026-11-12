@@ -23,6 +23,15 @@
   transition: box-shadow 150ms ease;
 }
 
+.categoria--apagada {
+  border-left-color: #cfcdd6;
+  background: #fbfbfc;
+}
+
+.categoria--apagada h3 {
+  color: var(--lla-gris);
+}
+
 .categoria:hover {
   box-shadow: 0 4px 14px rgb(21 18 28 / 0.07);
 }

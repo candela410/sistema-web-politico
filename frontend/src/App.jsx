@@ -3,7 +3,6 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from
 import { cerrarSesion, prepararCsrf, sesionDeEstaPestana, usuarioActual } from './api/auth'
 import Actividad from './components/actividad/Actividad'
 import Analitica from './components/analitica/Analitica'
-import Campanas from './components/campanas/Campanas'
 import ElegirCampana from './components/campanas/ElegirCampana'
 import Categorias from './components/categorias/Categorias'
 import Aviso from './components/comunes/Aviso'
@@ -14,6 +13,7 @@ import Grupos from './components/grupos/grupos'
 import Inicio from './components/inicio/Inicio'
 import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
 import Login from './components/login/Login'
+import Olvide from './components/login/Olvide'
 import Restablecer from './components/login/Restablecer'
 import Tutorial from './components/tutorial/tutorial'
 import Mapa from './components/mapa/Mapa'
@@ -28,13 +28,14 @@ import logo from './assets/logo.png'
 // Rutas de la app. Cada sección pide un permiso de Django (el mismo que usa el
 // menú lateral en components/menu/opciones.js):
 //   /login        ingreso
-//   /restablecer/:uid/:token  elegir contraseña nueva (enlace del correo)
+//   /olvide       "¿Olvidó su contraseña?": pedir el enlace por correo
+//   /restablecer/:uid/:token  elegir la contraseña (enlace del correo)
 //   /inicio       panel de inicio (todos los que tienen campaña)
-//   /campana      elegir la campaña (superusuario o permiso "elegir_campana")
+//   /campana      elegir, crear o desactivar campañas (superusuario o permiso "Ver campañas")
 //   /mapa, /cuestionarios(/nuevo|/:id|/:id/estadisticas), /categorias, /responder(/:id)
-//   /equipos, /usuarios, /grupos, /permisos, /actividad, /campanas
+//   /dashboard, /equipos, /usuarios, /grupos, /permisos, /actividad
 //   /tutorial     videos de ayuda (todos; cada uno ve los de sus funciones)
-// Todo lo que no sea /login, /campana o /campanas necesita una campaña elegida.
+// Todo lo que no sea /login, /olvide, /restablecer o /campana necesita una campaña elegida.
 
 function RequiereSesion({ usuario, children }) {
   const ubicacion = useLocation()
@@ -121,6 +122,7 @@ function Rutas() {
   return (
     <Routes>
       <Route path="/login" element={<PaginaLogin usuario={usuario} onIngreso={setUsuario} />} />
+      <Route path="/olvide" element={usuario ? <Navigate to={inicioDe(usuario)} replace /> : <Olvide />} />
       {/* Enlace del correo para elegir una contraseña nueva (no pide sesión) */}
       <Route path="/restablecer/:uid/:token" element={<Restablecer />} />
       {/* Enlace cortado al copiarlo (le falta el token): se avisa en vez de ir al login */}
@@ -159,7 +161,8 @@ function Rutas() {
         <Route path="/cuestionarios/nuevo" element={s('core.add_cuestionario', <EditorCuestionario key="nuevo" />)} />
         <Route path="/cuestionarios/:id" element={s('core.view_cuestionario', <EditorCuestionario />)} />
         <Route path="/cuestionarios/:id/estadisticas" element={s('core.view_encuesta', <DetalleCuestionario />)} />
-        <Route path="/analitica" element={s('core.view_encuesta', <Analitica usuario={usuario} />)} />
+        <Route path="/dashboard" element={s('core.view_encuesta', <Analitica usuario={usuario} />)} />
+        <Route path="/analitica" element={<Navigate to="/dashboard" replace />} />
         <Route path="/responder" element={s('core.add_encuesta', <ListaResponder />)} />
         <Route path="/responder/:id" element={s('core.add_encuesta', <ResponderCuestionario key="responder" />)} />
         <Route path="/usuarios" element={s('core.view_usuario', <Usuarios usuario={usuario} />)} />
@@ -167,12 +170,11 @@ function Rutas() {
         <Route path="/permisos" element={s('auth.view_group', <Permisos />)} />
         <Route path="/actividad" element={s('admin.view_logentry', <Actividad usuario={usuario} />)} />
         <Route path="/tutorial" element={s(null, <Tutorial usuario={usuario} />)} />
-        <Route path="/campanas" element={s('core.view_campana', <Campanas usuario={usuario} />, true)} />
         <Route
           path="/sin-campana"
           element={
-            <Aviso titulo="Tu usuario no tiene una campaña asignada">
-              Pedile a la administración que te asigne a una campaña para poder trabajar.
+            <Aviso titulo="Su usuario no tiene una campaña asignada">
+              Solicite a la administración que lo asigne a una campaña para poder trabajar.
             </Aviso>
           }
         />

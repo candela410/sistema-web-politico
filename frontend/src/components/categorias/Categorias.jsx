@@ -7,6 +7,9 @@ import Esqueleto from '../comunes/Esqueleto'
 import { Pencil, Trash2 } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
+import Interruptor from '../comunes/Interruptor'
+import { tiene } from '../../permisos'
+import { useConCambios } from '../../validaciones'
 
 const ordenar = (lista) => [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
@@ -15,6 +18,7 @@ function FormularioCategoria({ categoria, onGuardada, onCerrar }) {
   const [descripcion, setDescripcion] = useState(categoria?.descripcion ?? '')
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const conCambios = useConCambios({ nombre, descripcion })
 
   async function guardar(evento) {
     evento.preventDefault()
@@ -43,13 +47,13 @@ function FormularioCategoria({ categoria, onGuardada, onCerrar }) {
           onChange={(e) => setNombre(e.target.value)}
           placeholder="Ej.: Seguridad"
           maxLength={120}
+          autoCapitalize="sentences"
+          enterKeyHint="next"
           autoFocus
           required
         />
 
-        <label htmlFor="cat-descripcion">
-          Descripción <span className="opcional">(opcional)</span>
-        </label>
+        <label htmlFor="cat-descripcion">Descripción</label>
         <textarea
           id="cat-descripcion"
           className="entrada"
@@ -57,6 +61,7 @@ function FormularioCategoria({ categoria, onGuardada, onCerrar }) {
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
           placeholder="Qué tipo de cuestionarios agrupa"
+          maxLength={500}
         />
 
         {error && (
@@ -69,8 +74,8 @@ function FormularioCategoria({ categoria, onGuardada, onCerrar }) {
           <button type="button" className="boton boton--borde" onClick={onCerrar}>
             Cancelar
           </button>
-          <button type="submit" className="boton" disabled={guardando || !nombre.trim()}>
-            {guardando ? 'Guardando…' : 'Guardar'}
+          <button type="submit" className="boton" disabled={guardando || !nombre.trim() || !conCambios}>
+            {guardando ? 'Guardando…' : categoria ? 'Guardar cambios' : 'Crear categoría'}
           </button>
         </div>
       </form>
@@ -95,9 +100,9 @@ function ConfirmarBorrado({ categoria, onBorrada, onCerrar }) {
   }
 
   return (
-    <Modal titulo="Borrar categoría" onCerrar={onCerrar}>
+    <Modal titulo="Eliminar categoría" onCerrar={onCerrar}>
       <p className="modal__texto">
-        ¿Seguro que querés borrar <b>{categoria.nombre}</b>? Esta acción no se puede deshacer.
+        ¿Desea eliminar la categoría <b>{categoria.nombre}</b>? Esta acción no se puede deshacer.
       </p>
       {error && (
         <p className="texto-error" role="alert">
@@ -109,14 +114,14 @@ function ConfirmarBorrado({ categoria, onBorrada, onCerrar }) {
           Cancelar
         </button>
         <button type="button" className="boton boton--rojo" onClick={borrar} disabled={borrando}>
-          {borrando ? 'Borrando…' : 'Borrar'}
+          {borrando ? 'Eliminando…' : 'Eliminar'}
         </button>
       </div>
     </Modal>
   )
 }
 
-function Categorias() {
+function Categorias({ usuario }) {
   const [categorias, setCategorias] = useState(null)
   const [errorCarga, setErrorCarga] = useState('')
   const [busqueda, setBusqueda] = useState('')
@@ -142,8 +147,28 @@ function Categorias() {
 
   function avisar(texto) {
     setAviso(texto)
-    setTimeout(() => setAviso(''), 3000)
+    setTimeout(() => setAviso(''), 4000)
   }
+
+  // Desactivar una categoría desactiva también todos sus cuestionarios
+  async function cambiarEstado(categoria, activa) {
+    try {
+      const r = await api.cambiarEstadoCategoria(categoria.id, activa)
+      setCategorias((lista) => lista.map((c) => (c.id === categoria.id ? r.categoria : c)))
+      avisar(
+        activa
+          ? `La categoría «${categoria.nombre}» fue activada.`
+          : `La categoría «${categoria.nombre}» fue desactivada${
+              r.cuestionarios_desactivados
+                ? ` junto con ${r.cuestionarios_desactivados} cuestionario${r.cuestionarios_desactivados === 1 ? '' : 's'}`
+                : ''
+            }.`,
+      )
+    } catch (e) {
+      setErrorCarga(e.message)
+    }
+  }
+  const puedeEditar = tiene(usuario, 'core.change_categoria')
 
   return (
     <main className="pagina">
@@ -190,27 +215,48 @@ function Categorias() {
           {categorias.length === 0 ? (
             <>
               <b>Todavía no hay categorías.</b>
-              <span>Creá la primera con “+ Nueva categoría”.</span>
+              <span>Cree la primera con «+ Nueva categoría».</span>
             </>
           ) : (
-            <span>No hay categorías que coincidan con “{busqueda}”.</span>
+            <span>No hay categorías que coincidan con «{busqueda}».</span>
           )}
         </div>
       ) : (
         <>
           <ul className="categorias-lista">
             {paginado.items.map((c) => (
-              <li key={c.id} className="categoria">
+              <li key={c.id} className={`categoria${c.activa ? '' : ' categoria--apagada'}`}>
                 <div className="categoria__texto">
-                  <h3>{c.nombre}</h3>
+                  <h3>
+                    {c.nombre}
+                    {!c.activa && <span className="etiqueta">Desactivada</span>}
+                  </h3>
                   {c.descripcion && <p>{c.descripcion}</p>}
                   <span className="categoria__uso">
                     {c.cuestionarios === 1 ? '1 cuestionario' : `${c.cuestionarios} cuestionarios`}
                   </span>
                 </div>
                 <div className="categoria__acciones acciones-iconos">
+                  {puedeEditar && (
+                    <Interruptor
+                      activo={c.activa}
+                      onCambiar={(activa) => cambiarEstado(c, activa)}
+                      etiqueta={`Categoría ${c.nombre} activa`}
+                      textos={['Activa', 'Inactiva']}
+                      confirmacion={{
+                        titulo: 'Desactivar categoría',
+                        mensaje: (
+                          <>
+                            ¿Desea desactivar la categoría <b>{c.nombre}</b>?
+                            {c.cuestionarios > 0 &&
+                              ` También se desactivarán sus cuestionarios (${c.cuestionarios}).`}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
                   <BotonIcono icono={Pencil} etiqueta="Editar" onClick={() => setEditando(c)} />
-                  <BotonIcono icono={Trash2} etiqueta="Borrar" variante="peligro" onClick={() => setBorrando(c)} />
+                  <BotonIcono icono={Trash2} etiqueta="Eliminar" variante="peligro" onClick={() => setBorrando(c)} />
                 </div>
               </li>
             ))}
@@ -228,7 +274,7 @@ function Categorias() {
               ordenar(esNueva ? [...lista, categoria] : lista.map((c) => (c.id === categoria.id ? categoria : c))),
             )
             setEditando(null)
-            avisar(esNueva ? `Categoría “${categoria.nombre}” creada.` : 'Cambios guardados.')
+            avisar(esNueva ? `La categoría «${categoria.nombre}» fue creada.` : 'Los cambios se guardaron correctamente.')
           }}
         />
       )}
@@ -240,7 +286,7 @@ function Categorias() {
           onBorrada={(id) => {
             setCategorias((lista) => lista.filter((c) => c.id !== id))
             setBorrando(null)
-            avisar('Categoría borrada.')
+            avisar('La categoría fue eliminada.')
           }}
         />
       )}

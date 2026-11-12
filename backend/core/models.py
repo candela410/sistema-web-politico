@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser, Permission
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import F, Q
+from django.db.models import Q
 
 def con_mayuscula(texto):
     """Primera letra en mayúscula, el resto como se escribió ("barrio norte" → "Barrio norte")."""
@@ -42,8 +42,7 @@ class Campana(models.Model):
     id_campana = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(blank=True, null=True)
-    fecha_inicio = models.DateField(blank=True, null=True)
-    fecha_fin = models.DateField(blank=True, null=True)
+    # Sin fechas: lo que decide si se puede trabajar en ella es "activa"
     activa = models.BooleanField(default=True)
     creada_en = models.DateTimeField(auto_now_add=True)
 
@@ -52,23 +51,6 @@ class Campana(models.Model):
         verbose_name = "campaña"
         verbose_name_plural = "campañas"
         ordering = ["-activa", "nombre"]
-        # Permisos propios (tabla auth_permission). "administrar_campana" incluye
-        # todo lo de la campaña: mapa, cuestionarios, categorías, usuarios,
-        # permisos (ver) y actividad. Ver core/api.py.
-        permissions = [
-            ("elegir_campana", "Puede elegir la campaña al ingresar"),
-            ("administrar_campana", "Puede administrar la campaña"),
-        ]
-        constraints = [
-            models.CheckConstraint(
-                condition=(
-                    Q(fecha_inicio__isnull=True)
-                    | Q(fecha_fin__isnull=True)
-                    | Q(fecha_fin__gte=F("fecha_inicio"))
-                ),
-                name="ck_campana_fechas",
-            )
-        ]
 
     def __str__(self):
         return self.nombre
@@ -308,6 +290,8 @@ class Categoria(models.Model):
     id_categoria = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=120, unique=True)
     descripcion = models.TextField(blank=True, null=True)
+    # Al desactivarla se desactivan sus cuestionarios (ver categorias_views)
+    activa = models.BooleanField(default=True)
 
     class Meta:
         db_table = "categorias"
@@ -509,6 +493,10 @@ class RespuestaCargada(models.Model):
         db_column="id_opcion",
         related_name="respuestas",
     )
+    # Ubicación del celular al cargar la respuesta: con ella se sabe en qué
+    # zona se respondió (Dashboard). Las respuestas anteriores no la tienen.
+    latitud = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+    longitud = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
 
     class Meta:
         db_table = "respuesta_cargada"

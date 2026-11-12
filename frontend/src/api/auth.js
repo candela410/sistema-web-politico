@@ -45,7 +45,10 @@ export async function iniciarSesion(email, password, recordar = false) {
   return usuario
 }
 
-// Enlace del correo para restablecer la contraseña (/restablecer/:uid/:token)
+// "¿Olvidó su contraseña?": pide que le llegue el enlace por correo
+export const pedirEnlace = (email) => pedir('/api/auth/olvide/', { method: 'POST', datos: { email } })
+
+// Enlace del correo para elegir o restablecer la contraseña (/restablecer/:uid/:token)
 export const comprobarEnlace = (uid, token) => pedir(`/api/auth/restablecer/${uid}/${token}/`)
 
 export const restablecerContrasena = (uid, token, password) =>

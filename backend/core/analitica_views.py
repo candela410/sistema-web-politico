@@ -1,4 +1,4 @@
-"""Pantalla Analítica: los gráficos del Módulo de Analítica (analitica/analitica.py)
+"""Pantalla Dashboard: los gráficos del Módulo de Analítica (analitica/analitica.py)
 generados al momento para la campaña activa, con los filtros de la pantalla.
 
 El script y esta pantalla usan las mismas funciones, así que los gráficos son
@@ -17,6 +17,8 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET
 
 from .api import error, requiere_permiso
+from .cuestionarios_views import cuestionarios_de_campana
+from .models import Zona
 
 sys.path.insert(0, str(Path(settings.BASE_DIR).parent / "analitica"))
 import analitica  # noqa: E402
@@ -38,21 +40,30 @@ def _fecha(request, nombre):
 
 def _datos(request):
     """Encuestas de la campaña activa y el período a mostrar (el pedido o, si
-    no, el de la campaña / los datos, igual que el script)."""
+    no, de la primera a la última encuesta, igual que el script)."""
     desde, hasta = _fecha(request, "desde"), _fecha(request, "hasta")
     if desde and hasta and desde > hasta:
-        raise FiltroInvalido("La fecha «desde» no puede ser posterior a «hasta».")
+        raise FiltroInvalido("La fecha «desde» no puede ser posterior a la fecha «hasta».")
     c = request.campana
-    campana = {"id_campana": c.pk, "nombre": c.nombre, "fecha_inicio": c.fecha_inicio, "fecha_fin": c.fecha_fin}
-    todas = analitica.leer_encuestas(connection, campana)
-    desde, hasta = analitica.rango_de_fechas(SimpleNamespace(desde=desde, hasta=hasta), campana, todas)
+    todas = analitica.leer_encuestas(connection, {"id_campana": c.pk, "nombre": c.nombre})
+    desde, hasta = analitica.rango_de_fechas(SimpleNamespace(desde=desde, hasta=hasta), todas)
     return todas, desde, hasta
+
+
+def _imagen(fig):
+    imagen = io.BytesIO()
+    fig.savefig(imagen, format="png", dpi=110, bbox_inches="tight")
+    analitica.plt.close(fig)
+    respuesta = HttpResponse(imagen.getvalue(), content_type="image/png")
+    respuesta["Cache-Control"] = "private, no-cache"
+    return respuesta
 
 
 @require_GET
 @requiere_permiso("core.view_encuesta")
 def resumen(request):
-    """Período que se va a mostrar y cuántas encuestas hay en él."""
+    """Período que se va a mostrar, cuántas encuestas hay en él y las opciones
+    para el gráfico de respuestas (cuestionarios de la campaña y zonas)."""
     try:
         todas, desde, hasta = _datos(request)
     except FiltroInvalido as e:
@@ -63,32 +74,50 @@ def resumen(request):
         "hasta": hasta.isoformat() if hasta else None,
         "encuestas": encuestas,
         "graficos": list(analitica.GRAFICOS),
+        "cuestionarios": [
+            {"id": c.pk, "titulo": c.titulo}
+            for c in cuestionarios_de_campana(request.campana).order_by("titulo")
+        ],
+        "zonas": [{"id": z.pk, "nombre": z.nombre} for z in Zona.objects.order_by("nombre")],
     })
+
+
+def _respuestas(request):
+    """Gráfico 6: respuestas de un cuestionario de la campaña en una zona."""
+    try:
+        id_cuestionario = int(request.GET.get("cuestionario", ""))
+    except ValueError:
+        return error("Seleccione un cuestionario.")
+    cuestionario = cuestionarios_de_campana(request.campana).filter(pk=id_cuestionario).first()
+    if cuestionario is None:
+        return error("El cuestionario no existe en esta campaña.", 404)
+    zona = None
+    if request.GET.get("zona"):
+        zona = Zona.objects.filter(pk=request.GET["zona"]).first() if request.GET["zona"].isdigit() else None
+        if zona is None:
+            return error("La zona no existe.", 404)
+        zona = {"nombre": zona.nombre, "geometria": zona.geometria}
+    respuestas = analitica.leer_respuestas(connection, cuestionario.pk)
+    fig = analitica.figura_respuestas(respuestas, cuestionario.titulo, zona, request.campana.nombre)
+    if fig is None:
+        return error("No hay respuestas con ubicación para ese cuestionario en esa zona.", 404)
+    return _imagen(fig)
 
 
 @require_GET
 @requiere_permiso("core.view_encuesta")
 def grafico(request, clave):
-    """Imagen PNG de un gráfico (barras, donut, evolucion, heatmap o dashboard)."""
+    """Imagen PNG de un gráfico (periodo, donut, evolucion, heatmap, dashboard
+    o respuestas)."""
+    if clave == "respuestas":
+        return _respuestas(request)
     if clave not in analitica.GRAFICOS:
-        return error("Ese gráfico no existe.", 404)
+        return error("El gráfico no existe.", 404)
     try:
         todas, desde, hasta = _datos(request)
-        meta = request.GET.get("meta")
-        meta = int(meta) if meta else None
-        if meta is not None and meta <= 0:
-            raise ValueError
     except FiltroInvalido as e:
         return error(str(e))
-    except ValueError:
-        return error("La meta tiene que ser un número mayor que 0.")
-    fig = analitica.figura(clave, todas, desde, hasta, meta, request.campana.nombre) if desde else None
+    fig = analitica.figura(clave, todas, desde, hasta, request.campana.nombre) if desde else None
     if fig is None:
         return error("No hay encuestas en ese período.", 404)
-
-    imagen = io.BytesIO()
-    fig.savefig(imagen, format="png", dpi=110, bbox_inches="tight")
-    analitica.plt.close(fig)
-    respuesta = HttpResponse(imagen.getvalue(), content_type="image/png")
-    respuesta["Cache-Control"] = "private, no-cache"
-    return respuesta
+    return _imagen(fig)

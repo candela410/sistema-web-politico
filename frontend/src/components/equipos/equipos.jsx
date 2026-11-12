@@ -9,6 +9,7 @@ import { Pencil } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
+import { useConCambios } from '../../validaciones'
 
 function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) {
   const [nombre, setNombre] = useState(equipo?.nombre ?? '')
@@ -16,6 +17,7 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
   const [elegidos, setElegidos] = useState(() => (equipo?.usuarios ?? []).map((u) => u.id))
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const conCambios = useConCambios({ nombre, ruta, elegidos: [...elegidos].sort((a, b) => a - b) })
 
   // Los que ya están en este equipo más los que no tienen equipo
   const opciones = [...(equipo?.usuarios ?? []), ...disponibles]
@@ -48,6 +50,8 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
           onChange={(e) => setNombre(e.target.value)}
           placeholder="Ej.: Equipo Norte"
           maxLength={120}
+          autoCapitalize="sentences"
+          enterKeyHint="next"
           autoFocus
           required
         />
@@ -62,7 +66,7 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
           required
         >
           <option value="" disabled>
-            Elegí una ruta
+            Seleccione una ruta
           </option>
           {rutas.map((r) => (
             <option key={r.id} value={r.id}>
@@ -72,22 +76,16 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
         </select>
         {rutas.length === 0 && (
           <p className="equipo__ayuda">
-            Para crear un equipo primero tiene que haber una ruta en esta campaña. Se crean desde el Mapa.
+            Para crear un equipo primero debe existir una ruta en esta campaña. Las rutas se crean desde el Mapa.
           </p>
         )}
 
         <fieldset className="equipo__usuarios">
-          <legend>
-            Usuarios <span className="opcional">(opcional)</span>
-          </legend>
+          <legend>Usuarios</legend>
           {opciones.length === 0 ? (
-            <p className="equipo__ayuda">
-              No hay usuarios para asignar. Solo aparecen usuarios activos de la campaña, con ficha de militante, que
-              todavía no tienen equipo.
-            </p>
+            <p className="equipo__ayuda">No hay usuarios disponibles para asignar.</p>
           ) : (
             <>
-              <p className="equipo__ayuda">Solo se muestran usuarios que todavía no tienen equipo.</p>
               <ul className="equipo__usuarios-lista">
                 {opciones.map((u) => (
                   <li key={u.id}>
@@ -100,7 +98,7 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
                 ))}
               </ul>
               <p className="equipo__ayuda">
-                {elegidos.length === 1 ? '1 usuario elegido.' : `${elegidos.length} usuarios elegidos.`}
+                {elegidos.length === 1 ? '1 usuario seleccionado.' : `${elegidos.length} usuarios seleccionados.`}
               </p>
             </>
           )}
@@ -116,8 +114,8 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
           <button type="button" className="boton boton--borde" onClick={onCerrar}>
             Cancelar
           </button>
-          <button type="submit" className="boton" disabled={guardando || !nombre.trim() || !ruta}>
-            {guardando ? 'Guardando…' : 'Guardar'}
+          <button type="submit" className="boton" disabled={guardando || !nombre.trim() || !ruta || !conCambios}>
+            {guardando ? 'Guardando…' : equipo ? 'Guardar cambios' : 'Crear equipo'}
           </button>
         </div>
       </form>
@@ -179,7 +177,7 @@ function Equipos({ usuario }) {
     try {
       const guardado = await api.editarEquipo(equipo.id, { activo: !equipo.activo })
       setEquipos((lista) => lista.map((x) => (x.id === guardado.id ? guardado : x)))
-      avisar(guardado.activo ? `Equipo “${guardado.nombre}” activado.` : `Equipo “${guardado.nombre}” desactivado.`)
+      avisar(guardado.activo ? `El equipo «${guardado.nombre}» fue activado.` : `El equipo «${guardado.nombre}» fue desactivado.`)
     } catch (e) {
       setErrorAccion(e.message)
     }
@@ -190,7 +188,7 @@ function Equipos({ usuario }) {
       <header className="pagina__encabezado">
         <div>
           <h1>Equipos</h1>
-          <p>Grupos de militantes y la ruta que recorre cada uno.</p>
+          <p>Equipos de trabajo y la ruta que recorre cada uno.</p>
           <span className="franja-corta" aria-hidden="true">
             <i />
             <i />
@@ -238,10 +236,10 @@ function Equipos({ usuario }) {
           {equipos.length === 0 ? (
             <>
               <b>Todavía no hay equipos.</b>
-              {puedeCrear && <span>Creá el primero con “+ Nuevo equipo”.</span>}
+              {puedeCrear && <span>Cree el primero con «+ Nuevo equipo».</span>}
             </>
           ) : (
-            <span>No hay equipos que coincidan con “{busqueda}”.</span>
+            <span>No hay equipos que coincidan con «{busqueda}».</span>
           )}
         </div>
       ) : (
@@ -273,8 +271,7 @@ function Equipos({ usuario }) {
                       titulo: 'Desactivar equipo',
                       mensaje: (
                         <>
-                          ¿Seguro que querés desactivar <b>{e.nombre}</b>? Sus integrantes y su ruta se conservan, y lo
-                          podés volver a activar cuando quieras.
+                          ¿Desea desactivar el equipo <b>{e.nombre}</b>?
                         </>
                       ),
                     }}
@@ -298,7 +295,7 @@ function Equipos({ usuario }) {
           onGuardado={async (equipo, esNuevo) => {
             setEditando(null)
             await cargar()
-            avisar(esNuevo ? `Equipo “${equipo.nombre}” creado.` : 'Cambios guardados.')
+            avisar(esNuevo ? `El equipo «${equipo.nombre}» fue creado.` : 'Los cambios se guardaron correctamente.')
           }}
         />
       )}

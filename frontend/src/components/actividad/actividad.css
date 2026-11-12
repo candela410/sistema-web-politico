@@ -17,14 +17,10 @@
   font-weight: 600;
 }
 
-.filtros__buscar {
-  grid-column: 1 / -1;
-}
-
 .filtros__pie {
   grid-column: 1 / -1;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
@@ -200,14 +196,6 @@
   color: var(--lla-gris);
   font-style: italic;
   text-decoration: none;
-}
-
-.paginado {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 14px;
-  font-size: 0.88rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

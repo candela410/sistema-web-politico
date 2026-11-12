@@ -1,22 +1,26 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { comprobarEnlace, restablecerContrasena } from '../../api/auth'
+import { contrasenaValida, MENSAJE_CONTRASENA, requisitosContrasena } from '../../validaciones'
 import logo from '../../assets/logo.png'
+import CampoContrasena from './CampoContrasena'
 import FondoLogin from './FondoLogin'
 import './Login.css'
 
-// Pantalla del enlace que llega por correo (/restablecer/:uid/:token): elegir una
-// contraseña nueva. Se ve como el login y no hace falta haber iniciado sesión.
+// Pantalla del enlace que llega por correo (/restablecer/:uid/:token): elegir la
+// contraseña (la primera vez, desde la invitación, o una nueva). Se ve como el
+// login y no hace falta haber iniciado sesión.
 const INCOMPLETO =
-  'El enlace está incompleto. Abrilo con Ctrl + clic desde el correo, o copialo entero (puede ocupar más de una línea).'
+  'El enlace está incompleto. Ábralo con Ctrl + clic desde el correo o cópielo completo (puede ocupar más de una línea).'
 
 export default function Restablecer() {
   const { uid, token } = useParams()
   const [estado, setEstado] = useState(token ? 'comprobando' : 'invalido') // comprobando | formulario | invalido | listo
   const [email, setEmail] = useState('')
+  const [nueva, setNueva] = useState(false) // true: invitación (todavía no tiene contraseña)
   const [password, setPassword] = useState('')
   const [repetida, setRepetida] = useState('')
-  const [verPassword, setVerPassword] = useState(false)
+  const [tocados, setTocados] = useState({ password: false, repetida: false })
   const [error, setError] = useState(token ? '' : INCOMPLETO)
   const [guardando, setGuardando] = useState(false)
 
@@ -25,6 +29,7 @@ export default function Restablecer() {
     comprobarEnlace(uid, token)
       .then((r) => {
         setEmail(r.email)
+        setNueva(Boolean(r.nueva))
         setEstado('formulario')
       })
       .catch((e) => {
@@ -33,17 +38,17 @@ export default function Restablecer() {
       })
   }, [uid, token])
 
+  const errores = {
+    password: !password ? 'Ingrese la contraseña nueva.' : contrasenaValida(password) ? '' : MENSAJE_CONTRASENA,
+    repetida: !repetida ? 'Repita la contraseña.' : repetida !== password ? 'Las contraseñas no coinciden.' : '',
+  }
+  const verError = (campo) => (tocados[campo] ? errores[campo] : '')
+
   async function guardar(e) {
     e.preventDefault()
     setError('')
-    if (password.length < 8) {
-      setError('La contraseña tiene que tener al menos 8 caracteres.')
-      return
-    }
-    if (password !== repetida) {
-      setError('Las contraseñas no coinciden.')
-      return
-    }
+    setTocados({ password: true, repetida: true })
+    if (errores.password || errores.repetida) return
     setGuardando(true)
     try {
       await restablecerContrasena(uid, token, password)
@@ -55,27 +60,12 @@ export default function Restablecer() {
     }
   }
 
-  const ojito = (
-    <button
-      type="button"
-      className="login__eye"
-      onClick={() => setVerPassword((v) => !v)}
-      aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-        <circle cx="12" cy="12" r="3" />
-        {verPassword && <path d="M4 4l16 16" />}
-      </svg>
-    </button>
-  )
-
-  const candado = (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-    </svg>
-  )
+  const titulo = {
+    comprobando: 'Elegir contraseña',
+    formulario: nueva ? 'Elegir contraseña' : 'Restablecer contraseña',
+    invalido: 'Enlace no válido',
+    listo: 'Contraseña guardada',
+  }[estado]
 
   return (
     <main className="login">
@@ -85,53 +75,53 @@ export default function Restablecer() {
         <form className="login__form" onSubmit={guardar} noValidate>
           <img className="login__logo" src={logo} alt="Logo" />
 
-          <h1>{estado === 'listo' ? 'Contraseña actualizada' : 'Restablecer contraseña'}</h1>
+          <h1>{titulo}</h1>
           <p className="login__subtitle">
             {estado === 'comprobando' && 'Comprobando el enlace…'}
             {estado === 'formulario' && (
               <>
-                Elegí una contraseña nueva para <b>{email}</b>
+                Elija una contraseña para <b>{email}</b>
               </>
             )}
-            {estado === 'invalido' && 'No se puede usar este enlace'}
-            {estado === 'listo' && 'Ya podés ingresar con tu contraseña nueva'}
+            {estado === 'invalido' && 'No se puede usar este enlace.'}
+            {estado === 'listo' && 'Ya puede ingresar con su contraseña.'}
           </p>
           <div className="login__bar" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-            <span />
+            <span /><span /><span /><span />
           </div>
 
           {estado === 'formulario' && (
             <>
               <label htmlFor="password">Contraseña nueva</label>
-              <div className="login__field">
-                {candado}
-                <input
-                  id="password"
-                  type={verPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="Al menos 8 caracteres"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoFocus
-                />
-                {ojito}
-              </div>
+              <CampoContrasena
+                id="password"
+                value={password}
+                onChange={setPassword}
+                onBlur={() => setTocados((t) => ({ ...t, password: true }))}
+                autoComplete="new-password"
+                enterKeyHint="next"
+                error={verError('password')}
+                descripcion="requisitos"
+                autoFocus
+              />
+              <ul id="requisitos" className="login__requisitos" aria-label="Requisitos de la contraseña">
+                {requisitosContrasena(password).map((r) => (
+                  <li key={r.texto} className={r.ok ? 'login__requisito--ok' : ''}>
+                    {r.texto}
+                  </li>
+                ))}
+              </ul>
 
-              <label htmlFor="repetida">Repetí la contraseña</label>
-              <div className="login__field">
-                {candado}
-                <input
-                  id="repetida"
-                  type={verPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                  value={repetida}
-                  onChange={(e) => setRepetida(e.target.value)}
-                />
-              </div>
+              <label htmlFor="repetida">Repita la contraseña</label>
+              <CampoContrasena
+                id="repetida"
+                value={repetida}
+                onChange={setRepetida}
+                onBlur={() => setTocados((t) => ({ ...t, repetida: true }))}
+                autoComplete="new-password"
+                enterKeyHint="done"
+                error={verError('repetida')}
+              />
             </>
           )}
 
@@ -149,6 +139,11 @@ export default function Restablecer() {
           {(estado === 'invalido' || estado === 'listo') && (
             <Link className="login__submit login__submit--enlace" to="/login" replace>
               Ir a iniciar sesión
+            </Link>
+          )}
+          {estado === 'invalido' && (
+            <Link className="login__volver" to="/olvide" replace>
+              Solicitar un enlace nuevo
             </Link>
           )}
         </form>

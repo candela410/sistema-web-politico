@@ -159,8 +159,8 @@ function Tutorial({ usuario }) {
     return (
       <main className="pagina">
         <div className="vacio-tarjeta">
-          <b>No hay tutoriales para tu usuario.</b>
-          <span>Cuando tengas funciones asignadas vas a ver acá cómo usarlas.</span>
+          <b>No hay tutoriales para su usuario.</b>
+          <span>Cuando tenga funciones asignadas, aquí verá cómo usarlas.</span>
         </div>
       </main>
     )
@@ -173,7 +173,7 @@ function Tutorial({ usuario }) {
       <header className="pagina__encabezado tutorial__encabezado">
         <div>
           <h1>Tutorial</h1>
-          <p>Videos cortos, paso a paso, de todo lo que podés hacer con tu usuario.</p>
+          <p>Videos cortos, paso a paso, de todo lo que puede hacer con su usuario.</p>
           <span className="franja-corta" aria-hidden="true">
             <i />
             <i />
@@ -211,7 +211,7 @@ function Tutorial({ usuario }) {
               onClick={() => marcarVisto(elegido.id)}
               disabled={vistos.has(elegido.id)}
             >
-              {vistos.has(elegido.id) ? 'Ya lo viste' : 'Marcar como visto'}
+              {vistos.has(elegido.id) ? 'Ya lo vio' : 'Marcar como visto'}
             </button>
             {indice < tutoriales.length - 1 ? (
               <button type="button" className="boton" onClick={() => elegir(tutoriales[indice + 1])}>

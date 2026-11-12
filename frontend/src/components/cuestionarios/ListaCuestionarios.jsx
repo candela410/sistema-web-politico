@@ -29,10 +29,9 @@ function ConfirmarBorrado({ cuestionario, onBorrado, onCerrar }) {
   }
 
   return (
-    <Modal titulo="Borrar cuestionario" onCerrar={onCerrar}>
+    <Modal titulo="Eliminar cuestionario" onCerrar={onCerrar}>
       <p className="modal__texto">
-        ¿Seguro que querés borrar <b>{cuestionario.titulo}</b> con todas sus preguntas? Esta acción no se puede
-        deshacer.
+        ¿Desea eliminar <b>{cuestionario.titulo}</b> con todas sus preguntas? Esta acción no se puede deshacer.
       </p>
       {error && (
         <p className="texto-error" role="alert">
@@ -44,14 +43,14 @@ function ConfirmarBorrado({ cuestionario, onBorrado, onCerrar }) {
           Cancelar
         </button>
         <button type="button" className="boton boton--rojo" onClick={borrar} disabled={borrando}>
-          {borrando ? 'Borrando…' : 'Borrar'}
+          {borrando ? 'Eliminando…' : 'Eliminar'}
         </button>
       </div>
     </Modal>
   )
 }
 
-const FILTROS_INICIALES = { categoria: '', estado: 'todos', encuestas: 'todas' }
+const FILTROS_INICIALES = { categoria: '', estado: 'todos' }
 
 function ListaCuestionarios({ usuario }) {
   const navegar = useNavigate()
@@ -75,7 +74,7 @@ function ListaCuestionarios({ usuario }) {
 
   useEffect(() => {
     if (!aviso) return
-    const t = setTimeout(() => setAviso(''), 3500)
+    const t = setTimeout(() => setAviso(''), 4000)
     return () => clearTimeout(t)
   }, [aviso])
 
@@ -91,8 +90,7 @@ function ListaCuestionarios({ usuario }) {
       (c) =>
         (!texto || c.titulo.toLowerCase().includes(texto) || c.categoria.nombre.toLowerCase().includes(texto)) &&
         (!filtros.categoria || String(c.categoria.id) === filtros.categoria) &&
-        (filtros.estado === 'todos' || c.activo === (filtros.estado === 'activos')) &&
-        (filtros.encuestas === 'todas' || (c.encuestas > 0) === (filtros.encuestas === 'con')),
+        (filtros.estado === 'todos' || c.activo === (filtros.estado === 'activos')),
     )
   }, [cuestionarios, busqueda, filtros])
   const paginado = usePaginado(visibles)
@@ -104,7 +102,7 @@ function ListaCuestionarios({ usuario }) {
       <header className="pagina__encabezado">
         <div>
           <h1>Cuestionarios</h1>
-          <p>Armá las encuestas con sus preguntas y opciones.</p>
+          <p>Encuestas con sus preguntas y opciones.</p>
           <span className="franja-corta" aria-hidden="true">
             <i />
             <i />
@@ -126,7 +124,7 @@ function ListaCuestionarios({ usuario }) {
         </svg>
         <input
           type="search"
-          placeholder="Buscar por título o categoría"
+          placeholder="Buscar por título"
           aria-label="Buscar cuestionarios"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -151,14 +149,6 @@ function ListaCuestionarios({ usuario }) {
             <option value="todos">Todos</option>
             <option value="activos">Activos</option>
             <option value="inactivos">Inactivos</option>
-          </select>
-        </label>
-        <label>
-          Encuestas
-          <select className="entrada" value={filtros.encuestas} onChange={filtrar('encuestas')}>
-            <option value="todas">Todas</option>
-            <option value="con">Con encuestas</option>
-            <option value="sin">Sin encuestas</option>
           </select>
         </label>
         {filtrando && (
@@ -188,7 +178,7 @@ function ListaCuestionarios({ usuario }) {
           {cuestionarios.length === 0 ? (
             <>
               <b>Todavía no hay cuestionarios.</b>
-              <span>Creá el primero con “+ Crear cuestionario”.</span>
+              <span>Cree el primero con «+ Crear cuestionario».</span>
             </>
           ) : (
             <span>No hay cuestionarios que coincidan con la búsqueda y los filtros.</span>
@@ -225,13 +215,13 @@ function ListaCuestionarios({ usuario }) {
                     />
                   )}
                   {tiene(usuario, 'core.change_asignacioncuestionario') && (
-                    <BotonIcono icono={UserPlus} etiqueta="Asignar a militantes" onClick={() => setAsignando(c)} />
+                    <BotonIcono icono={UserPlus} etiqueta="Asignar a usuarios" onClick={() => setAsignando(c)} />
                   )}
                   {tiene(usuario, 'core.change_cuestionario') && (
                     <BotonIcono to={`/cuestionarios/${c.id}`} icono={Pencil} etiqueta="Editar" />
                   )}
                   {tiene(usuario, 'core.delete_cuestionario') && (
-                    <BotonIcono icono={Trash2} etiqueta="Borrar" variante="peligro" onClick={() => setBorrando(c)} />
+                    <BotonIcono icono={Trash2} etiqueta="Eliminar" variante="peligro" onClick={() => setBorrando(c)} />
                   )}
                 </div>
               </li>
@@ -257,8 +247,8 @@ function ListaCuestionarios({ usuario }) {
             setAsignando(null)
             setAviso(
               cantidad === 0
-                ? `${asignando.titulo} quedó sin militantes asignados.`
-                : `${asignando.titulo} quedó asignado a ${cantidad === 1 ? '1 militante' : `${cantidad} militantes`}.`,
+                ? `«${asignando.titulo}» quedó sin usuarios asignados.`
+                : `«${asignando.titulo}» quedó asignado a ${cantidad === 1 ? '1 usuario' : `${cantidad} usuarios`}.`,
             )
           }}
         />
@@ -271,7 +261,7 @@ function ListaCuestionarios({ usuario }) {
           onBorrado={(id) => {
             setCuestionarios((lista) => lista.filter((c) => c.id !== id))
             setBorrando(null)
-            setAviso('Cuestionario borrado.')
+            setAviso('El cuestionario fue eliminado.')
           }}
         />
       )}

@@ -29,31 +29,14 @@ def leer_json(request):
 # Permisos
 # ---------------------------------------------------------------------------
 
-ADMINISTRAR = "core.administrar_campana"
-# Lo que NO incluye "administrar_campana": administrar campañas y elegir otra
-SOLO_SUPERUSUARIO = {"view_campana", "add_campana", "change_campana", "delete_campana", "elegir_campana"}
-
-
-def _incluidos_en_administrar():
-    """Permisos que vienen con "Puede administrar la campaña"."""
-    core = Permission.objects.filter(content_type__app_label="core").exclude(codename__in=SOLO_SUPERUSUARIO)
-    extra = Permission.objects.filter(
-        content_type__app_label__in=["auth", "admin"], codename__in=["view_group", "view_permission", "view_logentry"]
-    )
-    return {f"{p.content_type.app_label}.{p.codename}" for p in (core | extra).select_related("content_type")}
-
-
 def permisos_de(usuario):
-    """Permisos de Django del usuario (propios y de sus grupos) más los que
-    incluye "administrar_campana". El superusuario los tiene todos."""
+    """Permisos de Django del usuario (los de su rol y los propios). El
+    superusuario los tiene todos."""
     if not usuario.is_authenticated or not usuario.is_active:
         return set()
     if usuario.is_superuser:
         return {f"{p.content_type.app_label}.{p.codename}" for p in Permission.objects.select_related("content_type")}
-    permisos = set(usuario.get_all_permissions())
-    if ADMINISTRAR in permisos:
-        permisos |= _incluidos_en_administrar()
-    return permisos
+    return set(usuario.get_all_permissions())
 
 
 # ---------------------------------------------------------------------------
@@ -62,9 +45,10 @@ def permisos_de(usuario):
 
 
 def puede_elegir_campana(usuario):
-    """El superusuario y quien tenga el permiso "elegir_campana" eligen la
-    campaña al ingresar. El resto trabaja siempre en la campaña de su usuario."""
-    return usuario.is_superuser or usuario.has_perm("core.elegir_campana")
+    """El superusuario y quien puede ver las campañas (permiso "Ver" de
+    Campañas) eligen la campaña al ingresar. El resto trabaja siempre en la
+    campaña de su usuario."""
+    return usuario.is_superuser or usuario.has_perm("core.view_campana")
 
 
 def campanas_disponibles(usuario):
@@ -92,7 +76,7 @@ def requiere_sesion(vista):
     @wraps(vista)
     def envoltura(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return error("No autenticado.", 401)
+            return error("Debe iniciar sesión.", 401)
         return vista(request, *args, **kwargs)
 
     return envoltura
@@ -111,7 +95,7 @@ def requiere_permiso(*permisos, campana=True):
         def envoltura(request, *args, **kwargs):
             usuario = request.user
             if not usuario.is_authenticated:
-                return error("No autenticado.", 401)
+                return error("Debe iniciar sesión.", 401)
             necesarios = []
             for p in permisos:
                 if isinstance(p, dict):
@@ -119,10 +103,10 @@ def requiere_permiso(*permisos, campana=True):
                 else:
                     necesarios.append(p)
             if not set(necesarios) <= permisos_de(usuario):
-                return error("No tenés permiso para hacer esto.", 403)
+                return error("No tiene permiso para realizar esta acción.", 403)
             request.campana = campana_activa(request)
             if campana and request.campana is None:
-                return error("Primero elegí una campaña.", 409, codigo="sin_campana")
+                return error("Primero seleccione una campaña.", 409, codigo="sin_campana")
             return vista(request, *args, **kwargs)
 
         return envoltura

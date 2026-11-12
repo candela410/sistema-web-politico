@@ -23,7 +23,6 @@ from .bitacora import diferencias, registrar
 from .mapa_views import rutas_de_campana
 from .models import Equipo, Usuario
 from .validaciones import nombre_cosa
-from .usuarios_views import GRUPO_MILITANTES
 
 ORDEN_USUARIOS = ("first_name", "last_name", "email")
 
@@ -58,14 +57,13 @@ def _miembros(ids_equipos):
 
 
 def _disponibles(request):
-    """Usuarios que se pueden asignar: de la campaña, activos, con el rol
-    Militantes y sin equipo."""
+    """Usuarios que se pueden asignar: de la campaña, activos y sin equipo
+    (cualquiera sea su rol)."""
     lista = Usuario.objects.filter(
         campana=request.campana,
         is_active=True,
-        groups__name=GRUPO_MILITANTES,
         equipo__isnull=True,
-    ).distinct().order_by(*ORDEN_USUARIOS)
+    ).order_by(*ORDEN_USUARIOS)
     return [_usuario_json(u) for u in lista]
 
 
@@ -94,10 +92,10 @@ def _validar(request, datos, equipo=None):
     """Valida nombre y ruta. Devuelve (nombre, ruta, mensaje). La ruta es obligatoria."""
     nombre = datos.get("nombre", equipo.nombre if equipo else "")
     if not isinstance(nombre, str) or not nombre.strip():
-        return None, None, "Poné un nombre al equipo."
+        return None, None, "Ingrese el nombre del equipo."
     nombre = nombre.strip()
     if len(nombre) > 120:
-        return None, None, "El nombre es muy largo (máximo 120 caracteres)."
+        return None, None, "El nombre admite hasta 120 caracteres."
     mensaje = nombre_cosa(nombre)
     if mensaje:
         return None, None, mensaje
@@ -111,12 +109,12 @@ def _validar(request, datos, equipo=None):
     # Si no viene "ruta" en la edición, se conserva la que ya tenía
     id_ruta = datos.get("ruta", equipo.ruta_id if equipo else None)
     if id_ruta in (None, ""):
-        return None, None, "Elegí la ruta del equipo."
+        return None, None, "Seleccione la ruta del equipo."
     if isinstance(id_ruta, bool) or not isinstance(id_ruta, int):
         return None, None, "La ruta no es válida."
     ruta = rutas_de_campana(request.campana).filter(pk=id_ruta).first()
     if ruta is None:
-        return None, None, "La ruta elegida no existe."
+        return None, None, "La ruta seleccionada no existe."
     return nombre, ruta, None
 
 
@@ -131,10 +129,10 @@ def _validar_usuarios(request, datos, equipo=None):
     ids = set(ids)
 
     usuarios = list(
-        Usuario.objects.filter(pk__in=ids, campana=request.campana, groups__name=GRUPO_MILITANTES).distinct()
+        Usuario.objects.filter(pk__in=ids, campana=request.campana)
     )
     if len(usuarios) != len(ids):
-        return None, "Alguno de los usuarios no existe o no es militante."
+        return None, "Alguno de los usuarios seleccionados no existe."
 
     for u in usuarios:
         ya_es_del_equipo = equipo is not None and u.equipo_id == equipo.pk
@@ -170,7 +168,7 @@ def equipos(request):
 
     datos = leer_json(request)
     if datos is None:
-        return error("JSON inválido.")
+        return error("Los datos enviados no son válidos.")
     nombre, ruta, mensaje = _validar(request, datos)
     if mensaje:
         return error(mensaje)
@@ -192,15 +190,15 @@ def equipo_detalle(request, pk):
 
     if request.method == "DELETE":
         # La ruta es obligatoria, así que ningún equipo se borra: se desactiva
-        return error("No se puede borrar un equipo que tiene una ruta asignada. Desactivalo.", 409)
+        return error("No se puede eliminar un equipo con ruta asignada. Puede desactivarlo.", 409)
 
     datos = leer_json(request)
     if datos is None:
-        return error("JSON inválido.")
+        return error("Los datos enviados no son válidos.")
 
     activo = datos.get("activo", equipo.activo)
     if not isinstance(activo, bool):
-        return error("El estado debe ser verdadero o falso.")
+        return error("El estado no es válido.")
 
     nombre = ruta = None
     if "nombre" in datos or "ruta" in datos:
@@ -211,7 +209,7 @@ def equipo_detalle(request, pk):
     if mensaje:
         return error(mensaje)
     if activo and not (ruta.pk if ruta else equipo.ruta_id):
-        return error("Asignale una ruta al equipo antes de activarlo.")
+        return error("Asigne una ruta al equipo antes de activarlo.")
 
     antes = _foto(equipo)
     with transaction.atomic():

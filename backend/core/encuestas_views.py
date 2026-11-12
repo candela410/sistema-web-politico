@@ -73,10 +73,10 @@ class RespuestaInvalida(Exception):
 
 def _limpiar_encuestado(datos):
     if not isinstance(datos, dict):
-        raise RespuestaInvalida("Faltan los datos de la persona encuestada.")
+        raise RespuestaInvalida("Ingrese los datos de la persona encuestada.")
     documento = str(datos.get("documento") or "").replace(".", "").replace(" ", "").strip()
     if not documento:
-        raise RespuestaInvalida("Falta el documento de la persona encuestada.")
+        raise RespuestaInvalida("Ingrese el documento de la persona encuestada.")
     mensaje = validar_documento(documento)
     if mensaje:
         raise RespuestaInvalida(mensaje)
@@ -138,14 +138,14 @@ def responder(request, pk):
 
     datos = leer_json(request)
     if datos is None:
-        return error("JSON inválido.")
+        return error("Los datos enviados no son válidos.")
     try:
         encuestado_datos = _limpiar_encuestado(datos.get("encuestado"))
         respuestas = _limpiar_respuestas(cuestionario, datos.get("respuestas"))
     except RespuestaInvalida as e:
         return error(str(e))
     if not respuestas:
-        return error("Respondé al menos una pregunta.")
+        return error("Responda al menos una pregunta.")
 
     latitud = _coordenada(datos.get("latitud"), -90, 90)
     longitud = _coordenada(datos.get("longitud"), -180, 180)
@@ -171,6 +171,9 @@ def responder(request, pk):
                 latitud=latitud,
                 longitud=longitud,
             )
+            # Cada respuesta guarda la ubicación del celular (la misma de la encuesta)
+            for respuesta in respuestas:
+                respuesta.latitud, respuesta.longitud = latitud, longitud
             RespuestaCargada.objects.bulk_create(respuestas)
     except IntegrityError:
         return error("Esta persona ya respondió este cuestionario.", 409)
@@ -238,7 +241,7 @@ def estadisticas(request, pk):
 def grafico(request, pk, pregunta, clave):
     """Imagen PNG de un gráfico de una pregunta, hecha con pandas y matplotlib."""
     if clave not in graficos.GRAFICOS:
-        return error("Ese gráfico no existe.", 404)
+        return error("El gráfico no existe.", 404)
     cuestionario = get_object_or_404(cuestionarios_de_campana(request.campana), pk=pk)
     p = get_object_or_404(cuestionario.preguntas.prefetch_related("opciones"), pk=pregunta)
     tabla, _, respondidas = graficos.tabla_de(p, graficos.respuestas_de(cuestionario))
@@ -287,9 +290,9 @@ def por_dia(request):
         desde = date.fromisoformat(request.GET["desde"])
         hasta = date.fromisoformat(request.GET["hasta"])
     except (KeyError, ValueError):
-        return error("Indicá desde y hasta como AAAA-MM-DD.")
+        return error("Indique las fechas desde y hasta con el formato AAAA-MM-DD.")
     if desde > hasta or (hasta - desde).days > 61:
-        return error("El rango tiene que ser de 1 a 62 días.")
+        return error("El rango debe ser de 1 a 62 días.")
     conteo = dict(
         Encuesta.objects.filter(
             cuestionario__in=cuestionarios_de_campana(request.campana),

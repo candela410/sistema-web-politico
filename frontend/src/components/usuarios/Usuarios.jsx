@@ -9,48 +9,54 @@ import Interruptor from '../comunes/Interruptor'
 import { KeyRound, Pencil } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
+import { emailValido, MENSAJE_EMAIL, useConCambios } from '../../validaciones'
 
-const GRUPO_MILITANTES = 'Militantes'
 const formatoFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
 
+// Alta y edición. No se escribe contraseña: al crear el usuario le llega por
+// correo una invitación para elegirla, y después se restablece con la llave.
 function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
   const [form, setForm] = useState({
     nombre: usuario?.nombre ?? '',
     apellido: usuario?.apellido ?? '',
     email: usuario?.email ?? '',
-    password: '',
-    grupos: usuario?.grupos.map((g) => g.id) ?? [],
-    administra: usuario?.administra ?? false,
+    grupo: usuario?.grupos[0]?.id ?? null,
     activo: usuario?.activo ?? true,
     documento: usuario?.documento ?? '',
     telefono: usuario?.telefono ?? '',
     direccion: usuario?.direccion ?? '',
   })
+  const [tocado, setTocado] = useState(false)
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const conCambios = useConCambios(form)
   const cambiar = (campo) => (e) =>
     setForm((f) => ({ ...f, [campo]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
-  // Un usuario tiene un solo rol (usuarios.id_grupo): tocar otro lo reemplaza, tocar el mismo lo quita
-  const alternarGrupo = (id) => setForm((f) => ({ ...f, grupos: f.grupos.includes(id) ? [] : [id] }))
+  const errorDeEmail = form.email.trim() && !emailValido(form.email) ? MENSAJE_EMAIL : ''
+  const completo = form.nombre.trim() && form.email.trim() && (form.grupo !== null || usuario?.es_superusuario)
 
   async function guardar(e) {
     e.preventDefault()
     setError('')
+    setTocado(true)
+    if (errorDeEmail) return
     setGuardando(true)
     const datos = {
       nombre: form.nombre,
       apellido: form.apellido,
-      email: form.email,
-      grupos: form.grupos,
-      administra: form.administra,
+      email: form.email.trim(),
+      grupos: form.grupo === null ? [] : [form.grupo],
       activo: form.activo,
       documento: form.documento,
       telefono: form.telefono,
       direccion: form.direccion,
-      ...(form.password && { password: form.password }),
     }
     try {
-      onGuardado(usuario ? await api.editarUsuario(usuario.id, datos) : await api.crearUsuario(datos), !usuario)
+      if (usuario) onGuardado(await api.editarUsuario(usuario.id, datos), null)
+      else {
+        const r = await api.crearUsuario(datos)
+        onGuardado(r.usuario, r)
+      }
     } catch (err) {
       setError(err.message)
       setGuardando(false)
@@ -59,71 +65,123 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
 
   return (
     <Modal titulo={usuario ? 'Editar usuario' : 'Nuevo usuario'} onCerrar={onCerrar}>
-      <form className="formulario-modal" onSubmit={guardar}>
+      <form className="formulario-modal" onSubmit={guardar} noValidate>
         <div className="formulario-modal__fila">
           <label>
             Nombre
-            <input className="entrada" value={form.nombre} onChange={cambiar('nombre')} required autoFocus />
+            <input
+              className="entrada"
+              value={form.nombre}
+              onChange={cambiar('nombre')}
+              autoCapitalize="words"
+              autoComplete="off"
+              enterKeyHint="next"
+              maxLength={150}
+              required
+              autoFocus
+            />
           </label>
           <label>
             Apellido
-            <input className="entrada" value={form.apellido} onChange={cambiar('apellido')} />
+            <input
+              className="entrada"
+              value={form.apellido}
+              onChange={cambiar('apellido')}
+              autoCapitalize="words"
+              autoComplete="off"
+              enterKeyHint="next"
+              maxLength={150}
+            />
           </label>
         </div>
         <label>
-          Email (con este ingresa)
-          <input className="entrada" type="email" value={form.email} onChange={cambiar('email')} required />
-        </label>
-        <label>
-          {usuario ? 'Nueva contraseña' : 'Contraseña'}{' '}
-          {usuario && <span className="opcional">(dejala vacía para no cambiarla)</span>}
+          Correo electrónico
           <input
             className="entrada"
-            type="password"
-            autoComplete="new-password"
-            value={form.password}
-            onChange={cambiar('password')}
-            required={!usuario}
-            minLength={8}
+            type="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            autoComplete="off"
+            enterKeyHint="next"
+            maxLength={254}
+            placeholder="usuario@correo.com"
+            value={form.email}
+            onChange={cambiar('email')}
+            onBlur={() => setTocado(true)}
+            aria-invalid={Boolean(tocado && errorDeEmail)}
+            required
           />
+          {tocado && errorDeEmail && <small className="texto-error">{errorDeEmail}</small>}
         </label>
 
         <fieldset>
           <legend>Rol</legend>
           {grupos.map((g) => (
             <label key={g.id} className="casilla-texto">
-              <input type="checkbox" checked={form.grupos.includes(g.id)} onChange={() => alternarGrupo(g.id)} />
-              <span>
-                {g.nombre}
-                <span className="opcional"> (rol)</span>
-                <small>
-                  {g.nombre === GRUPO_MILITANTES ? 'Solo carga encuestas.' : 'Permisos definidos en Gestión → Roles.'}
-                </small>
-              </span>
+              <input
+                type="radio"
+                name="rol"
+                checked={form.grupo === g.id}
+                onChange={() => setForm((f) => ({ ...f, grupo: g.id }))}
+              />
+              <span>{g.nombre}</span>
             </label>
           ))}
         </fieldset>
 
         <div className="formulario-modal__fila">
           <label>
-            Documento <span className="opcional">(opcional)</span>
-            <input className="entrada" inputMode="numeric" value={form.documento} onChange={cambiar('documento')} />
+            Documento
+            <input
+              className="entrada"
+              inputMode="numeric"
+              autoComplete="off"
+              enterKeyHint="next"
+              maxLength={10}
+              placeholder="Sin puntos"
+              value={form.documento}
+              onChange={cambiar('documento')}
+            />
           </label>
           <label>
-            Teléfono <span className="opcional">(opcional)</span>
-            <input className="entrada" type="tel" value={form.telefono} onChange={cambiar('telefono')} />
+            Teléfono
+            <input
+              className="entrada"
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              enterKeyHint="next"
+              maxLength={20}
+              value={form.telefono}
+              onChange={cambiar('telefono')}
+            />
           </label>
         </div>
         <label>
-          Dirección <span className="opcional">(opcional)</span>
-          <input className="entrada" value={form.direccion} onChange={cambiar('direccion')} />
+          Dirección
+          <input
+            className="entrada"
+            autoCapitalize="sentences"
+            autoComplete="off"
+            maxLength={200}
+            value={form.direccion}
+            onChange={cambiar('direccion')}
+          />
         </label>
 
         <label className="interruptor">
           <input type="checkbox" checked={form.activo} onChange={cambiar('activo')} />
           <span className="interruptor__pista" aria-hidden="true" />
-          Activo (puede ingresar)
+          Activo
         </label>
+
+        {!usuario && (
+          <p className="aviso-info aviso-info--chico">
+            Al crearlo, el usuario recibirá un correo para elegir su contraseña.
+          </p>
+        )}
 
         {error && (
           <p className="texto-error" role="alert">
@@ -134,8 +192,8 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
           <button type="button" className="boton boton--borde" onClick={onCerrar}>
             Cancelar
           </button>
-          <button type="submit" className="boton" disabled={guardando}>
-            {guardando ? 'Guardando…' : 'Guardar'}
+          <button type="submit" className="boton" disabled={guardando || !completo || !conCambios}>
+            {guardando ? 'Guardando…' : usuario ? 'Guardar cambios' : 'Crear usuario'}
           </button>
         </div>
       </form>
@@ -160,7 +218,7 @@ function Usuarios({ usuario: yo }) {
 
   useEffect(() => {
     if (!aviso) return
-    const t = setTimeout(() => setAviso(''), 3500)
+    const t = setTimeout(() => setAviso(''), 6000)
     return () => clearTimeout(t)
   }, [aviso])
 
@@ -181,7 +239,7 @@ function Usuarios({ usuario: yo }) {
         ? await api.desactivarUsuario(u.id)
         : await api.editarUsuario(u.id, { activo: true })
       reemplazar(actualizado)
-      setAviso(actualizado.activo ? 'Usuario activado.' : 'Usuario desactivado: ya no puede ingresar.')
+      setAviso(actualizado.activo ? 'El usuario fue activado.' : 'El usuario fue desactivado.')
     } catch (e) {
       setError(e.message)
     }
@@ -194,8 +252,8 @@ function Usuarios({ usuario: yo }) {
       const { email, redirigido } = await api.enviarRestablecer(u.id)
       setAviso(
         redirigido
-          ? `${u.email} es un correo de prueba: te enviamos el enlace a ${email}.`
-          : `Enviamos a ${email} un enlace para restablecer la contraseña.`,
+          ? `${u.email} es un correo de prueba: el enlace se envió a ${email}.`
+          : `Se envió a ${email} un enlace para restablecer la contraseña.`,
       )
     } catch (e) {
       setError(e.message)
@@ -233,7 +291,7 @@ function Usuarios({ usuario: yo }) {
         </svg>
         <input
           type="search"
-          placeholder="Buscar por nombre o email"
+          placeholder="Buscar por nombre o correo electrónico"
           aria-label="Buscar usuarios"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -265,12 +323,11 @@ function Usuarios({ usuario: yo }) {
                 <div className="tarjeta-fila__texto">
                   <h3>
                     {`${u.nombre} ${u.apellido}`.trim() || u.email}
-                    {u.id === yo.id && <span className="etiqueta etiqueta--verde">Vos</span>}
+                    {u.id === yo.id && <span className="etiqueta etiqueta--verde">Usted</span>}
                     {!u.activo && <span className="etiqueta">Desactivado</span>}
                   </h3>
                   <p>{u.email}</p>
                   <span className="tarjeta-fila__datos usuarios__grupos">
-                    {u.administra && <span className="etiqueta etiqueta--violeta">Administra la campaña</span>}
                     {u.grupos.map((g) => (
                       <span
                         key={g.id}
@@ -296,8 +353,8 @@ function Usuarios({ usuario: yo }) {
                           titulo: 'Desactivar usuario',
                           mensaje: (
                             <>
-                              ¿Seguro que querés desactivar a <b>{`${u.nombre} ${u.apellido}`.trim() || u.email}</b>? No va
-                              a poder iniciar sesión hasta que lo vuelvas a activar.
+                              ¿Desea desactivar a <b>{`${u.nombre} ${u.apellido}`.trim() || u.email}</b>? No podrá
+                              iniciar sesión hasta que se vuelva a activar.
                             </>
                           ),
                         }}
@@ -311,7 +368,7 @@ function Usuarios({ usuario: yo }) {
                           ? enviandoA === u.id
                             ? 'Enviando…'
                             : `Enviar a ${u.email} un enlace para restablecer la contraseña`
-                          : 'Activá el usuario para restablecer su contraseña'
+                          : 'Active el usuario para restablecer su contraseña'
                       }
                       disabled={!u.activo || enviandoA === u.id}
                       onClick={() => enviarRestablecer(u)}
@@ -331,10 +388,18 @@ function Usuarios({ usuario: yo }) {
           usuario={editando === 'nuevo' ? null : editando}
           grupos={datos.grupos}
           onCerrar={() => setEditando(null)}
-          onGuardado={(u, nuevo) => {
-            reemplazar(u, nuevo)
+          onGuardado={(u, alta) => {
+            reemplazar(u, Boolean(alta))
             setEditando(null)
-            setAviso(nuevo ? `Usuario ${u.email} creado.` : 'Cambios guardados.')
+            if (!alta) setAviso('Los cambios se guardaron correctamente.')
+            else if (alta.invitacion)
+              setAviso(
+                alta.invitacion === u.email
+                  ? `Usuario creado. Se envió a ${u.email} la invitación para elegir su contraseña.`
+                  : `Usuario creado. ${u.email} es un correo de prueba: la invitación se envió a ${alta.invitacion}.`,
+              )
+            else if (alta.aviso_invitacion) setError(`Usuario creado, pero no se pudo enviar la invitación: ${alta.aviso_invitacion}`)
+            else setAviso('Usuario creado.')
           }}
         />
       )}

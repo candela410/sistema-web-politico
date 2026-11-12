@@ -17,9 +17,6 @@ from .api import crud, error, leer_json, requiere_permiso
 from .models import Usuario
 from .validaciones import nombre_cosa
 
-# Grupo que el sistema usa por nombre (ver usuarios_views.GRUPO_MILITANTES)
-GRUPO_MILITANTES = "Militantes"
-
 
 def _integrantes(group, campana):
     """Usuarios del grupo. Los usuarios son de una campaña: se muestran los de la
@@ -44,12 +41,14 @@ def grupo_json(group, campana=None):
         "nombre": group.name,
         "permisos": sorted(p.pk for p in group.permissions.all() if p.content_type.app_label == "core"),
         "usuarios": _integrantes(group, campana),
+        # De todas las campañas: con alguno no se puede borrar
+        "total_usuarios": group.user_set.count(),
     }
 
 
 def validar_nombre(nombre, group=None):
     if not isinstance(nombre, str) or not nombre.strip():
-        return "Ingresá el nombre del grupo."
+        return "Ingrese el nombre del rol."
 
     nombre = nombre.strip()
 
@@ -66,7 +65,7 @@ def validar_nombre(nombre, group=None):
         repetido = repetido.exclude(pk=group.pk)
 
     if repetido.exists():
-        return "Ya existe un grupo con ese nombre."
+        return "Ya existe un rol con ese nombre."
 
     return None
 
@@ -84,7 +83,7 @@ def validar_permisos(ids):
     permisos = Permission.objects.filter(pk__in=ids, content_type__app_label="core")
 
     if permisos.count() != len(ids):
-        return None, "Alguno de los permisos elegidos no existe."
+        return None, "Alguno de los permisos seleccionados no existe."
 
     return list(permisos), None
 
@@ -110,7 +109,7 @@ def grupos(request):
     datos = leer_json(request)
 
     if datos is None:
-        return error("JSON inválido.")
+        return error("Los datos enviados no son válidos.")
 
     mensaje = validar_nombre(datos.get("nombre"))
     permisos, mensaje_permisos = validar_permisos(datos.get("permisos"))
@@ -133,12 +132,10 @@ def grupo_detalle(request, pk):
     group = get_object_or_404(Group, pk=pk)
 
     if request.method == "DELETE":
-        if group.name == GRUPO_MILITANTES:
-            return error("El grupo Militantes lo usa el sistema y no se puede borrar.", 409)
         cantidad = group.user_set.count()
         if cantidad:
             return error(
-                f"No se puede borrar: tiene {cantidad} usuario(s). Sacalos del grupo primero (Gestión → Usuarios).",
+                f"No se puede eliminar el rol porque tiene {cantidad} usuario{'s' if cantidad != 1 else ''} asignado{'s' if cantidad != 1 else ''}.",
                 409,
             )
         group.delete()
@@ -147,11 +144,9 @@ def grupo_detalle(request, pk):
     datos = leer_json(request)
 
     if datos is None:
-        return error("JSON inválido.")
+        return error("Los datos enviados no son válidos.")
 
     nombre = datos.get("nombre", group.name)
-    if group.name == GRUPO_MILITANTES and isinstance(nombre, str) and nombre.strip() != group.name:
-        return error("El grupo Militantes lo usa el sistema y no se puede renombrar.", 409)
 
     mensaje = validar_nombre(nombre, group)
     permisos, mensaje_permisos = validar_permisos(datos.get("permisos"))

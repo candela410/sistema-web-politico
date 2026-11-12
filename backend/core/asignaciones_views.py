@@ -19,7 +19,6 @@ from .bitacora import registrar
 from .cuestionarios_views import cuestionarios_de_campana
 from .equipos_views import equipos_de_campana
 from .models import AsignacionCuestionario, Usuario
-from .usuarios_views import GRUPO_MILITANTES
 
 PERMISOS = {
     "GET": "core.view_asignacioncuestionario",
@@ -32,8 +31,8 @@ def _nombre(usuario):
 
 
 def _militantes(campana):
-    """Usuarios que se pueden asignar: de la campaña, activos y con el rol Militantes."""
-    return Usuario.objects.filter(campana=campana, is_active=True, groups__name=GRUPO_MILITANTES).distinct()
+    """Usuarios que se pueden asignar: de la campaña y activos (cualquiera sea su rol)."""
+    return Usuario.objects.filter(campana=campana, is_active=True)
 
 
 def _asignados(cuestionario):
@@ -62,7 +61,7 @@ def asignaciones(request, pk):
 
     datos = leer_json(request)
     if datos is None:
-        return error("JSON inválido.")
+        return error("Los datos enviados no son válidos.")
     ids = datos.get("usuarios")
     if not isinstance(ids, list) or not all(isinstance(i, int) and not isinstance(i, bool) for i in ids):
         return error("La lista de usuarios no es válida.")
@@ -73,7 +72,7 @@ def asignaciones(request, pk):
     if nuevos:
         validos = set(_militantes(request.campana).filter(pk__in=nuevos).values_list("pk", flat=True))
         if validos != nuevos:
-            return error("Alguno de los usuarios no existe, no está activo o no es militante de la campaña.")
+            return error("Alguno de los usuarios seleccionados no existe o no está activo.")
     quitados = antes - elegidos
     # encuestas.(id_usuario, id_cuestionario) es FK a esta asignación: a quien ya
     # cargó encuestas de este cuestionario no se le puede quitar
@@ -82,7 +81,7 @@ def asignaciones(request, pk):
     )
     if con_encuestas:
         nombres = ", ".join(sorted(_nombre(u) for u in Usuario.objects.filter(pk__in=con_encuestas)))
-        return error(f"No se puede quitar a {nombres}: ya cargó encuestas de este cuestionario.", 409)
+        return error(f"No se puede quitar a {nombres} porque ya cargó encuestas de este cuestionario.", 409)
 
     if nuevos or quitados:
         with transaction.atomic():

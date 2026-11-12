@@ -109,19 +109,10 @@ AUTH_USER_MODEL = 'core.Usuario'
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 
+# Una sola regla, la misma que el frontend: 6 o más caracteres con una
+# mayúscula, una minúscula y un número (core/validaciones.py).
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'core.validaciones.ReglaContrasena'},
 ]
 
 

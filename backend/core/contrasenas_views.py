@@ -1,9 +1,14 @@
-"""Restablecer la contraseña por correo.
+"""Contraseñas por correo.
 
-Desde Gestión → Usuarios se envía al email del usuario un enlace al frontend
-(/restablecer/<uid>/<token>). El token es el de Django (PasswordResetTokenGenerator):
-vence a las PASSWORD_RESET_TIMEOUT segundos y deja de servir cuando cambia la
-contraseña o el usuario vuelve a ingresar."""
+El usuario elige su contraseña siempre desde un enlace que le llega por correo
+(/restablecer/<uid>/<token> en el frontend):
+- Al crear un usuario se le envía una invitación (no se escribe contraseña).
+- Desde Gestión → Usuarios se le puede enviar un enlace para restablecerla.
+- Desde el login, "¿Olvidó su contraseña?" lo pide la misma persona.
+
+El token es el de Django (PasswordResetTokenGenerator): vence a las
+PASSWORD_RESET_TIMEOUT segundos y deja de servir cuando cambia la contraseña o
+el usuario vuelve a ingresar."""
 
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
@@ -19,32 +24,55 @@ from django.views.decorators.http import require_http_methods, require_POST
 from .api import error, leer_json, requiere_permiso
 from .bitacora import registrar
 from .models import Usuario
+from .validaciones import email as validar_email
 
-ENLACE_INVALIDO = "El enlace no es válido o ya venció. Pedí uno nuevo a la administración."
+ENLACE_INVALIDO = "El enlace no es válido o ya venció. Solicite uno nuevo desde «¿Olvidó su contraseña?»."
+SIN_ENVIO = "No se pudo enviar el correo. Revise la configuración de correo del servidor."
+PEDIDO_RECIBIDO = (
+    "Si el correo pertenece a un usuario activo, recibirá un enlace para elegir una contraseña nueva."
+)
 
 
 def _horas_de_validez():
     return settings.PASSWORD_RESET_TIMEOUT // 3600
 
 
-def _mensaje(usuario, enlace):
+def _enlace(usuario):
+    uid = urlsafe_base64_encode(force_bytes(usuario.pk))
+    token = default_token_generator.make_token(usuario)
+    return f"{settings.FRONTEND_URL}/restablecer/{uid}/{token}"
+
+
+def _cuerpo(usuario, enlace, invitacion):
     nombre = usuario.first_name or usuario.email
+    if invitacion:
+        motivo = (
+            "Se creó su usuario en el Panel de gestión.\n"
+            "Para elegir su contraseña e ingresar, abra este enlace:\n\n"
+        )
+    else:
+        motivo = (
+            "Recibimos un pedido para restablecer la contraseña de su cuenta del Panel de gestión.\n"
+            "Para elegir una contraseña nueva, abra este enlace:\n\n"
+        )
+    pie = "" if invitacion else (
+        "Si usted no realizó este pedido, puede ignorar este correo: su contraseña no cambia.\n"
+    )
     return (
-        f"Hola, {nombre}:\n\n"
-        "Recibimos un pedido para restablecer la contraseña de tu cuenta del Panel de gestión.\n"
-        "Para elegir una contraseña nueva, entrá a este enlace:\n\n"
-        f"{enlace}\n\n"
+        f"Estimado/a {nombre}:\n\n"
+        f"{motivo}{enlace}\n\n"
         f"El enlace vence en {_horas_de_validez()} horas y sirve una sola vez.\n"
-        "Si no pediste este cambio, podés ignorar este correo: tu contraseña sigue siendo la misma.\n"
+        f"{pie}"
     )
 
 
-def _mensaje_redirigido(usuario, pedido_por, enlace):
+def _cuerpo_redirigido(usuario, pedido_por, enlace, invitacion):
     nombre = pedido_por.first_name or pedido_por.email
+    accion = "elegir la contraseña" if invitacion else "restablecer la contraseña"
     return (
-        f"Hola, {nombre}:\n\n"
-        f"Pediste restablecer la contraseña de {usuario.email}. Ese correo es de prueba,\n"
-        "así que el enlace te llega a vos. Con él se elige la contraseña nueva de ese usuario:\n\n"
+        f"Estimado/a {nombre}:\n\n"
+        f"Usted solicitó {accion} de {usuario.email}. Ese correo es de prueba, por eso\n"
+        "el enlace le llega a usted. Con él se elige la contraseña de ese usuario:\n\n"
         f"{enlace}\n\n"
         f"El enlace vence en {_horas_de_validez()} horas y sirve una sola vez.\n"
     )
@@ -55,40 +83,61 @@ def _es_real(email):
     return not settings.CORREOS_REALES or email.lower() in settings.CORREOS_REALES
 
 
-@require_POST
-@requiere_permiso("core.change_usuario")
-def enviar_enlace(request, pk):
-    """Envía el enlace para restablecer la contraseña al email del usuario. Si ese
-    email no está en CORREOS_REALES, el enlace le llega a quien lo pidió."""
-    usuario = get_object_or_404(Usuario, pk=pk, campana=request.campana)
-    if usuario.is_superuser and not request.user.is_superuser:
-        return error("Solo un superusuario puede modificar a otro superusuario.", 403)
-    if not usuario.is_active:
-        return error("El usuario está desactivado: activalo antes de restablecer su contraseña.", 409)
-
-    uid = urlsafe_base64_encode(force_bytes(usuario.pk))
-    token = default_token_generator.make_token(usuario)
-    enlace = f"{settings.FRONTEND_URL}/restablecer/{uid}/{token}"
-
+def enviar_enlace_a(usuario, pedido_por=None, invitacion=False):
+    """Envía el enlace para elegir la contraseña. Si el correo del usuario es de
+    prueba (no está en CORREOS_REALES) le llega a quien lo pidió.
+    Devuelve (correo de destino, None) o (None, mensaje de error)."""
+    enlace = _enlace(usuario)
+    asunto = "Bienvenido/a al Panel de gestión" if invitacion else "Restablecer su contraseña"
     if _es_real(usuario.email):
-        destino = usuario.email
-        asunto, cuerpo = "Restablecer tu contraseña", _mensaje(usuario, enlace)
-    elif _es_real(request.user.email):
-        destino = request.user.email
-        asunto = f"Restablecer la contraseña de {usuario.email}"
-        cuerpo = _mensaje_redirigido(usuario, request.user, enlace)
+        destino, cuerpo = usuario.email, _cuerpo(usuario, enlace, invitacion)
+    elif pedido_por is not None and _es_real(pedido_por.email):
+        destino = pedido_por.email
+        asunto = f"{asunto} ({usuario.email})"
+        cuerpo = _cuerpo_redirigido(usuario, pedido_por, enlace, invitacion)
     else:
-        return error(
-            f"{usuario.email} es un correo de prueba y el tuyo también: no hay a dónde enviar el enlace.", 409
-        )
-
+        return None, f"{usuario.email} es un correo de prueba: no hay a dónde enviar el enlace."
     try:
         send_mail(asunto, cuerpo, None, [destino])
     except OSError:
         # smtplib.SMTPException es un OSError: clave equivocada, sin conexión, etc.
-        return error("No se pudo enviar el correo. Revisá la configuración de correo del servidor.", 502)
+        return None, SIN_ENVIO
+    return destino, None
+
+
+@require_POST
+@requiere_permiso("core.change_usuario")
+def enviar_enlace(request, pk):
+    """Botón "Restablecer contraseña" de Gestión → Usuarios."""
+    usuario = get_object_or_404(Usuario, pk=pk, campana=request.campana)
+    if usuario.is_superuser and not request.user.is_superuser:
+        return error("Solo un superusuario puede modificar a otro superusuario.", 403)
+    if not usuario.is_active:
+        return error("El usuario está desactivado. Actívelo antes de restablecer su contraseña.", 409)
+    destino, mensaje = enviar_enlace_a(usuario, request.user)
+    if mensaje:
+        return error(mensaje, 502 if mensaje == SIN_ENVIO else 409)
     registrar(request, usuario, "editar", detalle=f"Envió a {destino} un enlace para restablecer la contraseña")
     return JsonResponse({"ok": True, "email": destino, "redirigido": destino != usuario.email})
+
+
+@require_POST
+def olvide(request):
+    """"¿Olvidó su contraseña?" del login: POST {email}. Siempre responde lo
+    mismo, exista o no el usuario, para no revelar qué correos están cargados."""
+    datos = leer_json(request)
+    if datos is None:
+        return error("Los datos enviados no son válidos.")
+    email = str(datos.get("email") or "").strip().lower()
+    mensaje = validar_email(email)
+    if mensaje:
+        return error(mensaje)
+    usuario = Usuario.objects.filter(email__iexact=email, is_active=True).first()
+    if usuario is not None and _es_real(usuario.email):
+        _, mensaje = enviar_enlace_a(usuario)
+        if mensaje == SIN_ENVIO:
+            return error(SIN_ENVIO, 502)
+    return JsonResponse({"ok": True, "mensaje": PEDIDO_RECIBIDO})
 
 
 def _usuario_del_enlace(uid, token):
@@ -107,14 +156,14 @@ def restablecer(request, uid, token):
     if usuario is None:
         return error(ENLACE_INVALIDO, 400)
     if request.method == "GET":
-        return JsonResponse({"email": usuario.email})
+        return JsonResponse({"email": usuario.email, "nueva": not usuario.has_usable_password()})
 
     datos = leer_json(request)
     if datos is None:
-        return error("JSON inválido.")
+        return error("Los datos enviados no son válidos.")
     password = datos.get("password") or ""
     if not isinstance(password, str) or not password:
-        return error("Ingresá la contraseña nueva.")
+        return error("Ingrese la contraseña nueva.")
     try:
         validate_password(password, usuario)
     except ValidationError as e:

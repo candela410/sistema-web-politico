@@ -127,7 +127,13 @@ def _barras(ax, tabla, respondidas):
 
 
 def _columnas(ax, tabla, _):
-    ax.bar(tabla["texto"].map(lambda t: _recortar(t, 14)), tabla["cantidad"], color=VIOLETA, width=0.6)
+    # Cuantitativa (la tabla trae "valor", ordenada de menor a mayor): histograma,
+    # con las barras pegadas. Cualitativa: columnas separadas.
+    histograma = "valor" in tabla
+    ax.bar(
+        tabla["texto"].map(lambda t: _recortar(t, 14)), tabla["cantidad"], color=VIOLETA,
+        width=1.0 if histograma else 0.6, edgecolor="white" if histograma else None, linewidth=1.5,
+    )
     ax.yaxis.grid(True, color=GRILLA)
     _ejes_limpios(ax)
     tope = max(tabla["cantidad"].max(), 1)

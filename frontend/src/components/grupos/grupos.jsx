@@ -7,8 +7,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
-
-const GRUPO_MILITANTES = 'Militantes'
+import { useConCambios } from '../../validaciones'
 
 const ordenar = (lista) =>
   [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
@@ -19,23 +18,13 @@ const posicion = (accion) => {
   return i === -1 ? ORDEN_ACCIONES.length : i
 }
 
-// Devuelve por qué un rol no se puede borrar ('' si se puede)
-function motivoSinBorrar(grupo) {
-  if (grupo.nombre === GRUPO_MILITANTES) {
-    return 'Este rol lo usa el sistema y no se puede borrar.'
-  }
-  if (grupo.total_usuarios > 0) {
-    return `No se puede borrar: tiene ${grupo.total_usuarios} usuario${grupo.total_usuarios === 1 ? '' : 's'} asignado${grupo.total_usuarios === 1 ? '' : 's'}.`
-  }
-  return ''
-}
-
 function FormularioGrupo({ grupo, onGuardado, onCerrar }) {
   const [nombre, setNombre] = useState(grupo?.nombre ?? '')
   const [seleccion, setSeleccion] = useState(new Set(grupo?.permisos ?? []))
   const [secciones, setSecciones] = useState(null)
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const conCambios = useConCambios({ nombre, permisos: [...seleccion].sort((a, b) => a - b) })
 
   useEffect(() => {
     api
@@ -167,9 +156,9 @@ function FormularioGrupo({ grupo, onGuardado, onCerrar }) {
           <button
             type="submit"
             className="boton"
-            disabled={guardando || !nombre.trim()}
+            disabled={guardando || !nombre.trim() || !conCambios}
           >
-            {guardando ? 'Guardando…' : 'Guardar'}
+            {guardando ? 'Guardando…' : grupo ? 'Guardar cambios' : 'Crear rol'}
           </button>
         </div>
       </form>
@@ -177,14 +166,15 @@ function FormularioGrupo({ grupo, onGuardado, onCerrar }) {
   )
 }
 
+// Eliminar un rol: si tiene usuarios (de cualquier campaña) no se puede, y se avisa
 function ConfirmarBorrado({ grupo, onBorrado, onCerrar }) {
   const [error, setError] = useState('')
   const [borrando, setBorrando] = useState(false)
+  const cantidad = grupo.total_usuarios ?? 0
 
   async function borrar() {
     setError('')
     setBorrando(true)
-
     try {
       await api.borrarGrupo(grupo.id)
       onBorrado(grupo.id)
@@ -194,35 +184,37 @@ function ConfirmarBorrado({ grupo, onBorrado, onCerrar }) {
     }
   }
 
-  return (
-    <Modal titulo="Borrar rol" onCerrar={onCerrar}>
-      <p className="modal__texto">
-        ¿Seguro que querés borrar el rol <b>{grupo.nombre}</b>?
-        Esta acción no se puede deshacer.
-      </p>
+  if (cantidad > 0)
+    return (
+      <Modal titulo="No se puede eliminar el rol" onCerrar={onCerrar}>
+        <p className="modal__texto">
+          El rol <b>{grupo.nombre}</b> tiene {cantidad} usuario{cantidad === 1 ? '' : 's'} asignado
+          {cantidad === 1 ? '' : 's'}. Para eliminarlo, asigne otro rol a {cantidad === 1 ? 'ese usuario' : 'esos usuarios'}.
+        </p>
+        <div className="acciones">
+          <button type="button" className="boton" onClick={onCerrar} autoFocus>
+            Entendido
+          </button>
+        </div>
+      </Modal>
+    )
 
+  return (
+    <Modal titulo="Eliminar rol" onCerrar={onCerrar}>
+      <p className="modal__texto">
+        ¿Desea eliminar el rol <b>{grupo.nombre}</b>? Esta acción no se puede deshacer.
+      </p>
       {error && (
         <p className="texto-error" role="alert">
           {error}
         </p>
       )}
-
       <div className="acciones">
-        <button
-          type="button"
-          className="boton boton--borde"
-          onClick={onCerrar}
-        >
+        <button type="button" className="boton boton--borde" onClick={onCerrar}>
           Cancelar
         </button>
-
-        <button
-          type="button"
-          className="boton boton--rojo"
-          onClick={borrar}
-          disabled={borrando}
-        >
-          {borrando ? 'Borrando…' : 'Borrar'}
+        <button type="button" className="boton boton--rojo" onClick={borrar} disabled={borrando}>
+          {borrando ? 'Eliminando…' : 'Eliminar'}
         </button>
       </div>
     </Modal>
@@ -294,7 +286,7 @@ function Grupos() {
 
         <input
           type="search"
-          placeholder="Buscar por nombre, descripción o usuario"
+          placeholder="Buscar por nombre o usuario"
           aria-label="Buscar roles"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -314,11 +306,11 @@ function Grupos() {
           {grupos.length === 0 ? (
             <>
               <b>Todavía no hay roles.</b>
-              <span>Creá el primero con “+ Nuevo rol”.</span>
+              <span>Cree el primero con «+ Nuevo rol».</span>
             </>
           ) : (
             <span>
-              No hay roles que coincidan con “{busqueda}”.
+              No hay roles que coincidan con «{busqueda}».
             </span>
           )}
         </div>
@@ -352,21 +344,15 @@ function Grupos() {
                     </>
                   )}
                 </p>
-
-                {motivoSinBorrar(grupo) && (
-                  <p className="grupo__aviso">{motivoSinBorrar(grupo)}</p>
-                )}
               </div>
 
               <div className="grupo__acciones acciones-iconos">
                 <BotonIcono icono={Pencil} etiqueta="Editar" onClick={() => setEditando(grupo)} />
                 <BotonIcono
                   icono={Trash2}
-                  etiqueta="Borrar rol"
-                  ayuda={motivoSinBorrar(grupo) || 'Borrar rol'}
+                  etiqueta="Eliminar rol"
                   variante="peligro"
                   onClick={() => setBorrando(grupo)}
-                  disabled={!!motivoSinBorrar(grupo)}
                 />
               </div>
             </li>
@@ -392,8 +378,8 @@ function Grupos() {
             setEditando(null)
             avisar(
               esNuevo
-                ? `Rol "${grupo.nombre}" creado.`
-                : 'Cambios guardados.',
+                ? `El rol «${grupo.nombre}» fue creado.`
+                : 'Los cambios se guardaron correctamente.',
             )
           }}
         />
@@ -408,7 +394,7 @@ function Grupos() {
               lista.filter((grupo) => grupo.id !== id),
             )
             setBorrando(null)
-            avisar('Rol borrado.')
+            avisar('El rol fue eliminado.')
           }}
         />
       )}

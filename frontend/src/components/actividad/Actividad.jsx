@@ -2,19 +2,22 @@ import { useEffect, useState } from 'react'
 import { obtenerHistorial } from '../../api/usuarios'
 import './actividad.css'
 import Esqueleto from '../comunes/Esqueleto'
+import Paginacion, { POR_PAGINA } from '../comunes/Paginacion'
 import { Eye, EyeOff } from 'lucide-react'
 
-// Historial de actividad: cada movimiento registrado en el log de Django
-// (fecha, hora, quién, qué hizo y, si editó, el valor anterior y el nuevo).
+// Historial de actividad de la campaña activa: cada movimiento registrado en
+// el log de Django (fecha, hora, quién, qué hizo y, si editó, el valor
+// anterior y el nuevo). Como el resto del sistema, muestra solo la campaña en
+// la que se está trabajando.
 
 const ACCIONES = {
   crear: { texto: 'Creó', clase: 'crear' },
   editar: { texto: 'Editó', clase: 'editar' },
-  borrar: { texto: 'Borró', clase: 'borrar' },
+  borrar: { texto: 'Eliminó', clase: 'borrar' },
   sesion: { texto: 'Sesión', clase: 'sesion' },
 }
 
-const FILTROS_VACIOS = { usuario: '', accion: '', seccion: '', desde: '', hasta: '', q: '', alcance: '' }
+const FILTROS_VACIOS = { usuario: '', accion: '', seccion: '', desde: '', hasta: '' }
 const formatoDia = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 const formatoHora = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
@@ -40,7 +43,7 @@ function Movimiento({ m }) {
           {m.accion === 'sesion' && <span>{m.detalle}</span>}
         </p>
         {m.detalle && m.accion !== 'sesion' && <p className="movimiento__detalle">{m.detalle}</p>}
-        {m.desde_admin && <p className="movimiento__detalle">Hecho desde el admin de Django.</p>}
+        {m.desde_admin && <p className="movimiento__detalle">Realizado desde el administrador de Django.</p>}
         {hayCambios && (
           <>
             <button
@@ -93,7 +96,7 @@ function Actividad({ usuario }) {
 
   useEffect(() => {
     let vigente = true
-    // Pequeña espera para no pedir en cada tecla del buscador
+    // Pequeña espera para no pedir en cada cambio rápido de filtros
     const t = setTimeout(() => {
       obtenerHistorial(JSON.parse(clave))
         .then((d) => {
@@ -110,7 +113,7 @@ function Actividad({ usuario }) {
   }, [clave])
 
   const cambiar = (campo) => (e) => {
-    setFiltros((f) => ({ ...f, [campo]: e.target.type === 'checkbox' ? (e.target.checked ? 'todas' : '') : e.target.value }))
+    setFiltros((f) => ({ ...f, [campo]: e.target.value }))
     setPagina(1)
   }
   const hayFiltros = Object.values(filtros).some(Boolean)
@@ -128,7 +131,7 @@ function Actividad({ usuario }) {
       <header className="pagina__encabezado">
         <div>
           <h1>Actividad</h1>
-          <p>Todo lo que se hizo en {usuario.campana?.nombre ?? 'la campaña'}: quién, cuándo y qué cambió.</p>
+          <p>Movimientos realizados en {usuario.campana?.nombre ?? 'la campaña'}: quién, cuándo y qué cambió.</p>
           <span className="franja-corta" aria-hidden="true">
             <i />
             <i />
@@ -156,7 +159,7 @@ function Actividad({ usuario }) {
             <option value="">Todas</option>
             <option value="crear">Creó</option>
             <option value="editar">Editó</option>
-            <option value="borrar">Borró</option>
+            <option value="borrar">Eliminó</option>
             <option value="sesion">Inicio / cierre de sesión</option>
           </select>
         </label>
@@ -179,23 +182,7 @@ function Actividad({ usuario }) {
           Hasta
           <input className="entrada" type="date" value={filtros.hasta} onChange={cambiar('hasta')} />
         </label>
-        <label className="filtros__buscar">
-          Buscar
-          <input
-            className="entrada"
-            type="search"
-            placeholder="Nombre de lo modificado"
-            value={filtros.q}
-            onChange={cambiar('q')}
-          />
-        </label>
         <div className="filtros__pie">
-          {usuario.es_superusuario && (
-            <label className="casilla-texto">
-              <input type="checkbox" checked={filtros.alcance === 'todas'} onChange={cambiar('alcance')} />
-              <span>Ver todas las campañas (también inicios de sesión de superusuarios y cambios de campañas)</span>
-            </label>
-          )}
           {hayFiltros && (
             <button
               type="button"
@@ -236,29 +223,13 @@ function Actividad({ usuario }) {
               </ol>
             </section>
           ))}
-          {datos.paginas > 1 && (
-            <nav className="paginado" aria-label="Páginas">
-              <button
-                type="button"
-                className="boton boton--borde boton--chico"
-                disabled={pagina <= 1}
-                onClick={() => setPagina((p) => p - 1)}
-              >
-                ← Más nuevos
-              </button>
-              <span>
-                Página {datos.pagina} de {datos.paginas}
-              </span>
-              <button
-                type="button"
-                className="boton boton--borde boton--chico"
-                disabled={pagina >= datos.paginas}
-                onClick={() => setPagina((p) => p + 1)}
-              >
-                Más viejos →
-              </button>
-            </nav>
-          )}
+          <Paginacion
+            pagina={datos.pagina}
+            paginas={datos.paginas}
+            total={datos.total}
+            porPagina={POR_PAGINA}
+            irA={setPagina}
+          />
         </div>
       )}
     </main>

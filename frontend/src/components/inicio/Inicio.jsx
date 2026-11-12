@@ -81,6 +81,13 @@ function semanaActual() {
   })
 }
 
+// Saludo formal según la hora del día
+function saludo() {
+  const hora = new Date().getHours()
+  if (hora >= 6 && hora < 12) return 'Buenos días'
+  return hora >= 12 && hora < 20 ? 'Buenas tardes' : 'Buenas noches'
+}
+
 const fechaCorta = (iso) => new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 
 // Número del tablero que cuenta desde 0 hasta su valor (700ms, frenando al final).
@@ -166,7 +173,7 @@ function Inicio({ usuario }) {
             {resumen === null ? (
               <p className="inicio__vacio">Cargando…</p>
             ) : resumen.ultimos.length === 0 ? (
-              <p className="inicio__vacio">Cuando se creen cuestionarios, vas a ver acá los últimos.</p>
+              <p className="inicio__vacio">Cuando se creen cuestionarios, aquí se mostrarán los últimos.</p>
             ) : (
               <ul className="inicio__ultimos">
                 {resumen.ultimos.map((c) => (
@@ -187,8 +194,10 @@ function Inicio({ usuario }) {
 
       <div className="inicio__centro">
         <header className="inicio__saludo">
-          <h1>Hola, {usuario.nombre || nombreDe(usuario)} 👋</h1>
-          <p>¿Qué querés gestionar hoy?</p>
+          <h1>
+            {saludo()}, {usuario.nombre || nombreDe(usuario)}
+          </h1>
+          <p>¿Qué desea gestionar hoy?</p>
           <span className="franja-corta" aria-hidden="true">
             <i />
             <i />
@@ -199,8 +208,8 @@ function Inicio({ usuario }) {
 
         {tarjetas.length === 0 && (
           <section className="inicio__caja">
-            <h3>Todavía no tenés secciones habilitadas</h3>
-            <p className="inicio__vacio">Pedile a la administración que te agregue a un grupo con permisos.</p>
+            <h3>Todavía no tiene secciones habilitadas</h3>
+            <p className="inicio__vacio">Solicite a la administración que le asigne un rol con permisos.</p>
           </section>
         )}
 

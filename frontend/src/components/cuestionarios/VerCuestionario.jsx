@@ -92,7 +92,7 @@ function VerCuestionario({ cuestionario, usuario, onCerrar }) {
             <h4>
               Asignado a
               {asignados && asignados.total > 0 && (
-                <span className="ver__contador">{plural(asignados.total, 'militante', 'militantes')}</span>
+                <span className="ver__contador">{plural(asignados.total, 'usuario', 'usuarios')}</span>
               )}
             </h4>
             {asignados === null ? (

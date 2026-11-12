@@ -4,7 +4,7 @@ import Esqueleto from '../comunes/Esqueleto'
 import Modal from '../comunes/Modal'
 import './asignar.css'
 
-// Check de un equipo: marca o desmarca a todos sus militantes.
+// Check de un equipo: marca o desmarca a todos sus integrantes.
 // Queda "a medias" (indeterminado) si solo están elegidos algunos.
 function CheckEquipo({ marcados, total, onChange, etiqueta }) {
   const ref = useRef(null)
@@ -49,12 +49,12 @@ function Grupo({ titulo, inactivo, usuarios, elegidos, alternar, alternarTodos }
               <input
                 type="checkbox"
                 checked={elegidos.has(u.id)}
-                // El que ya no es militante activo solo se puede quitar
+                // El que ya no está activo solo se puede quitar
                 disabled={!u.elegible && !elegidos.has(u.id)}
                 onChange={() => alternar(u.id)}
               />
               <span className="asignar__nombre">{u.nombre}</span>
-              <small>{u.elegible ? u.email : 'Ya no es militante activo'}</small>
+              <small>{u.elegible ? u.email : 'Usuario inactivo'}</small>
             </label>
           </li>
         ))}
@@ -68,6 +68,8 @@ function AsignarCuestionario({ cuestionario, onCerrar, onGuardado }) {
   const [elegidos, setElegidos] = useState(new Set())
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [iniciales, setIniciales] = useState('')
+  const conCambios = datos !== null && [...elegidos].sort((a, b) => a - b).join(',') !== iniciales
 
   useEffect(() => {
     api
@@ -75,7 +77,9 @@ function AsignarCuestionario({ cuestionario, onCerrar, onGuardado }) {
       .then((d) => {
         setDatos(d)
         const todos = [...d.equipos.flatMap((e) => e.usuarios), ...d.sin_equipo]
-        setElegidos(new Set(todos.filter((u) => u.asignado).map((u) => u.id)))
+        const asignados = todos.filter((u) => u.asignado).map((u) => u.id)
+        setElegidos(new Set(asignados))
+        setIniciales([...new Set(asignados)].sort((a, b) => a - b).join(','))
       })
       .catch((e) => setError(e.message))
   }, [cuestionario.id])
@@ -130,7 +134,7 @@ function AsignarCuestionario({ cuestionario, onCerrar, onGuardado }) {
 
       {c && !c.activo && (
         <p className="asignar__nota">
-          Este cuestionario está inactivo: los militantes no lo van a ver hasta que lo actives.
+          Este cuestionario está inactivo: no se mostrará para cargar encuestas hasta que se active.
         </p>
       )}
 
@@ -138,15 +142,15 @@ function AsignarCuestionario({ cuestionario, onCerrar, onGuardado }) {
 
       {datos && !hayMilitantes && (
         <p className="modal__texto">
-          No hay militantes activos en la campaña. Asignales el rol <b>Militantes</b> desde Usuarios.
+          No hay usuarios activos en la campaña.
         </p>
       )}
 
       {datos && hayMilitantes && (
         <>
           <p className="asignar__ayuda">
-            Marcá un equipo para asignárselo a todos sus integrantes, o elegí personas sueltas. Si alguien entra a un
-            equipo después, hay que asignárselo de nuevo.
+            Marque un equipo para asignarlo a todos sus integrantes o seleccione personas individuales. Si alguien se
+            suma a un equipo después, deberá asignarse nuevamente.
           </p>
           <div className="asignar__lista">
             {datos.equipos.map((e) => (
@@ -171,7 +175,7 @@ function AsignarCuestionario({ cuestionario, onCerrar, onGuardado }) {
             )}
           </div>
           <p className="asignar__ayuda">
-            {elegidos.size === 1 ? '1 militante elegido.' : `${elegidos.size} militantes elegidos.`}
+            {elegidos.size === 1 ? '1 usuario seleccionado.' : `${elegidos.size} usuarios seleccionados.`}
           </p>
         </>
       )}
@@ -186,8 +190,8 @@ function AsignarCuestionario({ cuestionario, onCerrar, onGuardado }) {
         <button type="button" className="boton boton--borde" onClick={onCerrar}>
           Cancelar
         </button>
-        <button type="button" className="boton" onClick={guardar} disabled={!datos || guardando}>
-          {guardando ? 'Guardando…' : 'Guardar'}
+        <button type="button" className="boton" onClick={guardar} disabled={!datos || guardando || !conCambios}>
+          {guardando ? 'Guardando…' : 'Guardar cambios'}
         </button>
       </div>
     </Modal>

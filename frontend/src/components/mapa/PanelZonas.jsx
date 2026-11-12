@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import Confirmacion from '../comunes/Confirmacion'
+import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import * as api from '../../api/mapa'
 import { COLORES_ZONA } from './formato'
 
@@ -24,10 +25,16 @@ function SelectorColor({ valor, onCambio }) {
   )
 }
 
-function PanelZonas({ zonas, modo, setModo, seleccionada, onSeleccionar, onGuardada, onBorrada, onError }) {
+// Rutas que pasan por cada zona (rutas → calles → barrios → zonas)
+const rutasDe = (zona, rutas) => rutas.filter((r) => r.zonas.includes(zona.nombre)).map((r) => r.nombre)
+
+function PanelZonas({ zonas, rutas, modo, setModo, seleccionada, onSeleccionar, onGuardada, onBorrada, onError }) {
   const [nombre, setNombre] = useState('')
   const [color, setColor] = useState(COLORES_ZONA[0])
   const [guardando, setGuardando] = useState(false)
+  // Valores con los que se abrió la edición: "Guardar" se habilita al cambiar algo
+  const [inicial, setInicial] = useState('')
+  const paginado = usePaginado(zonas)
 
   const zonaActiva = zonas.find((z) => z.id === seleccionada)
   const creando = modo?.tipo === 'zona-nueva'
@@ -42,6 +49,7 @@ function PanelZonas({ zonas, modo, setModo, seleccionada, onSeleccionar, onGuard
   function empezarEdicion(zona) {
     setNombre(zona.nombre)
     setColor(zona.color)
+    setInicial(JSON.stringify([zona.nombre, zona.color, zona.geometria]))
     setModo({ tipo: 'zona-editar', id: zona.id, geometria: zona.geometria })
   }
 
@@ -79,14 +87,10 @@ function PanelZonas({ zonas, modo, setModo, seleccionada, onSeleccionar, onGuard
 
   if (creando || editando) {
     const hayContorno = !!modo.geometria
+    const conCambios = creando || JSON.stringify([nombre.trim(), color, modo.geometria]) !== inicial
     return (
       <form className="formulario" onSubmit={guardar}>
         <h2>{creando ? 'Nueva zona' : 'Editar zona'}</h2>
-        {creando && !hayContorno && (
-          <p className="paso">
-            <b>1.</b> Dibujá el contorno de la zona en el mapa.
-          </p>
-        )}
         {creando && hayContorno && (
           <p className="paso paso--listo">
             Contorno dibujado.{' '}
@@ -95,7 +99,7 @@ function PanelZonas({ zonas, modo, setModo, seleccionada, onSeleccionar, onGuard
             </button>
           </p>
         )}
-        {editando && <p className="paso">Arrastrá los vértices en el mapa para cambiar el contorno.</p>}
+        {editando && <p className="paso">Arrastre los vértices en el mapa para cambiar el contorno.</p>}
 
         <label htmlFor="zona-nombre">Nombre</label>
         <input
@@ -105,6 +109,7 @@ function PanelZonas({ zonas, modo, setModo, seleccionada, onSeleccionar, onGuard
           onChange={(e) => setNombre(e.target.value)}
           placeholder="Ej.: Zona Norte"
           maxLength={100}
+          autoCapitalize="sentences"
           required
         />
 
@@ -117,7 +122,7 @@ function PanelZonas({ zonas, modo, setModo, seleccionada, onSeleccionar, onGuard
           <button type="button" className="boton boton--borde" onClick={() => setModo(null)}>
             Cancelar
           </button>
-          <button type="submit" className="boton" disabled={guardando || !hayContorno || !nombre.trim()}>
+          <button type="submit" className="boton" disabled={guardando || !hayContorno || !nombre.trim() || !conCambios}>
             {guardando ? 'Guardando…' : 'Guardar zona'}
           </button>
         </div>
@@ -132,10 +137,11 @@ function PanelZonas({ zonas, modo, setModo, seleccionada, onSeleccionar, onGuard
       </button>
 
       {zonas.length === 0 ? (
-        <p className="vacio">Todavía no hay zonas. Creá la primera dibujándola sobre el mapa.</p>
+        <p className="vacio">Todavía no hay zonas. Cree la primera dibujándola sobre el mapa.</p>
       ) : (
+        <>
         <ul className="items">
-          {zonas.map((z) => (
+          {paginado.items.map((z) => (
             <li key={z.id}>
               <button
                 type="button"
@@ -146,12 +152,17 @@ function PanelZonas({ zonas, modo, setModo, seleccionada, onSeleccionar, onGuard
                 <span className="item__color" style={{ background: z.color }} />
                 <span className="item__texto">
                   <b>{z.nombre}</b>
-                  <small>{z.barrios.length === 1 ? '1 barrio' : `${z.barrios.length} barrios`}</small>
+                  <small>
+                    {z.barrios.length === 1 ? '1 barrio' : `${z.barrios.length} barrios`} ·{' '}
+                    {rutasDe(z, rutas).length === 1 ? '1 ruta' : `${rutasDe(z, rutas).length} rutas`}
+                  </small>
                 </span>
               </button>
             </li>
           ))}
         </ul>
+        <Paginacion {...paginado} contenedor=".mapa__lateral" />
+        </>
       )}
 
       {zonaActiva && (
@@ -159,24 +170,28 @@ function PanelZonas({ zonas, modo, setModo, seleccionada, onSeleccionar, onGuard
           <h3>{zonaActiva.nombre}</h3>
           <p className="texto-suave">
             {zonaActiva.barrios.length === 0
-              ? 'No tiene barrios adentro.'
+              ? 'No tiene barrios dentro.'
               : zonaActiva.barrios
                   .slice(0, 15)
                   .map((b) => b.nombre)
                   .join(', ') + (zonaActiva.barrios.length > 15 ? ` y ${zonaActiva.barrios.length - 15} más.` : '.')}
           </p>
+          <dl className="datos">
+            <dt>Rutas</dt>
+            <dd>{rutasDe(zonaActiva, rutas).join(', ') || 'Ninguna ruta pasa por esta zona'}</dd>
+          </dl>
           <div className="acciones acciones-iconos">
             <BotonIcono icono={Pencil} etiqueta="Editar zona" onClick={() => empezarEdicion(zonaActiva)} />
-            <BotonIcono icono={Trash2} etiqueta="Borrar zona" variante="peligro" onClick={() => setABorrar(zonaActiva)} />
+            <BotonIcono icono={Trash2} etiqueta="Eliminar zona" variante="peligro" onClick={() => setABorrar(zonaActiva)} />
           </div>
           {aBorrar && (
             <Confirmacion
-              titulo="Borrar zona"
-              textoConfirmar="Borrar"
+              titulo="Eliminar zona"
+              textoConfirmar="Eliminar"
               onCerrar={() => setABorrar(null)}
               onConfirmar={() => borrar(aBorrar)}
             >
-              ¿Seguro que querés borrar la zona <b>{aBorrar.nombre}</b>? Sus barrios quedan sin zona.
+              ¿Desea eliminar la zona <b>{aBorrar.nombre}</b>? Sus barrios quedarán sin zona.
             </Confirmacion>
           )}
         </section>

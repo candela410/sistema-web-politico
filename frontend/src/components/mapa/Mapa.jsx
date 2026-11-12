@@ -78,14 +78,13 @@ function Mapa() {
       const color = colorDeZona[zona]
       const resaltado = seleccion?.tipo === 'barrio' && seleccion.id === id
       return {
-        // Sin zona: contorno violeta; con zona: el color de su zona
-        color: resaltado ? '#15121c' : color || '#51318f',
-        weight: resaltado ? 3 : 1.6,
-        opacity: color ? 0.9 : 0.7,
+        // Sin límites de barrio a la vista: solo el relleno (el color de su zona).
+        // El contorno aparece únicamente en el barrio que se eligió.
+        stroke: resaltado,
+        color: '#15121c',
+        weight: 3,
         fillColor: color || '#51318f',
-        fillOpacity: zonaSeleccionada && zona === zonaSeleccionada ? 0.45 : color ? 0.25 : 0.07,
-        // Contorno estimado (OpenStreetMap no tiene el límite real): línea punteada
-        dashArray: feature.properties.aproximado ? '5 5' : null,
+        fillOpacity: zonaSeleccionada && zona === zonaSeleccionada ? 0.45 : color ? 0.25 : 0.05,
       }
     },
     [colorDeZona, seleccion, zonaSeleccionada],
@@ -93,8 +92,8 @@ function Mapa() {
 
   const alHacerClicEnBarrio = useCallback(
     (feature, capa) => {
-      const { nombre, aproximado } = feature.properties
-      capa.bindTooltip(aproximado ? `${nombre} (límite aproximado)` : nombre, {
+      const { nombre } = feature.properties
+      capa.bindTooltip(nombre, {
         sticky: true,
         className: 'mapa-tooltip',
       })
@@ -156,7 +155,7 @@ function Mapa() {
 
         {barrios && barrios.features.length === 0 && (
           <p className="aviso">
-            Todavía no hay barrios cargados. Se cargan con{' '}
+            Todavía no hay barrios cargados. Se cargan con el comando{' '}
             <code>python manage.py importar_osm &quot;Ciudad&quot;</code>.
           </p>
         )}
@@ -186,6 +185,7 @@ function Mapa() {
         {pestana === 'zonas' ? (
           <PanelZonas
             zonas={zonas}
+            rutas={rutas}
             modo={modo}
             setModo={setModo}
             seleccionada={zonaSeleccionada}
@@ -235,17 +235,11 @@ function Mapa() {
         {(enDibujo || marcandoRuta) && (
           <div className="mapa__indicacion" role="status">
             {enDibujo
-              ? 'Hacé clic en el mapa para marcar los vértices de la zona. Cerrá la figura haciendo clic en el primer punto.'
-              : 'Hacé clic en el mapa para agregar puntos a la ruta. Podés arrastrarlos para moverlos.'}
+              ? 'Haga clic en el mapa para marcar los vértices de la zona. Para cerrar la figura, haga clic en el primer punto.'
+              : 'Haga clic en el mapa para agregar puntos a la ruta. Puede arrastrarlos para moverlos.'}
           </div>
         )}
         <div className="mapa__leyenda" aria-label="Referencias del mapa">
-          <span>
-            <i className="ref ref--barrio" /> Barrio
-          </span>
-          <span>
-            <i className="ref ref--aproximado" /> Barrio con límite aproximado
-          </span>
           <span>
             <i className="ref ref--zona" /> Zona (en su color)
           </span>
@@ -284,7 +278,6 @@ function Mapa() {
                 style={{
                   color: z.color,
                   weight: zonaSeleccionada === z.id ? 4 : 2.5,
-                  dashArray: zonaSeleccionada === z.id ? null : '6 4',
                   fill: false,
                 }}
               />

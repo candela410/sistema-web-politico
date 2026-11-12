@@ -100,16 +100,7 @@ def _respuestas(request):
     respuestas = analitica.leer_respuestas(connection, cuestionario.pk)
     fig = analitica.figura_respuestas(respuestas, cuestionario.titulo, zona, request.campana.nombre)
     if fig is None:
-        cargadas = respuestas[respuestas["id_respuesta"].notna()]
-        sin_ubicacion = int(cargadas["latitud"].isna().sum())
-        lugar = f"en {zona['nombre']}" if zona else "en ninguna zona"
-        mensaje = f"Todavía no hay respuestas de «{cuestionario.titulo}» con ubicación {lugar}."
-        if sin_ubicacion:
-            mensaje += (
-                f" Las {sin_ubicacion} respuestas cargadas antes de que se guardara la ubicación"
-                " no se pueden ubicar en una zona."
-            )
-        return error(mensaje, 404)
+        return error("No hay respuestas con ubicación para ese cuestionario en esa zona.", 404)
     return _imagen(fig)
 
 

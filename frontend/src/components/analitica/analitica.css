@@ -20,23 +20,6 @@
   font-weight: 600;
 }
 
-.analitica__filtros--respuestas {
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-}
-
-.analitica__seccion {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.analitica__seccion h2 {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 800;
-}
-
 .analitica__imagen .aviso-info {
   margin: 0;
 }
@@ -126,10 +109,6 @@
 
 @media (max-width: 760px) {
   .analitica__filtros,
-  .analitica__filtros--respuestas {
-    grid-template-columns: 1fr 1fr;
-  }
-
   .analitica__acciones {
     grid-column: 1 / -1;
     justify-content: flex-end;

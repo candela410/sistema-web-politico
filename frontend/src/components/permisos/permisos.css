@@ -76,9 +76,17 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1 1 240px;
   max-width: 360px;
   font-size: 0.88rem;
   font-weight: 600;
+}
+
+.permisos__filtro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
 }
 
 /* Una intensidad por acción: ver es lo más leve, borrar lo más fuerte */

@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
-import { LocateFixed, MapPin, MapPinOff } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import * as api from '../../api/encuestas'
 import { errorDocumento, errorPersona } from '../../validaciones'
@@ -13,38 +12,27 @@ import './responder.css'
 
 const ENCUESTADO_VACIO = { documento: '', nombre: '', apellido: '' }
 
-// Mensajes según por qué no se pudo obtener la ubicación
+// La ubicación del dispositivo es obligatoria, pero no se muestra en la
+// pantalla: se pide sola al abrir y, si al enviar todavía no está, se vuelve a
+// pedir en ese momento. Solo se avisa si no se pudo obtener.
 const ERRORES_UBICACION = {
-  1: 'El navegador no tiene permiso para usar la ubicación. Habilítelo en la configuración del sitio y presione «Reintentar».',
-  2: 'No se pudo determinar la ubicación. Verifique que la ubicación (GPS) del dispositivo esté activada.',
-  3: 'La ubicación tardó demasiado en obtenerse. Presione «Reintentar».',
+  1: 'El navegador no tiene permiso para usar la ubicación. Habilítelo en la configuración del sitio e intente nuevamente.',
+  2: 'Verifique que la ubicación (GPS) del dispositivo esté activada e intente nuevamente.',
+  3: 'La ubicación tardó demasiado en obtenerse. Intente nuevamente.',
 }
 
-// Estado de la ubicación del dispositivo, obligatoria para enviar la encuesta
-function EstadoUbicacion({ ubicacion, onReintentar }) {
-  if (ubicacion.estado === 'lista')
-    return (
-      <p className="ubicacion ubicacion--lista" role="status">
-        <MapPin size={17} aria-hidden="true" /> Ubicación detectada.
-      </p>
+function pedirUbicacion() {
+  return new Promise((resolver, rechazar) => {
+    if (!navigator.geolocation) {
+      rechazar(new Error('Este dispositivo o navegador no permite obtener la ubicación.'))
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolver({ latitud: p.coords.latitude, longitud: p.coords.longitude }),
+      (e) => rechazar(new Error(ERRORES_UBICACION[e.code] ?? ERRORES_UBICACION[2])),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
     )
-  if (ubicacion.estado === 'buscando')
-    return (
-      <p className="ubicacion" role="status">
-        <LocateFixed size={17} aria-hidden="true" /> Obteniendo la ubicación del dispositivo…
-      </p>
-    )
-  return (
-    <div className="ubicacion ubicacion--error" role="alert">
-      <MapPinOff size={17} aria-hidden="true" />
-      <span>
-        <b>La ubicación es obligatoria para cargar la encuesta.</b> {ubicacion.mensaje}
-      </span>
-      <button type="button" className="boton boton--borde boton--chico" onClick={onReintentar}>
-        Reintentar
-      </button>
-    </div>
-  )
+  })
 }
 
 function Pregunta({ pregunta, numero, elegidas, error, onCambio }) {
@@ -109,12 +97,7 @@ function ResponderCuestionario() {
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
-  // { estado: 'buscando' | 'lista' | 'error', latitud, longitud, mensaje }
-  const [ubicacion, setUbicacion] = useState(() =>
-    navigator.geolocation
-      ? { estado: 'buscando' }
-      : { estado: 'error', mensaje: 'Este dispositivo o navegador no permite obtener la ubicación.' },
-  )
+  const [ubicacion, setUbicacion] = useState(null) // { latitud, longitud }
   // Campos de la persona que ya se tocaron (sus errores se muestran desde ahí)
   const [tocados, setTocados] = useState({})
   const erroresPersona = {
@@ -132,24 +115,13 @@ function ResponderCuestionario() {
       .catch((e) => setError(e.message))
   }, [id])
 
-  // La ubicación es obligatoria: se pide al abrir y después de cada envío
-  const obtenerUbicacion = useCallback(() => {
-    navigator.geolocation?.getCurrentPosition(
-      (p) => setUbicacion({ estado: 'lista', latitud: p.coords.latitude, longitud: p.coords.longitude }),
-      (e) => setUbicacion({ estado: 'error', mensaje: ERRORES_UBICACION[e.code] ?? ERRORES_UBICACION[2] }),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
-    )
-  }, [])
-
+  // Se pide al abrir y al empezar cada encuesta nueva
   useEffect(() => {
-    obtenerUbicacion()
-  }, [enviado, obtenerUbicacion])
-
-  function reintentarUbicacion() {
-    if (!navigator.geolocation) return
-    setUbicacion({ estado: 'buscando' })
-    obtenerUbicacion()
-  }
+    if (enviado) return
+    pedirUbicacion()
+      .then(setUbicacion)
+      .catch(() => {})
+  }, [enviado])
 
   const cambiarEncuestado = (campo) => (e) => {
     // El documento admite solo números, hasta 8
@@ -191,19 +163,27 @@ function ResponderCuestionario() {
       setError('Revise los campos marcados en rojo.')
       return
     }
-    if (ubicacion.estado !== 'lista') {
-      setError('La ubicación es obligatoria. Actívela y presione «Reintentar».')
-      return
-    }
     setEnviando(true)
+    let lugar = ubicacion
+    if (!lugar) {
+      try {
+        lugar = await pedirUbicacion()
+        setUbicacion(lugar)
+      } catch (e) {
+        setError(`La ubicación es obligatoria para cargar la encuesta. ${e.message}`)
+        document.querySelector('.editor')?.scrollTo({ top: 0, behavior: 'smooth' })
+        setEnviando(false)
+        return
+      }
+    }
     try {
       await api.enviarRespuestas(id, {
         encuestado,
         respuestas: cuestionario.preguntas
           .filter((p) => respuestas[p.id]?.length > 0)
           .map((p) => ({ pregunta: p.id, opciones: respuestas[p.id] })),
-        latitud: ubicacion.latitud,
-        longitud: ubicacion.longitud,
+        latitud: lugar.latitud,
+        longitud: lugar.longitud,
       })
       setEnviado(true)
       window.scrollTo({ top: 0 })
@@ -219,7 +199,7 @@ function ResponderCuestionario() {
   function otraEncuesta() {
     setEncuestado(ENCUESTADO_VACIO)
     setTocados({})
-    if (navigator.geolocation) setUbicacion({ estado: 'buscando' })
+    setUbicacion(null)
     setRespuestas({})
     setErrores({})
     setError('')
@@ -280,8 +260,6 @@ function ResponderCuestionario() {
             <span className="respuesta__obligatoria">*</span> Indica que la pregunta es obligatoria
           </p>
         </section>
-
-        <EstadoUbicacion ubicacion={ubicacion} onReintentar={reintentarUbicacion} />
 
         {error && (
           <p className="aviso-error" role="alert">
@@ -357,12 +335,7 @@ function ResponderCuestionario() {
         ))}
 
         <div className="acciones">
-          <button
-            type="submit"
-            className="boton boton--grande"
-            disabled={enviando || ubicacion.estado !== 'lista'}
-            title={ubicacion.estado !== 'lista' ? 'Se necesita la ubicación del dispositivo' : undefined}
-          >
+          <button type="submit" className="boton boton--grande" disabled={enviando}>
             {enviando ? 'Enviando…' : 'Enviar encuesta'}
           </button>
         </div>

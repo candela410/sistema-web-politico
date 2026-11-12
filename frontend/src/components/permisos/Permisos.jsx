@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, Minus } from 'lucide-react'
+import { Check, Minus, X } from 'lucide-react'
 import { obtenerPermisos } from '../../api/usuarios'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './permisos.css'
@@ -44,6 +44,8 @@ function Permisos() {
     )
 
   const rol = datos.grupos.find((g) => g.id === elegido)
+  // El filtro "limpio" es el primer rol de la lista (el que se ve al entrar)
+  const porDefecto = datos.grupos[0]?.id ?? null
 
   return (
     <main className="pagina">
@@ -64,16 +66,27 @@ function Permisos() {
         <p className="vacio-tarjeta">Todavía no hay roles.</p>
       ) : (
         <>
-          <label className="permisos__elegir">
-            Rol
-            <select className="entrada" value={elegido ?? ''} onChange={(e) => setElegido(Number(e.target.value))}>
-              {datos.grupos.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.nombre} ({g.usuarios} usuario{g.usuarios === 1 ? '' : 's'})
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="permisos__filtro">
+            <label className="permisos__elegir">
+              Rol
+              <select className="entrada" value={elegido ?? ''} onChange={(e) => setElegido(Number(e.target.value))}>
+                {datos.grupos.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.nombre} ({g.usuarios} usuario{g.usuarios === 1 ? '' : 's'})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="boton boton--borde"
+              onClick={() => setElegido(porDefecto)}
+              disabled={elegido === porDefecto}
+            >
+              <X size={16} aria-hidden="true" />
+              Limpiar filtro
+            </button>
+          </div>
 
           {rol && rol.permisos.length === 0 ? (
             <p className="vacio-tarjeta">El rol {rol.nombre} no tiene permisos asignados.</p>

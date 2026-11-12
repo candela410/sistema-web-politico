@@ -128,7 +128,6 @@ function Analitica({ usuario }) {
   const [aplicados, setAplicados] = useState({ ...VACIOS, version: 0 })
   const [resumen, setResumen] = useState(null)
   const [error, setError] = useState('')
-  const [elegidos, setElegidos] = useState({ cuestionario: '', zona: '' })
   const [eligiendoPdf, setEligiendoPdf] = useState(false)
   const [errorPdf, setErrorPdf] = useState('')
 
@@ -140,8 +139,6 @@ function Analitica({ usuario }) {
         if (!vigente) return
         setResumen({ ...r, version })
         setError('')
-        // Por defecto, el primer cuestionario de la campaña
-        setElegidos((e) => (e.cuestionario || !r.cuestionarios.length ? e : { ...e, cuestionario: String(r.cuestionarios[0].id) }))
       })
       .catch((e) => vigente && (setResumen(null), setError(e.message)))
     return () => {
@@ -165,16 +162,6 @@ function Analitica({ usuario }) {
 
   const periodo = resumen?.desde ? `${fecha(resumen.desde)} al ${fecha(resumen.hasta)}` : ''
   const urlDe = (clave) => urlGraficoAnalitica(clave, { desde: resumen.desde, hasta: resumen.hasta, v: version })
-  const urlRespuestas = elegidos.cuestionario
-    ? urlGraficoAnalitica('respuestas', { cuestionario: elegidos.cuestionario, zona: elegidos.zona })
-    : ''
-  const cuestionario = resumen?.cuestionarios.find((c) => String(c.id) === elegidos.cuestionario)
-  const zona = resumen?.zonas.find((z) => String(z.id) === elegidos.zona)
-  const graficoRespuestas = {
-    clave: 'respuestas',
-    titulo: 'Respuestas por zona',
-    pregunta: `Respuestas de «${cuestionario?.titulo ?? ''}» ${zona ? `en ${zona.nombre}` : 'en todas las zonas'}.`,
-  }
 
   async function pdf(lista, archivo) {
     setErrorPdf('')
@@ -194,12 +181,8 @@ function Analitica({ usuario }) {
     }
   }
 
-  // Gráficos que se pueden incluir en el PDF: los de encuestas (si hay en el
-  // período) y el de respuestas por zona (si se eligió un cuestionario)
-  const paraPdf = [
-    ...(resumen?.encuestas > 0 ? GRAFICOS.map((g) => ({ ...g, url: urlDe(g.clave) })) : []),
-    ...(urlRespuestas ? [{ ...graficoRespuestas, url: urlRespuestas }] : []),
-  ]
+  // Gráficos que se pueden incluir en el PDF (si hay encuestas en el período)
+  const paraPdf = resumen?.encuestas > 0 ? GRAFICOS.map((g) => ({ ...g, url: urlDe(g.clave) })) : []
 
   async function descargarElegidos(lista) {
     await pdf(lista, lista.length === 1 ? `${lista[0].clave}.pdf` : 'dashboard.pdf')
@@ -280,55 +263,6 @@ function Analitica({ usuario }) {
               </div>
             </>
           )}
-
-          <section className="analitica__seccion" aria-labelledby="titulo-respuestas">
-            <h2 id="titulo-respuestas">Respuestas de un cuestionario por zona</h2>
-            {resumen.cuestionarios.length === 0 ? (
-              <p className="aviso-info">La campaña todavía no tiene cuestionarios.</p>
-            ) : (
-              <>
-                <div className="analitica__filtros analitica__filtros--respuestas">
-                  <label>
-                    Cuestionario
-                    <select
-                      className="entrada"
-                      value={elegidos.cuestionario}
-                      onChange={(e) => setElegidos((x) => ({ ...x, cuestionario: e.target.value }))}
-                    >
-                      {resumen.cuestionarios.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.titulo}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Zona
-                    <select
-                      className="entrada"
-                      value={elegidos.zona}
-                      onChange={(e) => setElegidos((x) => ({ ...x, zona: e.target.value }))}
-                    >
-                      <option value="">Todas las zonas</option>
-                      {resumen.zonas.map((z) => (
-                        <option key={z.id} value={z.id}>
-                          {z.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                {urlRespuestas && (
-                  <Grafico
-                    key={urlRespuestas}
-                    grafico={graficoRespuestas}
-                    url={urlRespuestas}
-                    mensajeError="No hay respuestas con ubicación para ese cuestionario en esa zona. Las respuestas cargadas antes de que se guardara la ubicación no se cuentan."
-                  />
-                )}
-              </>
-            )}
-          </section>
         </>
       )}
       {eligiendoPdf && (

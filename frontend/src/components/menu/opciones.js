@@ -8,6 +8,7 @@ import {
   Network,
   Route,
   ScrollText,
+  Settings,
   ShieldCheck,
   Tags,
   Users,
@@ -109,6 +110,18 @@ export const SECCIONES = [
         descripcion: 'Historial de cambios',
         icono: ScrollText,
         permiso: 'admin.view_logentry',
+      },
+    ],
+  },
+  {
+    titulo: 'Sistema',
+    // Sin permiso: todos entran a "Mi perfil"; la pestaña Backup es solo para superusuarios
+    opciones: [
+      {
+        ruta: '/configuracion',
+        texto: 'Configuración',
+        descripcion: 'Mi perfil y backup',
+        icono: Settings,
       },
     ],
   },

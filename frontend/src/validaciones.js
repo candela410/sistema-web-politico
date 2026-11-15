@@ -18,6 +18,13 @@ export function errorEmail(valor) {
   return emailValido(valor) ? '' : MENSAJE_EMAIL
 }
 
+// Nombre de usuario del login (apellido + inicial del nombre; también se acepta el correo)
+export function errorUsuario(valor) {
+  const texto = String(valor ?? '').trim()
+  if (!texto) return 'Ingrese su nombre de usuario.'
+  return /\s/.test(texto) ? 'El nombre de usuario no lleva espacios.' : ''
+}
+
 export function errorContrasena(valor) {
   if (!valor) return 'Ingrese su contraseña.'
   return contrasenaValida(valor) ? '' : MENSAJE_CONTRASENA

@@ -4,11 +4,12 @@ import { obtenerEstadisticas } from '../../api/encuestas'
 import Modal from '../comunes/Modal'
 import './cuestionarios.css'
 import { disponibles, f, plural, porDefecto } from './catalogoGraficos'
+import { explicarGrafico } from './explicacion'
 import { Dato, Grafico } from './graficos'
 
 // Estadísticas de un cuestionario (se abren con el botón "Estadísticas" de la
 // lista). En cada pregunta la persona elige UN tipo de gráfico a la vez, y puede
-// descargar un PDF eligiendo cuáles incluir.
+// descargar un PDF eligiendo cuáles incluir y si lleva la explicación de cada gráfico.
 
 // Mientras la pantalla está a la vista, las estadísticas se vuelven a pedir
 // cada 5 segundos: si llegó una encuesta nueva, los números y los gráficos se
@@ -101,6 +102,8 @@ function DescargarPdf({ datos, eleccion, nodos, onCerrar }) {
     for (const p of preguntas) for (const c of eleccion[p.id]) todo[`${p.id}:${c}`] = true
     return todo
   })
+  // Con explicación: debajo de cada gráfico, cómo se lee y qué muestran sus datos
+  const [conExplicacion, setConExplicacion] = useState(true)
   const [generando, setGenerando] = useState(false)
   const [error, setError] = useState('')
   const alternar = (clave) => setIncluir((i) => ({ ...i, [clave]: !i[clave] }))
@@ -119,7 +122,12 @@ function DescargarPdf({ datos, eleccion, nodos, onCerrar }) {
         total,
         graficos: (eleccion[p.id] ?? [])
           .filter((c) => incluir[`${p.id}:${c}`])
-          .map((c) => ({ nodo: nodos.current.get(`${p.id}:${c}`), nombre: nombreDe(p, c) }))
+          .map((c) => ({
+            nodo: nodos.current.get(`${p.id}:${c}`),
+            nombre: nombreDe(p, c),
+            // La explicación es la del gráfico elegido en esa pregunta
+            explicacion: conExplicacion ? explicarGrafico(p, c) : null,
+          }))
           .filter((g) => g.nodo),
       }))
       const nombre = datos.cuestionario.titulo.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g, '').trim().replace(/\s+/g, '-')
@@ -140,7 +148,7 @@ function DescargarPdf({ datos, eleccion, nodos, onCerrar }) {
             }
           : null,
         preguntas: { total, lista },
-        archivo: `informe-estadisticas-${nombre || 'cuestionario'}.pdf`,
+        archivo: `informe-estadisticas-${nombre || 'cuestionario'}${conExplicacion ? '-explicado' : ''}.pdf`,
       })
       onCerrar()
     } catch (e) {
@@ -182,6 +190,23 @@ function DescargarPdf({ datos, eleccion, nodos, onCerrar }) {
           Desmarcar todo
         </button>
       </div>
+      <fieldset className="pdf-explicacion">
+        <legend>¿Descargar con la explicación?</legend>
+        <label className="casilla-texto">
+          <input type="radio" name="explicacion" checked={conExplicacion} onChange={() => setConExplicacion(true)} />
+          <span>
+            <b>Con explicación</b>
+            <small>Debajo de cada gráfico se explica cómo leerlo y qué muestran sus datos.</small>
+          </span>
+        </label>
+        <label className="casilla-texto">
+          <input type="radio" name="explicacion" checked={!conExplicacion} onChange={() => setConExplicacion(false)} />
+          <span>
+            <b>Sin explicación</b>
+            <small>Solo los gráficos.</small>
+          </span>
+        </label>
+      </fieldset>
       {error && (
         <p className="texto-error" role="alert">
           {error}

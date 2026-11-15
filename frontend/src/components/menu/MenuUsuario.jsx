@@ -1,7 +1,8 @@
 import Dropdown from 'react-bootstrap/Dropdown'
 import { useNavigate } from 'react-router'
-import { ArrowLeftRight, ChevronDown, LogOut, UserRound } from 'lucide-react'
-import { inicialDe, nombreDe, rolDe } from './usuario'
+import { ArrowLeftRight, ChevronDown, LogOut, Settings } from 'lucide-react'
+import Avatar from '../comunes/Avatar'
+import { nombreDe, rolDe } from './usuario'
 
 // El desplegable se ubica 8px debajo del botón, alineado a la derecha.
 // Sin aceleración por GPU, Popper lo ubica con top/left y deja libre
@@ -13,7 +14,7 @@ const UBICACION = {
   ],
 }
 
-// Usuario en la barra superior; al tocarlo despliega sus datos, "Mi perfil",
+// Usuario en la barra superior; al tocarlo despliega sus datos, "Configuración",
 // la campaña activa y "Salir".
 // Es un Dropdown de react-bootstrap: se cierra con Escape o clickeando afuera
 // y las opciones se recorren con las flechas del teclado.
@@ -22,7 +23,7 @@ function MenuUsuario({ usuario, onCambiarCampana, onSalir }) {
   return (
     <Dropdown className="usuario" align="end">
       <Dropdown.Toggle as="button" type="button" bsPrefix="usuario__boton" aria-haspopup="menu">
-        <span className="usuario__avatar">{inicialDe(usuario)}</span>
+        <Avatar usuario={usuario} className="usuario__avatar" />
         <span className="usuario__texto">
           <strong>{nombreDe(usuario)}</strong>
           <small>{rolDe(usuario)}</small>
@@ -32,17 +33,17 @@ function MenuUsuario({ usuario, onCambiarCampana, onSalir }) {
       <Dropdown.Menu className="usuario__desplegable" role="menu" popperConfig={UBICACION}>
         <p className="usuario__datos">
           <strong>{nombreDe(usuario)}</strong>
-          <span>{usuario.email}</span>
+          <span>{usuario.username}</span>
         </p>
         <Dropdown.Item
           as="button"
           type="button"
           role="menuitem"
           className="usuario__accion"
-          onClick={() => navegar('/perfil')}
+          onClick={() => navegar('/configuracion')}
         >
-          <UserRound size={19} aria-hidden="true" />
-          Mi perfil
+          <Settings size={19} aria-hidden="true" />
+          Configuración
         </Dropdown.Item>
         {usuario.campana && (
           <p className="usuario__campana">

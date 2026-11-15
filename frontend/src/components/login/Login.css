@@ -214,6 +214,9 @@
 .login__ayuda--error {
   color: #a1134f;
 }
+.login__ayuda--ok {
+  color: #15803d;
+}
 
 /* Requisitos de la contraseña nueva: se tildan mientras se escribe */
 .login__requisitos {

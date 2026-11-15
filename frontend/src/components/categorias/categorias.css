@@ -16,7 +16,7 @@
   align-items: center;
   gap: 16px;
   padding: 16px 18px;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   border: 1px solid var(--lla-borde);
   border-left: 4px solid var(--lla-violeta);
   border-radius: 12px;
@@ -24,8 +24,8 @@
 }
 
 .categoria--apagada {
-  border-left-color: #cfcdd6;
-  background: #fbfbfc;
+  border-left-color: var(--o-linea-fuerte, #cfcdd6);
+  background: var(--o-superficie, #fbfbfc);
 }
 
 .categoria--apagada h3 {
@@ -64,8 +64,8 @@
   margin-top: 4px;
   padding: 2px 10px;
   border-radius: 999px;
-  background: rgb(81 49 143 / 0.08);
-  color: var(--lla-violeta);
+  background: rgb(var(--o-tinte, 81 49 143) / 0.08);
+  color: var(--o-violeta-texto, var(--lla-violeta));
   font-size: 0.78rem;
   font-weight: 600;
 }

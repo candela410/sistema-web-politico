@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router'
-import { Menu as IconoMenu } from 'lucide-react'
+import { Menu as IconoMenu, Moon, Sun } from 'lucide-react'
 import { salirDeCampana } from '../../api/campanas'
 import logo from '../../assets/logo.png'
+import { useTema } from '../../tema'
 import Avisos from './avisos'
 import BuscadorSecciones from './BuscadorSecciones'
 import Lateral from './Lateral'
@@ -30,6 +31,8 @@ function Menu({ usuario, onCambio, onSalir }) {
   const secciones = seccionesPara(usuario)
   const actual = opcionActual(secciones, pathname)
 
+  const [tema, alternarTema] = useTema()
+  const oscuro = tema === 'oscuro'
   const [colapsado, setColapsado] = useState(leerColapsado) // PC: lateral solo con íconos
   // Celular: el cajón queda abierto solo en la pantalla donde se abrió,
   // así al elegir una opción (cambia la dirección) se cierra solo
@@ -96,6 +99,19 @@ function Menu({ usuario, onCambio, onSalir }) {
               <span className="campana-activa__nombre">{usuario.campana.nombre}</span>
             </span>
           )}
+          {/* Modo claro / oscuro: el sol y la luna se cruzan al cambiar */}
+          <button
+            type="button"
+            className={`avisos__boton tema-boton${oscuro ? ' tema-boton--oscuro' : ''}`}
+            onClick={alternarTema}
+            role="switch"
+            aria-checked={oscuro}
+            aria-label="Modo oscuro"
+            title={oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          >
+            <Sun size={22} className="tema-boton__sol" aria-hidden="true" />
+            <Moon size={22} className="tema-boton__luna" aria-hidden="true" />
+          </button>
           {usuario.campana && <Avisos usuario={usuario} />}
           <MenuUsuario
             usuario={usuario}

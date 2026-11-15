@@ -184,7 +184,8 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
 
         {!usuario && (
           <p className="aviso-info aviso-info--chico">
-            Al crearlo, el usuario recibirá un correo para elegir su contraseña.
+            Al crearlo, el usuario recibirá un correo con su nombre de usuario (apellido + inicial del nombre) y un
+            enlace para elegir su contraseña.
           </p>
         )}
 
@@ -232,7 +233,7 @@ function Usuarios({ usuario: yo }) {
     const texto = normalizar(busqueda)
     const lista = datos?.usuarios ?? []
     if (!texto) return lista
-    return lista.filter((u) => normalizar(`${u.nombre} ${u.apellido} ${u.email}`).includes(texto))
+    return lista.filter((u) => normalizar(`${u.nombre} ${u.apellido} ${u.username} ${u.email}`).includes(texto))
   }, [datos, busqueda])
   const paginado = usePaginado(visibles)
 
@@ -290,7 +291,7 @@ function Usuarios({ usuario: yo }) {
         )}
       </header>
 
-      <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por nombre o correo electrónico" etiqueta="Buscar usuarios" />
+      <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por nombre, usuario o correo electrónico" etiqueta="Buscar usuarios" />
 
       <AvisoOk>{aviso}</AvisoOk>
       {error && (
@@ -320,7 +321,9 @@ function Usuarios({ usuario: yo }) {
                     {u.id === yo.id && <span className="etiqueta etiqueta--verde">Usted</span>}
                     {!u.activo && <span className="etiqueta">Desactivado</span>}
                   </h3>
-                  <p>{u.email}</p>
+                  <p>
+                    <b title="Nombre de usuario para ingresar">{u.username}</b> · {u.email}
+                  </p>
                   <span className="tarjeta-fila__datos usuarios__grupos">
                     {u.grupos.map((g) => (
                       <span
@@ -402,11 +405,11 @@ function Usuarios({ usuario: yo }) {
             else if (alta.invitacion)
               setAviso(
                 alta.invitacion === u.email
-                  ? `Usuario creado. Se envió a ${u.email} la invitación para elegir su contraseña.`
-                  : `Usuario creado. ${u.email} es un correo de prueba: la invitación se envió a ${alta.invitacion}.`,
+                  ? `Usuario «${u.username}» creado. Se envió a ${u.email} la invitación para elegir su contraseña.`
+                  : `Usuario «${u.username}» creado. ${u.email} es un correo de prueba: la invitación se envió a ${alta.invitacion}.`,
               )
             else if (alta.aviso_invitacion) setError(`Usuario creado, pero no se pudo enviar la invitación: ${alta.aviso_invitacion}`)
-            else setAviso('Usuario creado.')
+            else setAviso(`Usuario «${u.username}» creado.`)
           }}
         />
       )}

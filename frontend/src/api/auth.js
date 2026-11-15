@@ -36,26 +36,53 @@ function marcarSesion(valor) {
   }
 }
 
-export async function iniciarSesion(email, password, recordar = false) {
+// Se ingresa con el nombre de usuario (apellido + inicial del nombre)
+export async function iniciarSesion(nombreDeUsuario, password, recordar = false) {
   const { usuario } = await pedir('/api/auth/login/', {
     method: 'POST',
-    datos: { email, password, recordar },
+    datos: { usuario: nombreDeUsuario, password, recordar },
   })
   marcarSesion(true)
+  recordarUsuario(usuario.username)
   return usuario
 }
+
+// Último nombre de usuario que ingresó en este navegador: se propone en el
+// login y en "¿Olvidó su contraseña?" para no tener que recordarlo
+const ULTIMO_USUARIO = 'ultimo-usuario'
+
+export function ultimoUsuario() {
+  try {
+    return localStorage.getItem(ULTIMO_USUARIO) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function recordarUsuario(nombre) {
+  try {
+    localStorage.setItem(ULTIMO_USUARIO, nombre)
+  } catch {
+    // Sin almacenamiento: no se recuerda
+  }
+}
+
+// Configuración → Mi perfil. Las tres devuelven el usuario actualizado.
+export const guardarPerfil = (datos) => pedir('/api/auth/perfil/', { method: 'PATCH', datos }).then((r) => r.usuario)
+export const guardarFoto = (foto) => pedir('/api/auth/foto/', { method: 'PUT', datos: { foto } }).then((r) => r.usuario)
+export const quitarFoto = () => pedir('/api/auth/foto/', { method: 'DELETE' }).then((r) => r.usuario)
 
 // Mi perfil → "Cambiar contraseña": el enlace llega al correo del usuario. Devuelve { email }
 export const pedirCambioDeContrasena = () => pedir('/api/auth/cambiar-contrasena/', { method: 'POST' })
 
-// "¿Olvidó su contraseña?": pide que le llegue el enlace por correo
-export const pedirEnlace = (email) => pedir('/api/auth/olvide/', { method: 'POST', datos: { email } })
+// "¿Olvidó su contraseña?": con el nombre de usuario, el enlace llega al correo asociado
+export const pedirEnlace = (usuario) => pedir('/api/auth/olvide/', { method: 'POST', datos: { usuario } })
 
 // Enlace del correo para elegir o restablecer la contraseña (/restablecer/:uid/:token)
 export const comprobarEnlace = (uid, token) => pedir(`/api/auth/restablecer/${uid}/${token}/`)
 
-export const restablecerContrasena = (uid, token, password) =>
-  pedir(`/api/auth/restablecer/${uid}/${token}/`, { method: 'POST', datos: { password } })
+export const restablecerContrasena = (uid, token, password, repetida) =>
+  pedir(`/api/auth/restablecer/${uid}/${token}/`, { method: 'POST', datos: { password, repetida } })
 
 export async function cerrarSesion() {
   marcarSesion(false)

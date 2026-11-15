@@ -30,7 +30,7 @@ const TIPOS = { una_opcion: 'Una sola opción', opcion_multiple: 'Opción múlti
  *   campana, generadoPor, generadoEn (Date), formatoFecha, f (formato de números),
  *   resumen: { encuestas, militantes, preguntas, ultima } | null,
  *   preguntas: [{ numero, total, enunciado, tipo, variable, obligatoria, respondidas, sin_responder,
- *                 graficos: [{ nodo, nombre }] }],
+ *                 graficos: [{ nodo, nombre, explicacion: [párrafos] | null }] }],
  *   archivo,
  * }
  */
@@ -155,6 +155,33 @@ export async function descargarPdf(informe) {
     y += alto + 4
   }
 
+  // Recuadro con la explicación de un gráfico (cómo leerlo y qué muestran los datos)
+  const TITULOS_EXPLICACION = ['Cómo leer este gráfico', 'Qué muestran los datos']
+  const medirExplicacion = (parrafos) => {
+    fuente(9)
+    const bloques = parrafos.map((p) => pdf.splitTextToSize(p, ANCHO_UTIL - 12))
+    const alto = bloques.reduce((a, lineas) => a + 5 + lineas.length * altoLinea(9) + 2, 0) + 4
+    return { bloques, alto }
+  }
+  const cuadroExplicacion = ({ bloques, alto }) => {
+    pdf.setFillColor(...FONDO)
+    pdf.setDrawColor(...BORDE)
+    pdf.setLineWidth(0.2)
+    pdf.roundedRect(MARGEN, y, ANCHO_UTIL, alto, 1.5, 1.5, 'FD')
+    pdf.setFillColor(...VIOLETA)
+    pdf.rect(MARGEN, y, 1.2, alto, 'F')
+    let yTexto = y + 3
+    bloques.forEach((lineas, i) => {
+      fuente(7.5, true, VIOLETA)
+      pdf.text((TITULOS_EXPLICACION[i] ?? 'Además').toUpperCase(), MARGEN + 6, yTexto + 2.6)
+      yTexto += 5
+      fuente(9, false, TEXTO)
+      pdf.text(lineas, MARGEN + 6, yTexto + 2.6)
+      yTexto += lineas.length * altoLinea(9) + 2
+    })
+    y += alto + 6
+  }
+
   // --- Portada / primera hoja --------------------------------------------
 
   // Franja superior y logo
@@ -219,7 +246,7 @@ export async function descargarPdf(informe) {
     for (const p of conGraficos) {
       // Primero las imágenes, así el título de la pregunta no queda solo al pie de una hoja
       const imagenes = []
-      for (const { nodo, nombre } of p.graficos) {
+      for (const { nodo, nombre, explicacion } of p.graficos) {
         const imagen = await imagenDelGrafico(nodo, fontEmbedCSS)
         const { width, height } = await medidas(imagen.datos)
         let ancho = ANCHO_UTIL - 4
@@ -229,7 +256,7 @@ export async function descargarPdf(informe) {
           alto = 120
           ancho = (width / height) * alto
         }
-        imagenes.push({ imagen, ancho, alto, nombre })
+        imagenes.push({ imagen, ancho, alto, nombre, explicacion: explicacion?.length ? medirExplicacion(explicacion) : null })
       }
 
       // Encabezado de la pregunta: número, enunciado y ficha
@@ -257,8 +284,9 @@ export async function descargarPdf(informe) {
         ['Sin responder', f(p.sin_responder)],
       ])
 
-      for (const { imagen, ancho, alto, nombre } of imagenes) {
-        espacio(alto + 12)
+      for (const { imagen, ancho, alto, nombre, explicacion } of imagenes) {
+        // El gráfico y su explicación van juntos en la misma hoja
+        espacio(alto + 12 + (explicacion ? explicacion.alto + 2 : 0))
         fuente(8.5, true, GRIS)
         pdf.text(`Gráfico: ${nombre}`, MARGEN, y + 3)
         y += 5.5
@@ -266,7 +294,8 @@ export async function descargarPdf(informe) {
         pdf.setLineWidth(0.2)
         pdf.rect(MARGEN, y, ANCHO_UTIL, alto + 4)
         pdf.addImage(imagen.datos, imagen.formato, MARGEN + (ANCHO_UTIL - ancho) / 2, y + 2, ancho, alto)
-        y += alto + 4 + 6
+        y += alto + 4 + (explicacion ? 3 : 6)
+        if (explicacion) cuadroExplicacion(explicacion)
       }
       y += 3
     }

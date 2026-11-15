@@ -10,8 +10,8 @@
   padding: 0;
   border: 1.5px solid var(--lla-violeta);
   border-radius: 10px;
-  background: #fff;
-  color: var(--lla-violeta);
+  background: var(--o-superficie, #fff);
+  color: var(--o-violeta-texto, var(--lla-violeta));
   cursor: pointer;
   text-decoration: none;
   transition:
@@ -22,8 +22,8 @@
 }
 
 .accion-icono--peligro {
-  border-color: #e7b4bb;
-  color: #c0182f;
+  border-color: var(--o-borde-error, #e7b4bb);
+  color: var(--o-rojo-texto, #c0182f);
 }
 
 .accion-icono--lleno {
@@ -34,12 +34,12 @@
 
 @media (hover: hover) and (pointer: fine) {
   .accion-icono:hover:not(:disabled) {
-    background: rgb(81 49 143 / 0.08);
+    background: rgb(var(--o-tinte, 81 49 143) / 0.08);
   }
 
   .accion-icono--peligro:hover:not(:disabled) {
-    border-color: #c0182f;
-    background: #fdf1f2;
+    border-color: var(--o-rojo-texto, #c0182f);
+    background: var(--o-fondo-error, #fdf1f2);
   }
 
   .accion-icono--lleno:hover:not(:disabled) {
@@ -68,7 +68,7 @@
 }
 
 .accion-icono:focus-visible {
-  outline: 3px solid rgb(81 49 143 / 0.35);
+  outline: 3px solid rgb(var(--o-tinte, 81 49 143) / 0.35);
   outline-offset: 2px;
 }
 

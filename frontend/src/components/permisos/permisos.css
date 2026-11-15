@@ -4,7 +4,7 @@
 
 .tabla-envoltura-ancha {
   overflow-x: auto;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   border: 1px solid var(--lla-borde);
   border-radius: 12px;
 }
@@ -18,7 +18,7 @@
 .matriz th,
 .matriz td {
   padding: 10px 14px;
-  border-bottom: 1px solid #ecebf0;
+  border-bottom: 1px solid var(--o-linea, #ecebf0);
   text-align: left;
   vertical-align: middle;
 }
@@ -26,7 +26,7 @@
 .matriz thead th {
   position: sticky;
   top: 0;
-  background: #f7f6fa;
+  background: var(--o-superficie-2, #f7f6fa);
   font-weight: 800;
   white-space: nowrap;
 }
@@ -49,7 +49,7 @@
 }
 
 .matriz tbody tr:hover {
-  background: #fbfaff;
+  background: var(--o-superficie, #fbfaff);
 }
 
 .matriz__acciones {
@@ -68,7 +68,7 @@
 }
 
 .matriz__si {
-  color: #15803d;
+  color: var(--o-verde-texto, #15803d);
 }
 
 /* Selector del rol a consultar */
@@ -98,29 +98,29 @@
 }
 
 .permiso--0 {
-  background: #eef6fb;
-  color: #136a8c;
+  background: var(--o-superficie-2, #eef6fb);
+  color: var(--o-azul-texto, #136a8c);
 }
 
 .permiso--1 {
   background: rgb(31 157 107 / 0.13);
-  color: #146b49;
+  color: var(--o-verde-texto, #146b49);
 }
 
 .permiso--2 {
-  background: rgb(81 49 143 / 0.12);
-  color: var(--lla-violeta);
+  background: rgb(var(--o-tinte, 81 49 143) / 0.12);
+  color: var(--o-violeta-texto, var(--lla-violeta));
 }
 
 .permiso--3 {
-  background: #fdf1f2;
-  color: #a3172b;
+  background: var(--o-fondo-error, #fdf1f2);
+  color: var(--o-rojo-texto, #a3172b);
 }
 
 .permiso--4,
 .permiso---1 {
   background: rgb(247 168 50 / 0.18);
-  color: #8a5300;
+  color: var(--o-ambar-texto, #8a5300);
 }
 
 .permisos__titulo {
@@ -143,7 +143,7 @@
   flex-direction: column;
   gap: 4px;
   padding: 14px 16px;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   border: 1px solid var(--lla-borde);
   border-radius: 12px;
   overflow-wrap: anywhere;

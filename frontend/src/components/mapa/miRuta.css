@@ -10,7 +10,7 @@
   position: relative;
   z-index: 0;
   height: clamp(320px, 58vh, 560px);
-  border: 1px solid #ece8f4;
+  border: 1px solid var(--o-linea, #ece8f4);
   border-radius: 14px;
   overflow: hidden;
 }

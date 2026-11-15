@@ -24,17 +24,56 @@
   background: var(--fondo);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fondo: #12151c;
-    --tarjeta: #1b2029;
-    --texto: #e6e9ef;
-    --secundario: #a0a8b8;
-    --borde: #343b48;
-    --primario: #5b86f0;
-    --primario-hover: #7397f2;
-    --error: #f97066;
-  }
+/* ===== MODO OSCURO =====
+   Lo activa el botón sol/luna de la barra superior (src/tema.js), que pone
+   data-tema="oscuro" en <html>. Los estilos usan var(--o-nombre, color claro):
+   en modo claro las variables --o-* no existen y vale el color de siempre;
+   acá se definen para el modo oscuro. El login queda siempre claro. */
+:root[data-tema='oscuro'] {
+  --lla-texto: #ece9f5;
+  --lla-gris: #aaa5ba;
+  --lla-borde: #3b3450;
+  --lla-fondo: #15121d;
+
+  --fondo: #15121d;
+  --tarjeta: #1f1b2b;
+  --texto: #ece9f5;
+  --secundario: #aaa5ba;
+  --borde: #3b3450;
+  --error: #ff95a1;
+
+  --o-fondo-pagina: #15121d;
+  --o-superficie: #1f1b2b; /* tarjetas, campos, ventanas */
+  --o-superficie-velo: rgb(31 27 43 / 0.94);
+  --o-superficie-2: #2a2539; /* rellenos suaves, filas resaltadas */
+  --o-linea: #332c45;
+  --o-linea-fuerte: #4c4366;
+  --o-tinte: 183 160 255; /* violeta de sombras, anillos de foco y rellenos translúcidos */
+  --o-texto: #ece9f5;
+  --o-gris-texto: #aaa5ba;
+  --o-violeta-texto: #c4b2f8;
+  --o-magenta-texto: #f29bd0;
+  --o-rojo-texto: #ff95a1;
+  --o-verde-texto: #6dd9ad;
+  --o-azul-texto: #7fd0f0;
+  --o-ambar-texto: #f5c676;
+  --o-fondo-error: #3a1c25;
+  --o-borde-error: #7a3340;
+  --o-fondo-ok: #173428;
+  --o-borde-ok: #2c6a50;
+  --o-fondo-magenta: #3a1c33;
+  --o-borde-magenta: #7a3368;
+}
+
+:root[data-tema='oscuro'] .panel,
+:root[data-tema='oscuro'] .ventana-capa {
+  color-scheme: dark; /* calendarios, relojes y barras de desplazamiento del navegador */
+}
+
+/* Los gráficos son imágenes con fondo blanco: se les deja un marco prolijo */
+:root[data-tema='oscuro'] :is(.analitica__imagen, .grafico-imagen) img {
+  border-radius: 8px;
+  background: #fff;
 }
 
 * {
@@ -155,28 +194,28 @@ body {
 }
 
 .boton:focus-visible {
-  outline: 3px solid rgb(81 49 143 / 0.35);
+  outline: 3px solid rgb(var(--o-tinte, 81 49 143) / 0.35);
   outline-offset: 2px;
 }
 
 .boton--borde {
-  background: #fff;
-  color: var(--lla-violeta);
+  background: var(--o-superficie, #fff);
+  color: var(--o-violeta-texto, var(--lla-violeta));
   border: 1.5px solid var(--lla-violeta);
 }
 
 .boton--borde:hover:not(:disabled) {
-  background: rgb(81 49 143 / 0.08);
+  background: rgb(var(--o-tinte, 81 49 143) / 0.08);
 }
 
 .boton--peligro {
-  background: #fff;
-  color: #c0182f;
-  border: 1.5px solid #e7b4bb;
+  background: var(--o-superficie, #fff);
+  color: var(--o-rojo-texto, #c0182f);
+  border: 1.5px solid var(--o-borde-error, #e7b4bb);
 }
 
 .boton--peligro:hover:not(:disabled) {
-  background: #fdf1f2;
+  background: var(--o-fondo-error, #fdf1f2);
 }
 
 .boton--chico {
@@ -262,7 +301,7 @@ body {
   gap: 12px;
   height: 52px;
   padding: 0 14px;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   border: 1px solid var(--lla-borde);
   border-radius: 10px;
   transition: border-color 150ms ease, box-shadow 150ms ease;
@@ -270,7 +309,7 @@ body {
 
 .buscador:focus-within {
   border-color: var(--lla-violeta);
-  box-shadow: 0 0 0 3px rgb(81 49 143 / 0.15);
+  box-shadow: 0 0 0 3px rgb(var(--o-tinte, 81 49 143) / 0.15);
 }
 
 .buscador svg {
@@ -312,8 +351,8 @@ body {
   padding: 6px 10px;
   border: 0;
   border-radius: 8px;
-  background: #f1eef8;
-  color: var(--lla-violeta);
+  background: var(--o-superficie-2, #f1eef8);
+  color: var(--o-violeta-texto, var(--lla-violeta));
   font: inherit;
   font-size: 0.84rem;
   font-weight: 600;
@@ -322,7 +361,7 @@ body {
 }
 
 .buscador__limpiar:hover {
-  background: #e6e0f3;
+  background: var(--o-superficie-2, #e6e0f3);
 }
 
 .buscador__limpiar:focus-visible {
@@ -350,7 +389,7 @@ body {
 
 .texto-error {
   margin: 0;
-  color: #c0182f;
+  color: var(--o-rojo-texto, #c0182f);
   font-size: 0.9rem;
   font-weight: 500;
 }
@@ -362,7 +401,7 @@ label > small.texto-error {
 }
 
 .entrada[aria-invalid='true'] {
-  border-color: #c0182f;
+  border-color: var(--o-rojo-texto, #c0182f);
 }
 
 .entrada[aria-invalid='true']:focus {
@@ -379,7 +418,7 @@ label > small.texto-error {
   padding: 10px 14px;
   border-radius: 10px;
   background: rgb(31 157 107 / 0.12);
-  color: #146b49;
+  color: var(--o-verde-texto, #146b49);
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -392,7 +431,7 @@ label > small.texto-error {
   padding: 9px 12px;
   border: 1px solid var(--lla-borde);
   border-radius: 10px;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   color: var(--lla-texto);
   font: inherit;
   font-size: 1rem;
@@ -402,7 +441,7 @@ label > small.texto-error {
 .entrada:focus {
   outline: none;
   border-color: var(--lla-violeta);
-  box-shadow: 0 0 0 3px rgb(81 49 143 / 0.15);
+  box-shadow: 0 0 0 3px rgb(var(--o-tinte, 81 49 143) / 0.15);
 }
 
 .acciones {
@@ -492,15 +531,15 @@ label > small.texto-error {
   align-items: center;
   gap: 16px;
   padding: 16px 18px;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   border: 1px solid var(--lla-borde);
   border-left: 4px solid var(--lla-violeta);
   border-radius: 12px;
 }
 
 .tarjeta-fila--apagada {
-  border-left-color: #cfcdd6;
-  background: #fbfbfc;
+  border-left-color: var(--o-linea-fuerte, #cfcdd6);
+  background: var(--o-superficie, #fbfbfc);
 }
 
 .tarjeta-fila__texto {
@@ -544,25 +583,25 @@ label > small.texto-error {
   align-items: center;
   padding: 2px 9px;
   border-radius: 999px;
-  background: #f0eff4;
+  background: var(--o-superficie-2, #f0eff4);
   color: var(--lla-gris);
   font-size: 0.74rem;
   font-weight: 700;
 }
 
 .etiqueta--violeta {
-  background: rgb(81 49 143 / 0.1);
-  color: var(--lla-violeta);
+  background: rgb(var(--o-tinte, 81 49 143) / 0.1);
+  color: var(--o-violeta-texto, var(--lla-violeta));
 }
 
 .etiqueta--verde {
   background: rgb(31 157 107 / 0.14);
-  color: #146b49;
+  color: var(--o-verde-texto, #146b49);
 }
 
 .etiqueta--magenta {
   background: rgb(195 38 140 / 0.1);
-  color: #8f1c66;
+  color: var(--o-magenta-texto, #8f1c66);
 }
 
 /* Formularios dentro de ventanas modales */
@@ -655,13 +694,47 @@ label > small.texto-error {
 /* --- Pantallas de listado: fondo lavanda y tarjetas con sombra ---------- */
 
 .panel__contenido:has(> .pagina, > .tutorial) {
-  background: #f4f1fa;
+  background: var(--o-fondo-pagina, #f4f1fa);
 }
 
 /* Tarjetas de las listas: borde lavanda (el izquierdo conserva su color) y sombra suave */
 .pagina :is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila) {
-  border-top-color: #ece8f4;
-  border-right-color: #ece8f4;
-  border-bottom-color: #ece8f4;
-  box-shadow: 0 2px 10px rgb(81 49 143 / 0.05);
+  border-top-color: var(--o-linea, #ece8f4);
+  border-right-color: var(--o-linea, #ece8f4);
+  border-bottom-color: var(--o-linea, #ece8f4);
+  box-shadow: 0 2px 10px rgb(var(--o-tinte, 81 49 143) / 0.05);
+}
+
+/* Ventanas "Descargar PDF": elegir con o sin la explicación de los gráficos */
+.pdf-explicacion {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 4px;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--lla-borde);
+}
+
+.pdf-explicacion legend {
+  float: left; /* dentro del borde superior, como un título */
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.pdf-explicacion .casilla-texto {
+  align-items: flex-start;
+  clear: both;
+}
+
+.pdf-explicacion .casilla-texto span {
+  display: grid;
+  gap: 2px;
+}
+
+.pdf-explicacion small {
+  color: var(--lla-gris);
+  font-size: 0.8rem;
 }

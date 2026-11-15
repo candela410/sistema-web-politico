@@ -4,7 +4,8 @@ El usuario elige su contraseña siempre desde un enlace que le llega por correo
 (/restablecer/<uid>/<token> en el frontend):
 - Al crear un usuario se le envía una invitación (no se escribe contraseña).
 - Desde Gestión → Usuarios se le puede enviar un enlace para restablecerla.
-- Desde el login, "¿Olvidó su contraseña?" lo pide la misma persona.
+- Desde el login, "¿Olvidó su contraseña?" lo pide la misma persona con su
+  nombre de usuario: el enlace llega al correo asociado a ese usuario.
 - Desde "Mi perfil", "Cambiar contraseña" se lo envía a su propio correo.
 
 El token es el de Django (PasswordResetTokenGenerator): vence a las
@@ -26,12 +27,12 @@ from django.views.decorators.http import require_http_methods, require_POST
 from .api import error, leer_json, requiere_permiso
 from .bitacora import registrar
 from .models import Usuario
-from .validaciones import email as validar_email
 
 ENLACE_INVALIDO = "El enlace no es válido o ya venció. Solicite uno nuevo desde «¿Olvidó su contraseña?»."
 SIN_ENVIO = "No se pudo enviar el correo. Revise la configuración de correo del servidor."
 PEDIDO_RECIBIDO = (
-    "Si el correo pertenece a un usuario activo, recibirá un enlace para elegir una contraseña nueva."
+    "Si el nombre de usuario pertenece a un usuario activo, enviamos a su correo electrónico un enlace "
+    "para elegir una contraseña nueva."
 )
 
 
@@ -56,7 +57,7 @@ def _contenido(usuario, enlace, invitacion, pedido_por=None):
             "titulo": "Enlace para otro usuario",
             "saludo": f"Estimado/a {pedido_por.first_name or pedido_por.email}:",
             "parrafos": [
-                f"Usted solicitó {accion} del usuario {usuario.email}.",
+                f"Usted solicitó {accion} del usuario {usuario.username} ({usuario.email}).",
                 "Como ese correo electrónico es de prueba, le enviamos el enlace a usted. "
                 "Con él podrá elegir la contraseña de ese usuario.",
             ],
@@ -70,10 +71,10 @@ def _contenido(usuario, enlace, invitacion, pedido_por=None):
             "titulo": "Su usuario fue creado",
             "saludo": saludo,
             "parrafos": [
-                "Le damos la bienvenida al Panel de gestión. La administración creó un usuario a su nombre "
-                f"con el correo electrónico {usuario.email}.",
+                "Le damos la bienvenida al Panel de gestión. La administración creó un usuario a su nombre. "
+                f"Su nombre de usuario es: {usuario.username}",
                 "Para comenzar, elija su contraseña desde el siguiente botón. Luego podrá ingresar al "
-                "sistema con su correo electrónico y la contraseña elegida.",
+                "sistema con su nombre de usuario y la contraseña elegida.",
             ],
             "boton": "Elegir mi contraseña",
             "aviso": "",
@@ -83,7 +84,8 @@ def _contenido(usuario, enlace, invitacion, pedido_por=None):
         "titulo": "Restablecimiento de contraseña",
         "saludo": saludo,
         "parrafos": [
-            "Recibimos una solicitud para restablecer la contraseña de su cuenta en el Panel de gestión.",
+            "Recibimos una solicitud para restablecer la contraseña de su cuenta en el Panel de gestión "
+            f"(nombre de usuario: {usuario.username}).",
             "Para elegir una contraseña nueva, presione el siguiente botón.",
         ],
         "boton": "Restablecer contraseña",
@@ -170,21 +172,28 @@ def cambiar_propia(request):
 
 @require_POST
 def olvide(request):
-    """"¿Olvidó su contraseña?" del login: POST {email}. Siempre responde lo
-    mismo, exista o no el usuario, para no revelar qué correos están cargados."""
+    """"¿Olvidó su contraseña?" del login: POST {usuario}. El enlace se envía
+    al correo asociado a ese nombre de usuario. Siempre responde lo mismo,
+    exista o no el usuario, para no revelar qué usuarios están cargados."""
     datos = leer_json(request)
     if datos is None:
         return error("Los datos enviados no son válidos.")
-    email = str(datos.get("email") or "").strip().lower()
-    mensaje = validar_email(email)
-    if mensaje:
-        return error(mensaje)
-    usuario = Usuario.objects.filter(email__iexact=email, is_active=True).first()
+    nombre = str(datos.get("usuario") or "").strip()
+    if not nombre:
+        return error("Ingrese su nombre de usuario.")
+    usuario = buscar_por_nombre(nombre)
     if usuario is not None and _es_real(usuario.email):
         _, mensaje = enviar_enlace_a(usuario)
         if mensaje == SIN_ENVIO:
             return error(SIN_ENVIO, 502)
     return JsonResponse({"ok": True, "mensaje": PEDIDO_RECIBIDO})
+
+
+def buscar_por_nombre(nombre):
+    """Usuario activo con ese nombre de usuario (sin distinguir mayúsculas).
+    Si se escribe un correo, se busca por correo."""
+    campo = "email__iexact" if "@" in nombre else "username__iexact"
+    return Usuario.objects.filter(**{campo: nombre}, is_active=True).first()
 
 
 def _usuario_del_enlace(uid, token):
@@ -198,12 +207,16 @@ def _usuario_del_enlace(uid, token):
 @require_http_methods(["GET", "POST"])
 def restablecer(request, uid, token):
     """GET: comprueba el enlace (lo usa la pantalla al abrirse).
-    POST {password}: guarda la contraseña nueva. No hace falta haber iniciado sesión."""
+    POST {password, repetida}: guarda la contraseña nueva. No hace falta haber iniciado sesión."""
     usuario = _usuario_del_enlace(uid, token)
     if usuario is None:
         return error(ENLACE_INVALIDO, 400)
     if request.method == "GET":
-        return JsonResponse({"email": usuario.email, "nueva": not usuario.has_usable_password()})
+        return JsonResponse({
+            "username": usuario.username,
+            "email": usuario.email,
+            "nueva": not usuario.has_usable_password(),
+        })
 
     datos = leer_json(request)
     if datos is None:
@@ -211,6 +224,9 @@ def restablecer(request, uid, token):
     password = datos.get("password") or ""
     if not isinstance(password, str) or not password:
         return error("Ingrese la contraseña nueva.")
+    # La pantalla la pide dos veces
+    if "repetida" in datos and datos["repetida"] != password:
+        return error("Las contraseñas no coinciden.")
     try:
         validate_password(password, usuario)
     except ValidationError as e:

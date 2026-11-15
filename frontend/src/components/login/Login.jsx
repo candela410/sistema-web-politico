@@ -2,9 +2,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 // iniciarSesion: habla con Django (src/api/auth.js)
-import { iniciarSesion } from '../../api/auth'
-// Mismas reglas de correo y contraseña que el backend
-import { errorContrasena, errorEmail } from '../../validaciones'
+import { iniciarSesion, ultimoUsuario } from '../../api/auth'
+// Mismas reglas que el backend
+import { errorContrasena, errorUsuario } from '../../validaciones'
 // Logo del águila (src/assets/logo.png)
 import logo from '../../assets/logo.png'
 // Olas de colores y foto del fondo (las comparte con Olvide y Restablecer)
@@ -16,40 +16,44 @@ import './Login.css'
 // (App.jsx la usa para guardar el usuario y redirigir)
 export default function Login({ onIngreso }) {
   // ----- ESTADOS -----
-  const [email, setEmail] = useState('')
+  // Nombre de usuario: apellido + primera letra del nombre (ej: "perezj").
+  // Se propone el último que ingresó en este navegador.
+  const [nombre, setNombre] = useState(ultimoUsuario)
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false) // checkbox "Recordar"
-  // Campos que el usuario ya tocó: el error de cada uno se muestra recién al salir del campo
-  const [tocados, setTocados] = useState({ email: false, password: false })
+  // Los errores se muestran mientras se escribe (en cuanto el campo tiene algo)
+  // y, si quedó vacío, al salir del campo o al enviar
+  const [tocados, setTocados] = useState({ nombre: false, password: false })
   const [error, setError] = useState('') // error que devuelve el servidor
   const [loading, setLoading] = useState(false)
 
-  const errores = { email: errorEmail(email), password: errorContrasena(password) }
+  const errores = { nombre: errorUsuario(nombre), password: errorContrasena(password) }
+  const valores = { nombre, password }
   const tocar = (campo) => () => setTocados((t) => ({ ...t, [campo]: true }))
 
   // ----- AL APRETAR "Iniciar sesión" -----
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    setTocados({ email: true, password: true })
+    setTocados({ nombre: true, password: true })
     // Las mismas reglas que valida el backend: si no se cumplen, no se envía
-    if (errores.email || errores.password) {
-      document.getElementById(errores.email ? 'email' : 'password')?.focus()
+    if (errores.nombre || errores.password) {
+      document.getElementById(errores.nombre ? 'usuario' : 'password')?.focus()
       return
     }
     setLoading(true)
     try {
       // "remember" se manda al backend: si es false, la sesión termina al cerrar el navegador
-      const usuario = await iniciarSesion(email.trim(), password, remember)
+      const usuario = await iniciarSesion(nombre.trim(), password, remember)
       onIngreso?.(usuario)
     } catch (err) {
-      setError(err.message || 'El correo electrónico o la contraseña son incorrectos.')
+      setError(err.message || 'El nombre de usuario o la contraseña son incorrectos.')
     } finally {
       setLoading(false)
     }
   }
 
-  const verError = (campo) => tocados[campo] && errores[campo]
+  const verError = (campo) => (tocados[campo] || valores[campo] !== '' ? errores[campo] : '')
 
   return (
     <main className="login">
@@ -66,34 +70,37 @@ export default function Login({ onIngreso }) {
             <span /><span /><span /><span />
           </div>
 
-          {/* ----- CORREO: teclado de correo, sin mayúsculas ni corrector ----- */}
-          <label htmlFor="email">Correo electrónico</label>
-          <div className={`login__field${verError('email') ? ' login__field--error' : ''}`}>
+          {/* ----- NOMBRE DE USUARIO: sin mayúsculas ni corrector ----- */}
+          <label htmlFor="usuario">Nombre de usuario</label>
+          <div className={`login__field${verError('nombre') ? ' login__field--error' : ''}`}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="3" y="5" width="18" height="14" rx="2" />
-              <path d="m3 7 9 6 9-6" />
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
             </svg>
             <input
-              id="email"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
+              id="usuario"
+              type="text"
+              autoComplete="username"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
               enterKeyHint="next"
               maxLength={254}
-              placeholder="usuario@correo.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={tocar('email')}
-              aria-invalid={Boolean(verError('email'))}
-              aria-describedby={verError('email') ? 'email-error' : undefined}
+              placeholder="apellido + inicial del nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              onBlur={tocar('nombre')}
+              aria-invalid={Boolean(verError('nombre'))}
+              aria-describedby={verError('nombre') ? 'usuario-error' : 'usuario-ayuda'}
             />
           </div>
-          {verError('email') && (
-            <p id="email-error" className="login__ayuda login__ayuda--error">
-              {errores.email}
+          {verError('nombre') ? (
+            <p id="usuario-error" className="login__ayuda login__ayuda--error">
+              {errores.nombre}
+            </p>
+          ) : (
+            <p id="usuario-ayuda" className="login__ayuda">
+              Su apellido y la primera letra de su nombre. Ejemplo: Juan Pérez → <b>perezj</b>
             </p>
           )}
 
@@ -114,7 +121,7 @@ export default function Login({ onIngreso }) {
               <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
               <span>Recordar</span>
             </label>
-            <Link to="/olvide" state={{ email: email.trim() }}>
+            <Link to="/olvide" state={{ usuario: nombre.trim() }}>
               ¿Olvidó su contraseña?
             </Link>
           </div>

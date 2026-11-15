@@ -3,7 +3,7 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px 12px;
   padding: 16px;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   border: 1px solid var(--lla-borde);
   border-radius: 12px;
 }
@@ -52,7 +52,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   border: 1px solid var(--lla-borde);
   border-radius: 12px;
 }
@@ -62,7 +62,7 @@
   grid-template-columns: 74px 14px 1fr;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 1px solid #ecebf0;
+  border-bottom: 1px solid var(--o-linea, #ecebf0);
 }
 
 .movimiento:last-child {
@@ -81,7 +81,7 @@
   height: 10px;
   margin-top: 6px;
   border-radius: 50%;
-  background: #b9b6c2;
+  background: var(--o-linea-fuerte, #b9b6c2);
 }
 
 .movimiento--crear .movimiento__marca {
@@ -131,21 +131,21 @@
 
 .accion--crear {
   background: rgb(31 157 107 / 0.13);
-  color: #146b49;
+  color: var(--o-verde-texto, #146b49);
 }
 
 .accion--editar {
-  background: rgb(81 49 143 / 0.12);
-  color: var(--lla-violeta);
+  background: rgb(var(--o-tinte, 81 49 143) / 0.12);
+  color: var(--o-violeta-texto, var(--lla-violeta));
 }
 
 .accion--borrar {
-  background: #fdf1f2;
-  color: #a3172b;
+  background: var(--o-fondo-error, #fdf1f2);
+  color: var(--o-rojo-texto, #a3172b);
 }
 
 .accion--sesion {
-  background: #f0eff4;
+  background: var(--o-superficie-2, #f0eff4);
   color: var(--lla-gris);
 }
 
@@ -165,14 +165,14 @@
 .cambios th,
 .cambios td {
   padding: 8px 10px;
-  border: 1px solid #ecebf0;
+  border: 1px solid var(--o-linea, #ecebf0);
   text-align: left;
   vertical-align: top;
   overflow-wrap: anywhere;
 }
 
 .cambios thead th {
-  background: #f7f6fa;
+  background: var(--o-superficie-2, #f7f6fa);
   color: var(--lla-gris);
   font-weight: 700;
 }
@@ -183,13 +183,13 @@
 }
 
 .cambios__antes {
-  background: #fff6f7;
-  color: #8a1525;
+  background: var(--o-fondo-error, #fff6f7);
+  color: var(--o-rojo-texto, #8a1525);
 }
 
 .cambios__despues {
-  background: #f2fbf6;
-  color: #0f5c3c;
+  background: var(--o-fondo-ok, #f2fbf6);
+  color: var(--o-verde-texto, #0f5c3c);
 }
 
 .cambios__vacio {

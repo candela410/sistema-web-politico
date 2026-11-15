@@ -5,14 +5,14 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: rgb(81 49 143 / 0.12);
-  color: var(--lla-violeta);
+  background: rgb(var(--o-tinte, 81 49 143) / 0.12);
+  color: var(--o-violeta-texto, var(--lla-violeta));
   font-weight: 800;
   font-size: 0.95rem;
 }
 
 .tarjeta-fila--apagada .avatar {
-  background: #f0eff4;
+  background: var(--o-superficie-2, #f0eff4);
   color: var(--lla-gris);
 }
 

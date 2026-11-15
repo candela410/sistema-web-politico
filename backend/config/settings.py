@@ -56,6 +56,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Backup automático: revisa la programación (core/backup.py)
+    'core.backup.programador',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -86,6 +88,9 @@ DATABASES = {
     'default': dj_database_url.config(
         env='DATABASE_URL',
         conn_max_age=600,
+        # Comprueba la conexión antes de reutilizarla: al restaurar un backup
+        # Neon corta las conexiones abiertas
+        conn_health_checks=True,
     )
 }
 # Neon exige SSL; los tests pueden usar SQLite local (ver README).
@@ -102,7 +107,8 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
 
 
-# Usuario propio con login por email (core.Usuario, tabla usuarios)
+# Usuario propio (core.Usuario, tabla usuarios). Se ingresa con el nombre de
+# usuario (apellido + inicial del nombre); ver core/views.py
 AUTH_USER_MODEL = 'core.Usuario'
 
 
@@ -180,3 +186,12 @@ CORREOS_REALES = {
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
 # El enlace para restablecer la contraseña vence a las 24 horas (y sirve una sola vez)
 PASSWORD_RESET_TIMEOUT = 60 * 60 * 24
+
+# Backup de la base con la API de Neon (Configuración → Backup, core/backup.py).
+# NEON_API_KEY: Neon → Account settings → API keys. NEON_PROJECT_ID: Neon →
+# Project settings (ej: noisy-haze-97297807). NEON_BRANCH_ID es opcional: sin
+# él se usa la rama principal. El plan Free admite un solo snapshot.
+NEON_API_KEY = os.environ.get('NEON_API_KEY', '').strip()
+NEON_PROJECT_ID = os.environ.get('NEON_PROJECT_ID', '').strip()
+NEON_BRANCH_ID = os.environ.get('NEON_BRANCH_ID', '').strip()
+NEON_MAX_SNAPSHOTS = max(1, int(os.environ.get('NEON_MAX_SNAPSHOTS', '1') or 1))

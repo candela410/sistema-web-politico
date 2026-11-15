@@ -24,7 +24,7 @@
   padding: 0 8px;
   border: 1px solid var(--lla-borde);
   border-radius: 9px;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   color: var(--lla-texto);
   font: inherit;
   font-weight: 600;
@@ -37,7 +37,7 @@
 
 .paginacion__boton:hover:not(:disabled):not(.paginacion__boton--actual) {
   border-color: var(--lla-violeta);
-  color: var(--lla-violeta);
+  color: var(--o-violeta-texto, var(--lla-violeta));
 }
 
 .paginacion__boton:focus-visible {

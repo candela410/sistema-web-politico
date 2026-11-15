@@ -332,14 +332,14 @@
 
 @media (hover: hover) and (pointer: fine) {
   .interruptor--lista:hover {
-    background: rgb(81 49 143 / 0.06);
+    background: rgb(var(--o-tinte, 81 49 143) / 0.06);
   }
 }
 
 .interruptor--lista .interruptor__texto {
   /* Ancho fijo: "Activo" e "Inactivo" no mueven los botones de al lado */
   min-width: 52px;
-  color: var(--lla-violeta);
+  color: var(--o-violeta-texto, var(--lla-violeta));
   transition: color 200ms ease;
 }
 

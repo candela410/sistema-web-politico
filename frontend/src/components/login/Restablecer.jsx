@@ -10,13 +10,15 @@ import './Login.css'
 // Pantalla del enlace que llega por correo (/restablecer/:uid/:token): elegir la
 // contraseña (la primera vez, desde la invitación, o una nueva). Se ve como el
 // login y no hace falta haber iniciado sesión.
+// La contraseña se escribe dos veces (cada campo con su ojito para verla) y las
+// dos se validan mientras se escriben, sin esperar a salir del campo.
 const INCOMPLETO =
   'El enlace está incompleto. Ábralo con Ctrl + clic desde el correo o cópielo completo (puede ocupar más de una línea).'
 
 export default function Restablecer() {
   const { uid, token } = useParams()
   const [estado, setEstado] = useState(token ? 'comprobando' : 'invalido') // comprobando | formulario | invalido | listo
-  const [email, setEmail] = useState('')
+  const [cuenta, setCuenta] = useState('') // nombre de usuario al que pertenece el enlace
   const [nueva, setNueva] = useState(false) // true: invitación (todavía no tiene contraseña)
   const [password, setPassword] = useState('')
   const [repetida, setRepetida] = useState('')
@@ -28,7 +30,7 @@ export default function Restablecer() {
     if (!token) return
     comprobarEnlace(uid, token)
       .then((r) => {
-        setEmail(r.email)
+        setCuenta(r.username || r.email)
         setNueva(Boolean(r.nueva))
         setEstado('formulario')
       })
@@ -42,7 +44,9 @@ export default function Restablecer() {
     password: !password ? 'Ingrese la contraseña nueva.' : contrasenaValida(password) ? '' : MENSAJE_CONTRASENA,
     repetida: !repetida ? 'Repita la contraseña.' : repetida !== password ? 'Las contraseñas no coinciden.' : '',
   }
-  const verError = (campo) => (tocados[campo] ? errores[campo] : '')
+  const valores = { password, repetida }
+  const verError = (campo) => (tocados[campo] || valores[campo] !== '' ? errores[campo] : '')
+  const coinciden = repetida !== '' && !errores.password && !errores.repetida
 
   async function guardar(e) {
     e.preventDefault()
@@ -51,7 +55,7 @@ export default function Restablecer() {
     if (errores.password || errores.repetida) return
     setGuardando(true)
     try {
-      await restablecerContrasena(uid, token, password)
+      await restablecerContrasena(uid, token, password, repetida)
       setEstado('listo')
     } catch (err) {
       setError(err.message)
@@ -80,11 +84,15 @@ export default function Restablecer() {
             {estado === 'comprobando' && 'Comprobando el enlace…'}
             {estado === 'formulario' && (
               <>
-                Elija una contraseña para <b>{email}</b>
+                Elija una contraseña para el usuario <b>{cuenta}</b>
               </>
             )}
             {estado === 'invalido' && 'No se puede usar este enlace.'}
-            {estado === 'listo' && 'Ya puede ingresar con su contraseña.'}
+            {estado === 'listo' && (
+              <>
+                Ya puede ingresar con su usuario <b>{cuenta}</b> y su contraseña.
+              </>
+            )}
           </p>
           <div className="login__bar" aria-hidden="true">
             <span /><span /><span /><span />
@@ -122,6 +130,11 @@ export default function Restablecer() {
                 enterKeyHint="done"
                 error={verError('repetida')}
               />
+              {coinciden && (
+                <p className="login__ayuda login__ayuda--ok" role="status">
+                  ✓ Las contraseñas coinciden.
+                </p>
+              )}
             </>
           )}
 

@@ -2,9 +2,9 @@
 Django por rol e historial de actividad (registro de Django, LogEntry).
 
 Al crear un usuario no se escribe contraseña: se le envía por correo una
-invitación para que la elija (ver contrasenas_views)."""
+invitación para que la elija (ver contrasenas_views). El nombre de usuario con
+el que ingresa lo arma el sistema: apellido + primera letra del nombre."""
 
-import re
 from datetime import date, datetime, time
 
 from django.contrib.admin.models import LogEntry
@@ -20,7 +20,7 @@ from django.views.decorators.http import require_http_methods
 from .api import crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, leer, registrar
 from .contrasenas_views import enviar_enlace_a
-from .models import Usuario
+from .models import Usuario, username_libre
 from .validaciones import documento as validar_documento
 from .validaciones import email as validar_email
 from .validaciones import espacios, nombre_persona
@@ -39,6 +39,7 @@ POR_PAGINA = 15
 def _usuario_json(u):
     return {
         "id": u.pk,
+        "username": u.username,
         "email": u.email,
         "nombre": u.first_name,
         "apellido": u.last_name,
@@ -56,6 +57,7 @@ def _usuario_json(u):
 
 def _foto(u):
     return {
+        "Usuario": u.username,
         "Email": u.email,
         "Nombre": u.first_name,
         "Apellido": u.last_name,
@@ -65,15 +67,6 @@ def _foto(u):
         "Teléfono": u.telefono or "",
         "Dirección": u.direccion or "",
     }
-
-
-def _username_libre(email):
-    base = re.sub(r"[^\w.@+-]", "", email.split("@")[0])[:140] or "usuario"
-    nombre, n = base, 1
-    while Usuario.objects.filter(username=nombre).exists():
-        n += 1
-        nombre = f"{base}{n}"
-    return nombre
 
 
 def _limpiar(datos, usuario=None):
@@ -147,6 +140,8 @@ def _guardar(usuario, d):
     usuario.email = d["email"]
     usuario.first_name = d["nombre"]
     usuario.last_name = d["apellido"]
+    # Si cambia el nombre o el apellido, cambia el nombre de usuario
+    usuario.username = username_libre(d["nombre"], d["apellido"], usuario)
     usuario.is_active = d["activo"]
     usuario.documento = d["documento"]
     usuario.telefono = d["telefono"]
@@ -181,11 +176,11 @@ def usuarios(request):
     if mensaje:
         return error(mensaje)
     with transaction.atomic():
-        usuario = Usuario(username=_username_libre(limpios["email"]), campana=request.campana)
+        usuario = Usuario(campana=request.campana)
         # Sin contraseña hasta que la elija desde la invitación
         usuario.set_unusable_password()
         _guardar(usuario, limpios)
-    registrar(request, usuario, "crear", detalle=f"Creó el usuario {usuario.email}")
+    registrar(request, usuario, "crear", detalle=f"Creó el usuario {usuario.username} ({usuario.email})")
     destino, aviso = enviar_enlace_a(usuario, request.user, invitacion=True) if usuario.is_active else (None, None)
     return JsonResponse(
         {"usuario": _usuario_json(usuario), "invitacion": destino, "aviso_invitacion": aviso},

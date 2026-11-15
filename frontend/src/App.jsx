@@ -14,7 +14,7 @@ import Inicio from './components/inicio/Inicio'
 import ListaCuestionarios from './components/cuestionarios/ListaCuestionarios'
 import Login from './components/login/Login'
 import Olvide from './components/login/Olvide'
-import Perfil from './components/perfil/Perfil'
+import Configuracion from './components/configuracion/Configuracion'
 import Restablecer from './components/login/Restablecer'
 import Tutorial from './components/tutorial/tutorial'
 import Mapa from './components/mapa/Mapa'
@@ -38,7 +38,8 @@ import logo from './assets/logo.png'
 //   /dashboard, /equipos, /usuarios, /grupos, /permisos, /actividad
 //   /tutorial     videos de ayuda (todos; cada uno ve los de sus funciones)
 //   /mi-ruta      la ruta del equipo del usuario (todos; pensada para el militante)
-//   /perfil       Mi perfil: datos propios y cambiar la contraseña por correo
+//   /configuracion         Mi perfil: datos propios, foto y cambiar la contraseña
+//   /configuracion/backup  Backup de la base (solo superusuarios)
 // Todo lo que no sea /login, /olvide, /restablecer o /campana necesita una campaña elegida.
 
 function RequiereSesion({ usuario, children }) {
@@ -175,7 +176,18 @@ function Rutas() {
         <Route path="/permisos" element={s('auth.view_group', <Permisos />)} />
         <Route path="/actividad" element={s('admin.view_logentry', <Actividad usuario={usuario} />)} />
         <Route path="/tutorial" element={s(null, <Tutorial usuario={usuario} />)} />
-        <Route path="/perfil" element={s(null, <Perfil usuario={usuario} />)} />
+        <Route path="/configuracion" element={s(null, <Configuracion usuario={usuario} onCambio={setUsuario} />)} />
+        <Route
+          path="/configuracion/backup"
+          element={
+            usuario?.es_superusuario ? (
+              s(null, <Configuracion usuario={usuario} onCambio={setUsuario} pestana="backup" />)
+            ) : (
+              <Navigate to="/configuracion" replace />
+            )
+          }
+        />
+        <Route path="/perfil" element={<Navigate to="/configuracion" replace />} />
         <Route
           path="/sin-campana"
           element={

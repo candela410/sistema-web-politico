@@ -19,7 +19,7 @@
   left: 0;
   width: 100%;
   height: clamp(120px, 20vh, 220px);
-  fill: var(--lla-violeta);
+  fill: var(--o-violeta-texto, var(--lla-violeta));
   pointer-events: none;
 }
 
@@ -69,7 +69,7 @@
   gap: 4px 16px;
   align-items: center;
   padding: 18px 20px;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   border: 1px solid var(--lla-borde);
   border-left: 5px solid var(--lla-violeta);
   border-radius: 14px;
@@ -82,7 +82,7 @@
 
 .elegir__campana:hover:not(:disabled) {
   border-color: var(--lla-violeta);
-  box-shadow: 0 6px 20px rgb(81 49 143 / 0.14);
+  box-shadow: 0 6px 20px rgb(var(--o-tinte, 81 49 143) / 0.14);
 }
 
 .elegir__campana:active:not(:disabled) {
@@ -90,7 +90,7 @@
 }
 
 .elegir__campana:focus-visible {
-  outline: 3px solid rgb(81 49 143 / 0.35);
+  outline: 3px solid rgb(var(--o-tinte, 81 49 143) / 0.35);
   outline-offset: 2px;
 }
 
@@ -122,7 +122,7 @@
 
 .elegir__entrar {
   grid-area: entrar;
-  color: var(--lla-violeta);
+  color: var(--o-violeta-texto, var(--lla-violeta));
   font-weight: 800;
   white-space: nowrap;
 }

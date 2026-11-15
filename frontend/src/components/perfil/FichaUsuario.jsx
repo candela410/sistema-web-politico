@@ -1,5 +1,5 @@
-import { CalendarDays, Clock, Flag, IdCard, Mail, MapPin, Phone, ShieldCheck, Users } from 'lucide-react'
-import { inicialDe } from '../menu/usuario'
+import { AtSign, CalendarDays, Clock, Flag, IdCard, Mail, MapPin, Phone, ShieldCheck, Users } from 'lucide-react'
+import Avatar from '../comunes/Avatar'
 import './perfil.css'
 
 // Ficha con los datos de un usuario. La usan "Mi perfil" y el botón "Ver" de
@@ -26,14 +26,13 @@ function Dato({ icono: Icono, etiqueta, valor }) {
   )
 }
 
-function FichaUsuario({ usuario: u, campana }) {
+function FichaUsuario({ usuario: u, campana, avatar }) {
   const nombre = `${u.nombre ?? ''} ${u.apellido ?? ''}`.trim() || u.email
   return (
     <article className="ficha">
       <header className="ficha__encabezado">
-        <span className="ficha__avatar" aria-hidden="true">
-          {inicialDe(u)}
-        </span>
+        {/* avatar: en Mi perfil, el círculo con el botón para cambiar la foto */}
+        {avatar ?? <Avatar usuario={u} className="ficha__avatar" />}
         <div>
           <h2>{nombre}</h2>
           <span className="etiqueta etiqueta--magenta">{rolesDe(u)}</span>
@@ -41,6 +40,7 @@ function FichaUsuario({ usuario: u, campana }) {
         </div>
       </header>
       <dl className="ficha__datos">
+        <Dato icono={AtSign} etiqueta="Nombre de usuario" valor={u.username} />
         <Dato icono={Mail} etiqueta="Correo electrónico" valor={u.email} />
         <Dato icono={IdCard} etiqueta="Documento" valor={u.documento} />
         <Dato icono={Phone} etiqueta="Teléfono" valor={u.telefono} />

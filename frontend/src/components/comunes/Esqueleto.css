@@ -19,9 +19,9 @@
   align-items: center;
   gap: 10px;
   padding: 16px 18px;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   border: 1px solid var(--lla-borde);
-  border-left: 4px solid #e4e1ec;
+  border-left: 4px solid var(--o-linea, #e4e1ec);
   border-radius: 12px;
 }
 
@@ -43,7 +43,7 @@
   height: 12px;
   border-radius: 6px;
   /* Brillo que recorre la barra; lineal porque es movimiento constante */
-  background: linear-gradient(90deg, #efedf3 0%, #f8f7fa 40%, #efedf3 80%) 0 0 / 300% 100%;
+  background: linear-gradient(90deg, var(--o-superficie-2, #efedf3) 0%, var(--o-superficie-2, #f8f7fa) 40%, var(--o-superficie-2, #efedf3) 80%) 0 0 / 300% 100%;
   animation: esqueleto-brillo 1.4s linear infinite;
 }
 

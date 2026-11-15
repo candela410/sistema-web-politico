@@ -1,4 +1,6 @@
 import re
+import unicodedata
+from datetime import time
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, Permission
@@ -199,10 +201,40 @@ class Equipo(models.Model):
 # ---------------------------------------------------------------------------
 
 
+def base_username(nombre, apellido):
+    """Nombre de usuario según la regla del sistema: el apellido y la primera
+    letra del nombre, en minúsculas y sin acentos ni espacios
+    ("José" + "Pérez Gil" → "perezgilj")."""
+
+    def limpio(texto):
+        sin_acentos = unicodedata.normalize("NFD", str(texto or "")).encode("ascii", "ignore").decode()
+        return re.sub(r"[^a-z0-9]", "", sin_acentos.lower())
+
+    nombre, apellido = limpio(nombre), limpio(apellido)
+    return (apellido + nombre[:1] if apellido else nombre)[:140] or "usuario"
+
+
+def username_libre(nombre, apellido, usuario=None):
+    """La regla de base_username; si ya lo usa otra persona se le agrega un
+    número (perezj, perezj2, perezj3...). `usuario`: a quién se le va a poner
+    (conserva el que tiene si sigue correspondiendo a su nombre)."""
+    base = base_username(nombre, apellido)
+    if usuario is not None and re.fullmatch(rf"{re.escape(base)}\d*", usuario.username or ""):
+        return usuario.username
+    otros = Usuario.objects.all() if usuario is None or usuario.pk is None else Usuario.objects.exclude(pk=usuario.pk)
+    candidato, n = base, 1
+    while otros.filter(username__iexact=candidato).exists():
+        n += 1
+        candidato = f"{base}{n}"
+    return candidato
+
+
 # Usuario del sistema: reemplaza a auth_user. Los grupos y permisos
 # son los de Django (auth_group, auth_permission, auth_group_permissions).
 class Usuario(AbstractUser):
-    # Único porque el login es con correo y contraseña
+    # Se ingresa con el nombre de usuario (username: apellido + inicial del
+    # nombre, ver base_username). El correo es único: a él llegan los enlaces
+    # para elegir la contraseña.
     email = models.EmailField(unique=True)
 
     campana = models.ForeignKey(
@@ -229,6 +261,9 @@ class Usuario(AbstractUser):
     documento = models.CharField(max_length=30, unique=True, null=True, blank=True)
     telefono = models.CharField(max_length=40, blank=True, null=True)
     direccion = models.TextField(blank=True, null=True)
+    # Foto de perfil: imagen chica (256 px) como "data:image/jpeg;base64,...".
+    # Va en la base porque el servidor no conserva archivos entre despliegues.
+    foto = models.TextField(blank=True, null=True)
     equipo = models.ForeignKey(
         Equipo,
         on_delete=models.SET_NULL,
@@ -244,6 +279,40 @@ class Usuario(AbstractUser):
     class Meta:
         db_table = "usuarios"
         verbose_name = "usuario"
+
+
+class ConfiguracionBackup(models.Model):
+    """Programación del backup automático (pantalla Configuración → Backup).
+    Una sola fila (id = 1). Los backups en sí no se guardan acá: son snapshots
+    de Neon y se listan con su API (ver backup.py)."""
+
+    class Frecuencia(models.TextChoices):
+        DIARIA = "diaria", "Todos los días"
+        SEMANAL = "semanal", "Una vez por semana"
+
+    activo = models.BooleanField(default=False)
+    frecuencia = models.CharField(max_length=10, choices=Frecuencia, default=Frecuencia.DIARIA)
+    # Día del backup semanal: 0 = lunes ... 6 = domingo
+    dia_semana = models.PositiveSmallIntegerField(default=0)
+    hora = models.TimeField(default=time(3, 0))
+    # Los horarios programados hasta este momento ya se atendieron (o son
+    # anteriores a la última vez que se cambió la programación)
+    controlado_hasta = models.DateTimeField(blank=True, null=True)
+    ultimo_automatico = models.DateTimeField(blank=True, null=True)
+    ultimo_error = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = "configuracion_backup"
+        verbose_name = "configuración de backup"
+        # Solo superusuarios: no genera permisos para asignar a los roles
+        default_permissions = ()
+        constraints = [
+            models.CheckConstraint(condition=Q(dia_semana__lte=6), name="ck_backup_dia_semana"),
+        ]
+
+    @classmethod
+    def actual(cls):
+        return cls.objects.get_or_create(pk=1)[0]
 
 
 class Encuestado(models.Model):

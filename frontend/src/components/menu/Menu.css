@@ -24,7 +24,7 @@
   display: grid;
   /* La columna de la marca nunca es más chica que su contenido, así
      "Panel de gestión" no se corta en pantallas medianas */
-  grid-template-columns: minmax(max-content, 1fr) minmax(0, 480px) 1fr;
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, 480px) minmax(max-content, 1fr);
   align-items: center;
   gap: 20px;
   height: 72px;
@@ -183,7 +183,7 @@
   margin: 0;
   padding: 6px;
   list-style: none;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   color: var(--lla-texto);
   border: 1px solid var(--lla-borde);
   border-radius: 12px;
@@ -202,12 +202,12 @@
 }
 
 .buscador-secciones__lista li svg {
-  color: var(--lla-violeta);
+  color: var(--o-violeta-texto, var(--lla-violeta));
 }
 
 .buscador-secciones__lista li.marcado {
-  background: rgb(81 49 143 / 0.1);
-  color: var(--lla-violeta);
+  background: rgb(var(--o-tinte, 81 49 143) / 0.1);
+  color: var(--o-violeta-texto, var(--lla-violeta));
 }
 
 .buscador-secciones__lista .buscador-secciones__vacio {
@@ -320,7 +320,7 @@
   right: 0;
   width: 264px;
   padding: 6px;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   color: var(--lla-texto);
   border: 1px solid var(--lla-borde);
   border-radius: 12px;
@@ -329,9 +329,9 @@
      teclado y mientras se presiona) */
   --bs-dropdown-link-color: var(--lla-texto);
   --bs-dropdown-link-hover-color: var(--lla-texto);
-  --bs-dropdown-link-hover-bg: #f4f2f9;
+  --bs-dropdown-link-hover-bg: var(--o-superficie-2, #f4f2f9);
   --bs-dropdown-link-active-color: var(--lla-texto);
-  --bs-dropdown-link-active-bg: #ece7f6;
+  --bs-dropdown-link-active-bg: var(--o-linea-fuerte, #ece7f6);
 }
 
 .usuario__datos {
@@ -393,27 +393,27 @@
 }
 
 .usuario__accion svg {
-  color: var(--lla-violeta);
+  color: var(--o-violeta-texto, var(--lla-violeta));
 }
 
 .usuario__accion:hover {
-  background: #f4f2f9;
+  background: var(--o-superficie-2, #f4f2f9);
 }
 
 .usuario__accion--salir,
 .usuario__accion--salir svg {
-  color: #c0182f;
+  color: var(--o-rojo-texto, #c0182f);
 }
 
 .usuario__accion--salir {
-  --bs-dropdown-link-hover-color: #c0182f;
-  --bs-dropdown-link-hover-bg: #fdf1f2;
-  --bs-dropdown-link-active-color: #c0182f;
-  --bs-dropdown-link-active-bg: #fbe3e6;
+  --bs-dropdown-link-hover-color: var(--o-rojo-texto, #c0182f);
+  --bs-dropdown-link-hover-bg: var(--o-fondo-error, #fdf1f2);
+  --bs-dropdown-link-active-color: var(--o-rojo-texto, #c0182f);
+  --bs-dropdown-link-active-bg: var(--o-fondo-error, #fbe3e6);
 }
 
 .usuario__accion--salir:hover {
-  background: #fdf1f2;
+  background: var(--o-fondo-error, #fdf1f2);
 }
 
 /* --- Cuerpo: lateral + contenido -------------------------------------- */
@@ -689,16 +689,16 @@
   width: min(380px, calc(100vw - 24px));
   padding: 0;
   overflow: hidden;
-  background: #fff;
+  background: var(--o-superficie, #fff);
   color: var(--lla-texto);
   border: 1px solid var(--lla-borde);
   border-radius: 14px;
   box-shadow: 0 12px 32px rgb(21 18 28 / 0.18);
   --bs-dropdown-link-color: var(--lla-texto);
   --bs-dropdown-link-hover-color: var(--lla-texto);
-  --bs-dropdown-link-hover-bg: #f4f2f9;
+  --bs-dropdown-link-hover-bg: var(--o-superficie-2, #f4f2f9);
   --bs-dropdown-link-active-color: var(--lla-texto);
-  --bs-dropdown-link-active-bg: #ece7f6;
+  --bs-dropdown-link-active-bg: var(--o-linea-fuerte, #ece7f6);
 }
 
 .avisos__cabecera {
@@ -706,7 +706,7 @@
   align-items: baseline;
   justify-content: space-between;
   padding: 14px 16px 10px;
-  border-bottom: 1px solid #eeedf2;
+  border-bottom: 1px solid var(--o-linea, #eeedf2);
 }
 
 .avisos__cabecera strong {
@@ -738,7 +738,7 @@
 }
 
 .avisos__item--nuevo {
-  background: rgb(81 49 143 / 0.06);
+  background: rgb(var(--o-tinte, 81 49 143) / 0.06);
 }
 
 .avisos__item-icono {
@@ -748,24 +748,24 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: rgb(81 49 143 / 0.1);
-  color: var(--lla-violeta);
+  background: rgb(var(--o-tinte, 81 49 143) / 0.1);
+  color: var(--o-violeta-texto, var(--lla-violeta));
 }
 
 .avisos__item-icono--asignacion,
 .avisos__item-icono--encuesta {
   background: rgb(195 38 140 / 0.1);
-  color: var(--lla-magenta);
+  color: var(--o-magenta-texto, var(--lla-magenta));
 }
 
 .avisos__item-icono--crear {
   background: rgb(29 138 78 / 0.1);
-  color: #1d8a4e;
+  color: var(--o-verde-texto, #1d8a4e);
 }
 
 .avisos__item-icono--borrar {
   background: rgb(192 24 47 / 0.1);
-  color: #c0182f;
+  color: var(--o-rojo-texto, #c0182f);
 }
 
 .avisos__item-texto {
@@ -820,8 +820,8 @@
 .avisos__pie {
   display: block;
   padding: 12px 16px;
-  border-top: 1px solid #eeedf2;
-  color: var(--lla-violeta) !important;
+  border-top: 1px solid var(--o-linea, #eeedf2);
+  color: var(--o-violeta-texto, var(--lla-violeta)) !important;
   font-size: 0.88rem;
   font-weight: 600;
   text-align: center;
@@ -831,5 +831,30 @@
   .avisos__boton {
     width: 42px;
     height: 42px;
+  }
+}
+
+/* Botón de modo claro / oscuro: el sol sale girando y entra la luna (y al revés) */
+.tema-boton svg {
+  grid-area: 1 / 1;
+  transition:
+    transform 320ms var(--ease-out, ease-out),
+    opacity 200ms ease;
+}
+
+.tema-boton__luna,
+.tema-boton--oscuro .tema-boton__sol {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.4);
+}
+
+.tema-boton--oscuro .tema-boton__luna {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tema-boton svg {
+    transition: none;
   }
 }

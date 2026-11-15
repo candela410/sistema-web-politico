@@ -1,0 +1,198 @@
+/* Configuración: pestañas, Mi perfil y Backup */
+
+.config-pestanas {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--lla-borde);
+}
+
+.config-pestanas__opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  margin-bottom: -1px;
+  border-bottom: 3px solid transparent;
+  border-radius: 8px 8px 0 0;
+  color: var(--lla-gris);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.config-pestanas__opcion:hover {
+  color: var(--o-violeta-texto, var(--lla-violeta));
+  background: rgb(var(--o-tinte, 81 49 143) / 0.06);
+}
+
+.config-pestanas__opcion.active {
+  color: var(--o-violeta-texto, var(--lla-violeta));
+  border-bottom-color: var(--lla-violeta);
+}
+
+.config-pestanas__opcion:focus-visible {
+  outline: 3px solid rgb(var(--o-tinte, 81 49 143) / 0.35);
+  outline-offset: 2px;
+}
+
+/* --- Mi perfil ----------------------------------------------------------- */
+
+.perfil-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* La foto (o la inicial) llena el círculo del avatar */
+.avatar-foto {
+  overflow: hidden;
+}
+
+.avatar-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Avatar de Mi perfil: es un botón para cambiar la foto */
+.foto-perfil {
+  position: relative;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.foto-perfil .ficha__avatar {
+  width: 84px;
+  height: 84px;
+  font-size: 2rem;
+}
+
+.foto-perfil__camara {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--superficie, var(--o-superficie, #fff));
+  border-radius: 50%;
+  background: var(--lla-violeta);
+  color: #fff;
+}
+
+.foto-perfil:hover .foto-perfil__camara {
+  background: var(--lla-violeta-oscuro);
+}
+
+.foto-perfil:focus-visible {
+  outline: 3px solid rgb(var(--o-tinte, 81 49 143) / 0.35);
+  outline-offset: 3px;
+}
+
+.foto-perfil:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* --- Backup -------------------------------------------------------------- */
+
+.backup__tarjeta {
+  display: grid;
+  gap: 14px;
+}
+
+.backup__tarjeta h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.backup__tarjeta .texto-suave {
+  margin: 0;
+}
+
+.backup__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.backup__cabecera .boton {
+  flex: none;
+}
+
+.backup__programacion {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+}
+
+.backup__campos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.backup__campos label {
+  display: grid;
+  gap: 6px;
+  min-width: 170px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--lla-gris);
+}
+
+.backup__datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--lla-borde);
+}
+
+.backup__datos dt {
+  color: var(--lla-gris);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.backup__datos dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.backup__consecuencias {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .backup__cabecera {
+    flex-direction: column;
+  }
+
+  .backup__datos {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Campos que no se pueden tocar (el documento en Mi perfil, la hora con el backup apagado) */
+.formulario-modal .entrada:disabled,
+.backup__campos .entrada:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -13,6 +13,15 @@
     />
   </head>
   <body>
+    <script>
+      // Modo oscuro: se aplica antes de dibujar la página para que no parpadee (ver src/tema.js)
+      try {
+        if (localStorage.getItem('tema') === 'oscuro') {
+          document.documentElement.dataset.tema = 'oscuro'
+          document.documentElement.dataset.bsTheme = 'dark'
+        }
+      } catch (e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

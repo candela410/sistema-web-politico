@@ -361,7 +361,10 @@ export async function descargarPdf(informe) {
 async function imagenDelGrafico(nodo, fontEmbedCSS) {
   const img = nodo.querySelector('.grafico-imagen img')
   if (img) {
-    const respuesta = await fetch(img.currentSrc || img.src, { credentials: 'same-origin', cache: 'no-store' })
+    // En el PDF siempre van los colores claros, aunque la pantalla esté en modo oscuro
+    const url = new URL(img.currentSrc || img.src, location.href)
+    url.searchParams.delete('tema')
+    const respuesta = await fetch(url, { credentials: 'same-origin', cache: 'no-store' })
     if (!respuesta.ok) throw new Error('no se pudo descargar uno de los gráficos')
     return { datos: await comoDataUrl(await respuesta.blob()), formato: 'PNG' }
   }

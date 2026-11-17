@@ -4,8 +4,8 @@ import { obtenerPermisos } from '../../api/usuarios'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import './permisos.css'
 
-// Permisos de Django por rol, solo para consultar: se elige un rol y se ve qué
-// puede hacer en cada sección. Los permisos se cambian en Gestión → Roles.
+// Permisos de Django por rol, solo para consultar: se ven todos los roles o se
+// filtra uno para ver qué puede hacer en cada sección. Los permisos se cambian en Gestión → Roles.
 const ACCIONES = [
   { clave: 'Ver', texto: 'Ver' },
   { clave: 'Crear', texto: 'Crear' },
@@ -22,7 +22,6 @@ function Permisos() {
     obtenerPermisos()
       .then((d) => {
         setDatos(d)
-        setElegido(d.grupos[0]?.id ?? null)
       })
       .catch((e) => setError(e.message))
   }, [])
@@ -44,8 +43,6 @@ function Permisos() {
     )
 
   const rol = datos.grupos.find((g) => g.id === elegido)
-  // El filtro "limpio" es el primer rol de la lista (el que se ve al entrar)
-  const porDefecto = datos.grupos[0]?.id ?? null
 
   return (
     <main className="pagina">
@@ -69,7 +66,12 @@ function Permisos() {
           <div className="permisos__filtro">
             <label className="permisos__elegir">
               Rol
-              <select className="entrada" value={elegido ?? ''} onChange={(e) => setElegido(Number(e.target.value))}>
+              <select
+                className="entrada"
+                value={elegido ?? ''}
+                onChange={(e) => setElegido(e.target.value === '' ? null : Number(e.target.value))}
+              >
+                <option value="">Todos los roles</option>
                 {datos.grupos.map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.nombre} ({g.usuarios} usuario{g.usuarios === 1 ? '' : 's'})
@@ -80,51 +82,62 @@ function Permisos() {
             <button
               type="button"
               className="boton boton--borde"
-              onClick={() => setElegido(porDefecto)}
-              disabled={elegido === porDefecto}
+              onClick={() => setElegido(null)}
+              disabled={elegido === null}
             >
               <X size={16} aria-hidden="true" />
               Limpiar filtro
             </button>
           </div>
 
-          {rol && rol.permisos.length === 0 ? (
-            <p className="vacio-tarjeta">El rol {rol.nombre} no tiene permisos asignados.</p>
-          ) : (
-            rol && (
-              <div className="tabla-envoltura-ancha">
-                <table className="matriz">
-                  <caption className="sr-solo">Permisos del rol {rol.nombre}</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Sección</th>
-                      {ACCIONES.map((a) => (
-                        <th key={a.clave} scope="col" className="matriz__columna">
-                          {a.texto}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rol.permisos.map((s) => (
-                      <tr key={s.seccion}>
-                        <th scope="row">{s.seccion}</th>
+          {/* Sin filtro se ven los permisos de todos los roles; con un rol elegido, solo los de ese */}
+          {(rol ? [rol] : datos.grupos).map((r) => (
+            <section key={r.id} className="permisos__rol">
+              {!rol && (
+                <h2 className="permisos__rol-titulo">
+                  {r.nombre}{' '}
+                  <span className="texto-suave">
+                    ({r.usuarios} usuario{r.usuarios === 1 ? '' : 's'})
+                  </span>
+                </h2>
+              )}
+              {r.permisos.length === 0 ? (
+                <p className="vacio-tarjeta">El rol {r.nombre} no tiene permisos asignados.</p>
+              ) : (
+                <div className="tabla-envoltura-ancha">
+                  <table className="matriz">
+                    <caption className="sr-solo">Permisos del rol {r.nombre}</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Sección</th>
                         {ACCIONES.map((a) => (
-                          <td key={a.clave} className="matriz__columna">
-                            {s.acciones.includes(a.clave) ? (
-                              <Check size={18} className="matriz__si" aria-label="Sí" />
-                            ) : (
-                              <Minus size={16} className="matriz__nada" aria-label="No" />
-                            )}
-                          </td>
+                          <th key={a.clave} scope="col" className="matriz__columna">
+                            {a.texto}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
-          )}
+                    </thead>
+                    <tbody>
+                      {r.permisos.map((s) => (
+                        <tr key={s.seccion}>
+                          <th scope="row">{s.seccion}</th>
+                          {ACCIONES.map((a) => (
+                            <td key={a.clave} className="matriz__columna">
+                              {s.acciones.includes(a.clave) ? (
+                                <Check size={18} className="matriz__si" aria-label="Sí" />
+                              ) : (
+                                <Minus size={16} className="matriz__nada" aria-label="No" />
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          ))}
         </>
       )}
 

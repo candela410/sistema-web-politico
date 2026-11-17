@@ -1,0 +1,653 @@
+/* =========================================================================
+   MODO OSCURO
+   Lo activa el botón sol/luna de la barra superior (src/tema.js), que pone
+   data-tema="oscuro" en <html>. El login queda siempre claro.
+
+   Criterio: superficies neutras (gris azulado, no violeta) en capas que se
+   aclaran a medida que "suben" (fondo → barra/menú → tarjetas → campos y
+   ventanas), bordes finos en lugar de sombras, y el violeta de la campaña
+   solo como acento (botones, opción activa, foco). Los textos tienen buen
+   contraste sin llegar al blanco puro, que cansa la vista.
+   ========================================================================= */
+
+:root[data-tema='oscuro'] {
+  /* --- Capas (de más profunda a más alta) --- */
+  --oc-fondo: #0c0e13;       /* fondo de las páginas */
+  --oc-cromo: #111319;       /* barra superior y menú lateral */
+  --oc-capa-1: #161921;      /* tarjetas */
+  --oc-capa-2: #1c2029;      /* campos, rellenos suaves, filas resaltadas */
+  --oc-capa-3: #232834;      /* hover, ventanas elevadas */
+  --oc-linea: #252a35;       /* bordes */
+  --oc-linea-fuerte: #333a48;
+
+  /* --- Textos --- */
+  --oc-texto: #e4e6ec;
+  --oc-texto-2: #9ba2b0;
+  --oc-texto-3: #6c7382;
+
+  /* --- Acento (violeta de la campaña, ajustado para fondo oscuro) --- */
+  --oc-acento: #6d55d6;        /* fondo de botones: texto blanco con buen contraste */
+  --oc-acento-hover: #7b64e2;
+  --oc-acento-texto: #b3a5f7;  /* violeta para textos e íconos */
+
+  /* --- Variables que usa todo el sistema --- */
+  --lla-violeta: var(--oc-acento);
+  --lla-violeta-oscuro: var(--oc-acento-hover); /* en oscuro el hover aclara */
+  --lla-texto: var(--oc-texto);
+  --lla-gris: var(--oc-texto-2);
+  --lla-borde: var(--oc-linea);
+  --lla-fondo: var(--oc-fondo);
+
+  --fondo: var(--oc-fondo);
+  --tarjeta: var(--oc-capa-1);
+  --texto: var(--oc-texto);
+  --secundario: var(--oc-texto-2);
+  --borde: var(--oc-linea);
+  --error: #f8a5ad;
+
+  --o-fondo-pagina: var(--oc-fondo);
+  --o-superficie: var(--oc-capa-1);
+  --o-superficie-velo: rgb(22 25 33 / 0.94);
+  --o-superficie-2: var(--oc-capa-2);
+  --o-linea: var(--oc-linea);
+  --o-linea-fuerte: var(--oc-linea-fuerte);
+  --o-tinte: 139 118 240; /* violeta de anillos de foco y rellenos translúcidos */
+  --o-texto: var(--oc-texto);
+  --o-gris-texto: var(--oc-texto-2);
+  --o-violeta-texto: var(--oc-acento-texto);
+  --o-magenta-texto: #ef9fd2;
+  --o-rojo-texto: #f8a5ad;
+  --o-verde-texto: #74d6ae;
+  --o-azul-texto: #86cdee;
+  --o-ambar-texto: #f1c983;
+  --o-fondo-error: #2a171c;
+  --o-borde-error: #5e2a33;
+  --o-fondo-ok: #13261f;
+  --o-borde-ok: #24503e;
+  --o-fondo-magenta: #2a1726;
+  --o-borde-magenta: #5e2a52;
+
+  /* --- Bootstrap (desplegables, ventanas, tooltips) --- */
+  --bs-body-bg: var(--oc-fondo);
+  --bs-body-color: var(--oc-texto);
+  --bs-emphasis-color: var(--oc-texto);
+  --bs-secondary-color: var(--oc-texto-2);
+  --bs-secondary-bg: var(--oc-capa-2);
+  --bs-tertiary-bg: var(--oc-capa-1);
+  --bs-border-color: var(--oc-linea);
+  --bs-link-color: var(--oc-acento-texto);
+  --bs-link-color-rgb: 179, 165, 247;
+  --bs-link-hover-color: #cbc1fa;
+  --bs-link-hover-color-rgb: 203, 193, 250;
+  --bs-primary: var(--oc-acento);
+  --bs-primary-rgb: 109, 85, 214;
+  --bs-focus-ring-color: rgb(139 118 240 / 0.4);
+
+  color-scheme: dark;
+  background: var(--oc-fondo);
+}
+
+:root[data-tema='oscuro'] body {
+  background: var(--oc-fondo);
+}
+
+/* Calendarios, relojes, selects y barras de desplazamiento nativas en oscuro */
+:root[data-tema='oscuro'] .panel,
+:root[data-tema='oscuro'] .ventana-capa {
+  color-scheme: dark;
+}
+
+/* Barras de desplazamiento discretas */
+:root[data-tema='oscuro'] * {
+  scrollbar-color: var(--oc-linea-fuerte) transparent;
+}
+
+:root[data-tema='oscuro'] ::selection {
+  background: rgb(139 118 240 / 0.35);
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------------------
+   Barra superior y menú lateral: neutros, separados por una línea fina
+   --------------------------------------------------------------------------- */
+
+:root[data-tema='oscuro'] .panel__barra {
+  background: var(--oc-cromo);
+  color: var(--oc-texto);
+  box-shadow: inset 0 -1px 0 var(--oc-linea);
+}
+
+/* La franja de colores de la marca queda, apenas más suave */
+:root[data-tema='oscuro'] .franja-marca {
+  opacity: 0.85;
+}
+
+:root[data-tema='oscuro'] .panel__hamburguesa {
+  background: var(--oc-capa-2);
+  color: var(--oc-texto);
+  box-shadow: inset 0 0 0 1px var(--oc-linea-fuerte);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root[data-tema='oscuro'] .panel__hamburguesa:hover {
+    background: var(--oc-capa-3);
+    box-shadow: inset 0 0 0 1px var(--oc-linea-fuerte);
+  }
+}
+
+:root[data-tema='oscuro'] .panel__titulo span {
+  color: var(--oc-texto-2);
+  opacity: 1;
+}
+
+:root[data-tema='oscuro'] .buscador-secciones {
+  background: var(--oc-capa-1);
+  border-color: var(--oc-linea);
+}
+
+:root[data-tema='oscuro'] .buscador-secciones:focus-within {
+  background: var(--oc-capa-2);
+  border-color: var(--oc-acento);
+  box-shadow: 0 0 0 3px rgb(139 118 240 / 0.2);
+}
+
+:root[data-tema='oscuro'] .buscador-secciones input {
+  color: var(--oc-texto);
+}
+
+:root[data-tema='oscuro'] .buscador-secciones input::placeholder {
+  color: var(--oc-texto-3);
+}
+
+:root[data-tema='oscuro'] .buscador-secciones kbd {
+  border-color: var(--oc-linea-fuerte);
+  background: var(--oc-capa-2);
+  color: var(--oc-texto-2);
+  opacity: 1;
+}
+
+:root[data-tema='oscuro'] .buscador-secciones svg {
+  color: var(--oc-texto-3);
+}
+
+:root[data-tema='oscuro'] .campana-activa {
+  border-color: var(--oc-linea-fuerte);
+  background: var(--oc-capa-1);
+  color: var(--oc-texto);
+}
+
+:root[data-tema='oscuro'] :is(.usuario__boton, .avisos__boton) {
+  background: var(--oc-capa-2);
+  color: var(--oc-texto);
+  box-shadow: inset 0 0 0 1px var(--oc-linea);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root[data-tema='oscuro'] :is(.usuario__boton, .avisos__boton):hover {
+    background: var(--oc-capa-3);
+  }
+}
+
+:root[data-tema='oscuro'] .usuario__avatar {
+  background: rgb(139 118 240 / 0.18);
+  color: var(--oc-acento-texto);
+}
+
+:root[data-tema='oscuro'] .usuario__texto small,
+:root[data-tema='oscuro'] .usuario__texto span:last-child {
+  color: var(--oc-texto-2);
+  opacity: 1;
+}
+
+:root[data-tema='oscuro'] .avisos__numero {
+  border-color: var(--oc-cromo);
+}
+
+:root[data-tema='oscuro'] :is(.panel__hamburguesa, .usuario__boton, .lateral__opcion, .avisos__boton):focus-visible {
+  outline: 2px solid var(--oc-acento-texto);
+  outline-offset: 2px;
+}
+
+:root[data-tema='oscuro'] .lateral {
+  background: var(--oc-cromo);
+  color: var(--oc-texto);
+  box-shadow: inset -1px 0 0 var(--oc-linea);
+}
+
+:root[data-tema='oscuro'] .lateral__grupo + .lateral__grupo {
+  border-top-color: var(--oc-linea);
+}
+
+:root[data-tema='oscuro'] .lateral__titulo {
+  color: var(--oc-texto-3);
+  opacity: 1;
+}
+
+:root[data-tema='oscuro'] .lateral__opcion {
+  color: var(--oc-texto-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root[data-tema='oscuro'] .lateral__opcion:hover {
+    background: var(--oc-capa-2);
+    color: var(--oc-texto);
+  }
+}
+
+:root[data-tema='oscuro'] .lateral__opcion.active {
+  background: rgb(139 118 240 / 0.14);
+  color: #fff;
+  box-shadow: inset 3px 0 0 var(--oc-acento-texto);
+}
+
+:root[data-tema='oscuro'] .lateral__opcion.active svg {
+  color: var(--oc-acento-texto);
+}
+
+/* Fondo detrás del menú en el celular */
+:root[data-tema='oscuro'] .lateral__fondo,
+:root[data-tema='oscuro'] .panel__velo {
+  background: rgb(0 0 0 / 0.6);
+}
+
+/* Pantalla de carga al entrar */
+:root[data-tema='oscuro'] .arranque {
+  background: var(--oc-fondo);
+}
+
+/* ---------------------------------------------------------------------------
+   Páginas, tarjetas y listas: bordes finos, sin sombras violetas
+   --------------------------------------------------------------------------- */
+
+:root[data-tema='oscuro'] .panel__contenido,
+:root[data-tema='oscuro'] .panel__contenido:has(> .pagina, > .tutorial) {
+  background: var(--oc-fondo);
+}
+
+:root[data-tema='oscuro'] .pagina :is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila) {
+  border-top-color: var(--oc-linea);
+  border-right-color: var(--oc-linea);
+  border-bottom-color: var(--oc-linea);
+  box-shadow: none;
+}
+
+/* En listas, el borde izquierdo de color pasa a ser un acento fino */
+:root[data-tema='oscuro'] .tarjeta-fila {
+  border-left-width: 3px;
+}
+
+:root[data-tema='oscuro'] .tarjeta-fila--apagada {
+  background: var(--oc-capa-1);
+  opacity: 0.75;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root[data-tema='oscuro'] .pagina :is(.cuestionario-item, .categoria, .equipo, .grupo, .tarjeta-fila):hover {
+    border-top-color: var(--oc-linea-fuerte);
+    border-right-color: var(--oc-linea-fuerte);
+    border-bottom-color: var(--oc-linea-fuerte);
+  }
+}
+
+/* Cualquier sombra pensada para fondo claro se reemplaza por una oscura y suave */
+:root[data-tema='oscuro'] :is(.buscador-secciones__lista, .avisos__desplegable, .usuario__menu, .dropdown-menu) {
+  background: var(--oc-capa-2);
+  border-color: var(--oc-linea-fuerte);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.55);
+}
+
+:root[data-tema='oscuro'] .dropdown-menu {
+  --bs-dropdown-bg: var(--oc-capa-2);
+  --bs-dropdown-color: var(--oc-texto);
+  --bs-dropdown-border-color: var(--oc-linea-fuerte);
+  --bs-dropdown-link-color: var(--oc-texto);
+  --bs-dropdown-link-hover-color: var(--oc-texto);
+  --bs-dropdown-link-hover-bg: var(--oc-capa-3);
+  --bs-dropdown-link-active-bg: rgb(139 118 240 / 0.18);
+  --bs-dropdown-link-active-color: #fff;
+  --bs-dropdown-divider-bg: var(--oc-linea);
+  --bs-dropdown-header-color: var(--oc-texto-3);
+}
+
+:root[data-tema='oscuro'] .avisos__desplegable {
+  --bs-dropdown-link-hover-bg: var(--oc-capa-3);
+}
+
+/* Campos de formulario: un escalón más claros que la tarjeta que los contiene */
+:root[data-tema='oscuro'] .entrada,
+:root[data-tema='oscuro'] .form-control,
+:root[data-tema='oscuro'] .form-select {
+  background-color: var(--oc-capa-2);
+  border-color: var(--oc-linea-fuerte);
+  color: var(--oc-texto);
+}
+
+:root[data-tema='oscuro'] .entrada:hover:not(:disabled):not(:focus) {
+  border-color: #3f4757;
+}
+
+:root[data-tema='oscuro'] .entrada:focus,
+:root[data-tema='oscuro'] .form-control:focus,
+:root[data-tema='oscuro'] .form-select:focus {
+  background-color: var(--oc-capa-2);
+  border-color: var(--oc-acento-texto);
+  box-shadow: 0 0 0 3px rgb(139 118 240 / 0.22);
+}
+
+:root[data-tema='oscuro'] .entrada:disabled,
+:root[data-tema='oscuro'] .entrada[readonly] {
+  background-color: var(--oc-capa-1);
+  color: var(--oc-texto-3);
+  border-color: var(--oc-linea);
+}
+
+:root[data-tema='oscuro'] :is(.entrada, input, textarea)::placeholder {
+  color: var(--oc-texto-3);
+}
+
+:root[data-tema='oscuro'] select.entrada option {
+  background: var(--oc-capa-2);
+  color: var(--oc-texto);
+}
+
+:root[data-tema='oscuro'] .buscador {
+  background: var(--oc-capa-1);
+  border-color: var(--oc-linea);
+}
+
+:root[data-tema='oscuro'] .buscador:focus-within {
+  border-color: var(--oc-acento-texto);
+  box-shadow: 0 0 0 3px rgb(139 118 240 / 0.2);
+}
+
+:root[data-tema='oscuro'] .buscador svg {
+  stroke: var(--oc-texto-3);
+}
+
+/* Botones */
+:root[data-tema='oscuro'] .boton {
+  background: var(--oc-acento);
+  color: #fff;
+}
+
+:root[data-tema='oscuro'] .boton:hover:not(:disabled) {
+  background: var(--oc-acento-hover);
+}
+
+:root[data-tema='oscuro'] .boton:disabled {
+  opacity: 0.45;
+}
+
+:root[data-tema='oscuro'] .boton--borde {
+  background: transparent;
+  color: var(--oc-texto);
+  border: 1px solid var(--oc-linea-fuerte);
+}
+
+:root[data-tema='oscuro'] .boton--borde svg {
+  color: var(--oc-acento-texto);
+}
+
+:root[data-tema='oscuro'] .boton--borde:hover:not(:disabled) {
+  background: var(--oc-capa-2);
+  border-color: #424a5a;
+}
+
+:root[data-tema='oscuro'] .boton--peligro {
+  background: transparent;
+  color: var(--o-rojo-texto);
+  border: 1px solid var(--o-borde-error);
+}
+
+:root[data-tema='oscuro'] .boton--peligro:hover:not(:disabled) {
+  background: var(--o-fondo-error);
+}
+
+:root[data-tema='oscuro'] .boton--rojo {
+  background: #c22f45;
+}
+
+:root[data-tema='oscuro'] .boton--rojo:hover:not(:disabled) {
+  background: #d23a51;
+}
+
+:root[data-tema='oscuro'] .boton:focus-visible {
+  outline: 2px solid var(--oc-acento-texto);
+  outline-offset: 2px;
+}
+
+/* Interruptor (Activo / Obligatoria) */
+:root[data-tema='oscuro'] .interruptor__pista {
+  background: var(--oc-linea-fuerte);
+}
+
+:root[data-tema='oscuro'] .interruptor__pista::after {
+  background: #e9eaee;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+}
+
+:root[data-tema='oscuro'] .interruptor input:checked + .interruptor__pista {
+  background: var(--oc-acento);
+}
+
+:root[data-tema='oscuro'] .interruptor input:checked + .interruptor__pista::after {
+  background: #fff;
+}
+
+/* Etiquetas (Superusuario, roles, estados): relleno tenue y borde sutil */
+:root[data-tema='oscuro'] .etiqueta {
+  background: var(--oc-capa-2);
+  color: var(--oc-texto-2);
+  box-shadow: inset 0 0 0 1px var(--oc-linea);
+}
+
+:root[data-tema='oscuro'] .etiqueta--violeta {
+  background: rgb(139 118 240 / 0.14);
+  color: var(--oc-acento-texto);
+  box-shadow: inset 0 0 0 1px rgb(139 118 240 / 0.25);
+}
+
+:root[data-tema='oscuro'] .etiqueta--verde {
+  background: rgb(52 199 140 / 0.12);
+  color: var(--o-verde-texto);
+  box-shadow: inset 0 0 0 1px rgb(52 199 140 / 0.22);
+}
+
+:root[data-tema='oscuro'] .etiqueta--magenta {
+  background: rgb(222 76 170 / 0.12);
+  color: var(--o-magenta-texto);
+  box-shadow: inset 0 0 0 1px rgb(222 76 170 / 0.24);
+}
+
+/* Avisos y mensajes */
+:root[data-tema='oscuro'] .aviso-ok {
+  background: var(--o-fondo-ok);
+  color: var(--o-verde-texto);
+  box-shadow: inset 0 0 0 1px var(--o-borde-ok);
+}
+
+:root[data-tema='oscuro'] .aviso-error {
+  background: var(--o-fondo-error);
+  color: var(--o-rojo-texto);
+  border-color: var(--o-borde-error);
+}
+
+:root[data-tema='oscuro'] .aviso-info {
+  background: rgb(134 205 238 / 0.08);
+  color: #c4d9e6;
+  border-color: rgb(134 205 238 / 0.2);
+}
+
+:root[data-tema='oscuro'] .vacio-tarjeta {
+  border-color: var(--oc-linea-fuerte);
+  color: var(--oc-texto-3);
+}
+
+/* Tablas (permisos, actividad, estadísticas) */
+:root[data-tema='oscuro'] :is(.matriz, table) :is(th, td) {
+  border-color: var(--oc-linea);
+}
+
+:root[data-tema='oscuro'] :is(.matriz, table) thead th {
+  background: var(--oc-capa-2);
+  color: var(--oc-texto-2);
+}
+
+:root[data-tema='oscuro'] .matriz__nada {
+  color: var(--oc-texto-3);
+}
+
+/* Paginación activa y avatares sólidos */
+:root[data-tema='oscuro'] :is(.ficha__avatar, .tarjeta-fila__avatar) {
+  background: rgb(139 118 240 / 0.16);
+  color: var(--oc-acento-texto);
+}
+
+/* ---------------------------------------------------------------------------
+   Ventanas (modales) y tooltips
+   --------------------------------------------------------------------------- */
+
+:root[data-tema='oscuro'] .ventana__fondo {
+  --bs-backdrop-bg: #000;
+  --bs-backdrop-opacity: 0.65;
+}
+
+:root[data-tema='oscuro'] .ventana__caja,
+:root[data-tema='oscuro'] .modal-content {
+  background: var(--oc-capa-1);
+  color: var(--oc-texto);
+  border: 1px solid var(--oc-linea-fuerte);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.6);
+}
+
+:root[data-tema='oscuro'] .tooltip {
+  --bs-tooltip-bg: var(--oc-capa-3);
+  --bs-tooltip-color: var(--oc-texto);
+}
+
+/* ---------------------------------------------------------------------------
+   Inicio
+   --------------------------------------------------------------------------- */
+
+/* Tarjetas de secciones: superficie oscura con un tinte del color de cada
+   sección, en lugar de bloques de color saturado */
+:root[data-tema='oscuro'] .inicio__tarjeta {
+  --acento: var(--oc-acento);
+  background:
+    radial-gradient(130% 120% at 0% 0%, color-mix(in srgb, var(--acento) 30%, transparent), transparent 62%),
+    var(--oc-capa-1);
+  border: 1px solid color-mix(in srgb, var(--acento) 30%, var(--oc-linea));
+  color: var(--oc-texto);
+}
+
+:root[data-tema='oscuro'] .inicio__tarjeta--violeta { --acento: #8b76f0; }
+:root[data-tema='oscuro'] .inicio__tarjeta--celeste { --acento: #2fb4e9; }
+:root[data-tema='oscuro'] .inicio__tarjeta--naranja { --acento: #f7a832; }
+:root[data-tema='oscuro'] .inicio__tarjeta--magenta { --acento: #dd3f9f; }
+
+:root[data-tema='oscuro'] .inicio__tarjeta::before {
+  background: none;
+}
+
+:root[data-tema='oscuro'] .inicio__tarjeta::after {
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.06) 48%,
+    rgb(255 255 255 / 0.02) 54%,
+    transparent 70%
+  );
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root[data-tema='oscuro'] .inicio__tarjeta:hover {
+    border-color: color-mix(in srgb, var(--acento) 55%, var(--oc-linea));
+    box-shadow: 0 10px 28px rgb(0 0 0 / 0.45);
+  }
+}
+
+:root[data-tema='oscuro'] .inicio__tarjeta-icono {
+  background: color-mix(in srgb, var(--acento) 22%, transparent);
+  color: color-mix(in srgb, var(--acento) 55%, #fff);
+}
+
+:root[data-tema='oscuro'] .inicio__tarjeta-flecha {
+  background: color-mix(in srgb, var(--acento) 18%, var(--oc-capa-2));
+  color: color-mix(in srgb, var(--acento) 55%, #fff);
+}
+
+:root[data-tema='oscuro'] .inicio__tarjeta-pie small {
+  color: var(--oc-texto-2);
+  opacity: 1;
+}
+
+:root[data-tema='oscuro'] .inicio__perfil::before {
+  background: linear-gradient(120deg, #2a2257, #3b2a6e 60%, #5a2453);
+}
+
+:root[data-tema='oscuro'] .inicio__avatar {
+  border-color: var(--oc-capa-1);
+  background: var(--oc-capa-3);
+  color: var(--oc-acento-texto);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.4);
+}
+
+:root[data-tema='oscuro'] .inicio__semana .hoy strong {
+  background: var(--oc-acento);
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------------------
+   Mapa: el mapa base se oscurece; zonas, rutas y marcadores conservan su color
+   --------------------------------------------------------------------------- */
+
+:root[data-tema='oscuro'] .leaflet-container {
+  background: #11141a;
+}
+
+:root[data-tema='oscuro'] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.6);
+}
+
+:root[data-tema='oscuro'] .leaflet-bar a,
+:root[data-tema='oscuro'] .leaflet-bar a:hover {
+  background: var(--oc-capa-2);
+  color: var(--oc-texto);
+  border-bottom-color: var(--oc-linea-fuerte);
+}
+
+:root[data-tema='oscuro'] .leaflet-bar {
+  border: 1px solid var(--oc-linea-fuerte);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.45);
+}
+
+:root[data-tema='oscuro'] .leaflet-control-attribution {
+  background: rgb(17 19 25 / 0.8);
+  color: var(--oc-texto-3);
+}
+
+:root[data-tema='oscuro'] .leaflet-control-attribution a {
+  color: var(--oc-texto-2);
+}
+
+:root[data-tema='oscuro'] :is(.leaflet-popup-content-wrapper, .leaflet-popup-tip) {
+  background: var(--oc-capa-2);
+  color: var(--oc-texto);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.55);
+}
+
+:root[data-tema='oscuro'] .leaflet-tooltip {
+  background: var(--oc-capa-3);
+  color: var(--oc-texto);
+  border-color: var(--oc-linea-fuerte);
+}
+
+/* ---------------------------------------------------------------------------
+   Gráficos: el servidor los dibuja con fondo oscuro (?tema=oscuro), del mismo
+   tono que las tarjetas, así quedan integrados
+   --------------------------------------------------------------------------- */
+
+:root[data-tema='oscuro'] :is(.analitica__imagen, .grafico-imagen) img {
+  border-radius: 8px;
+  background: var(--oc-capa-1);
+}

@@ -5,7 +5,8 @@ import { obtenerCuestionarios } from '../../api/cuestionarios'
 import { obtenerEncuestasPorDia, obtenerParaResponder } from '../../api/encuestas'
 import { obtenerRutas, obtenerZonas } from '../../api/mapa'
 import { tiene } from '../../permisos'
-import { inicialDe, nombreDe, rolDe } from '../menu/usuario'
+import { nombreDe, rolDe } from '../menu/usuario'
+import Avatar from '../comunes/Avatar'
 import { seccionesPara } from '../menu/opciones'
 import './inicio.css'
 
@@ -153,7 +154,8 @@ function Inicio({ usuario }) {
     <main className="inicio">
       <aside className="inicio__columna">
         <section className="inicio__caja inicio__perfil">
-          <span className="inicio__avatar">{inicialDe(usuario)}</span>
+          {/* Su foto de perfil (la misma de arriba a la derecha) o, si no cargó una, su inicial */}
+          <Avatar usuario={usuario} className="inicio__avatar" />
           <h2>{nombreDe(usuario)}</h2>
           <span className="inicio__rol">{rolDe(usuario)}</span>
           <p title={usuario.email}>

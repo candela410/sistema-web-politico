@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from .models import Pregunta, RespuestaCargada, numero_de  # noqa: E402
+from .tema_graficos import oscurecer  # noqa: E402
 
 # Paleta categórica (la misma que usaba el frontend), en orden fijo
 CATEGORICOS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
@@ -199,15 +200,18 @@ DIBUJOS = {"barras": _barras, "columnas": _columnas, "linea": _linea, "torta": _
 TAMANOS = {"torta": (7, 3.4), "distribucion": (7, 1.6)}
 
 
-def grafico_png(clave, tabla, respondidas):
-    """Dibuja el gráfico pedido y lo devuelve como PNG."""
+def grafico_png(clave, tabla, respondidas, oscuro=False):
+    """Dibuja el gráfico pedido y lo devuelve como PNG (con oscuro=True, en
+    los colores del modo oscuro de la pantalla)."""
     alto = max(2.2, 0.45 * len(tabla) + 0.8) if clave == "barras" else 3.2
     figura, ax = plt.subplots(figsize=TAMANOS.get(clave, (7, alto)), dpi=110)
     try:
         DIBUJOS[clave](ax, tabla, respondidas)
         figura.tight_layout()
+        if oscuro:
+            oscurecer(figura)
         salida = io.BytesIO()
-        figura.savefig(salida, format="png", facecolor="white", bbox_inches="tight")
+        figura.savefig(salida, format="png", facecolor=figura.get_facecolor(), bbox_inches="tight")
         return salida.getvalue()
     finally:
         plt.close(figura)

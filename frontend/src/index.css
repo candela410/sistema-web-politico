@@ -25,56 +25,8 @@
 }
 
 /* ===== MODO OSCURO =====
-   Lo activa el botón sol/luna de la barra superior (src/tema.js), que pone
-   data-tema="oscuro" en <html>. Los estilos usan var(--o-nombre, color claro):
-   en modo claro las variables --o-* no existen y vale el color de siempre;
-   acá se definen para el modo oscuro. El login queda siempre claro. */
-:root[data-tema='oscuro'] {
-  --lla-texto: #ece9f5;
-  --lla-gris: #aaa5ba;
-  --lla-borde: #3b3450;
-  --lla-fondo: #15121d;
-
-  --fondo: #15121d;
-  --tarjeta: #1f1b2b;
-  --texto: #ece9f5;
-  --secundario: #aaa5ba;
-  --borde: #3b3450;
-  --error: #ff95a1;
-
-  --o-fondo-pagina: #15121d;
-  --o-superficie: #1f1b2b; /* tarjetas, campos, ventanas */
-  --o-superficie-velo: rgb(31 27 43 / 0.94);
-  --o-superficie-2: #2a2539; /* rellenos suaves, filas resaltadas */
-  --o-linea: #332c45;
-  --o-linea-fuerte: #4c4366;
-  --o-tinte: 183 160 255; /* violeta de sombras, anillos de foco y rellenos translúcidos */
-  --o-texto: #ece9f5;
-  --o-gris-texto: #aaa5ba;
-  --o-violeta-texto: #c4b2f8;
-  --o-magenta-texto: #f29bd0;
-  --o-rojo-texto: #ff95a1;
-  --o-verde-texto: #6dd9ad;
-  --o-azul-texto: #7fd0f0;
-  --o-ambar-texto: #f5c676;
-  --o-fondo-error: #3a1c25;
-  --o-borde-error: #7a3340;
-  --o-fondo-ok: #173428;
-  --o-borde-ok: #2c6a50;
-  --o-fondo-magenta: #3a1c33;
-  --o-borde-magenta: #7a3368;
-}
-
-:root[data-tema='oscuro'] .panel,
-:root[data-tema='oscuro'] .ventana-capa {
-  color-scheme: dark; /* calendarios, relojes y barras de desplazamiento del navegador */
-}
-
-/* Los gráficos son imágenes con fondo blanco: se les deja un marco prolijo */
-:root[data-tema='oscuro'] :is(.analitica__imagen, .grafico-imagen) img {
-  border-radius: 8px;
-  background: #fff;
-}
+   Está todo en src/tema-oscuro.css. Los estilos usan var(--o-nombre, color claro):
+   en modo claro las variables --o-* no existen y vale el color de siempre. */
 
 * {
   box-sizing: border-box;
@@ -662,6 +614,18 @@ label > small.texto-error {
 .opcional {
   color: var(--lla-gris);
   font-weight: 400;
+}
+
+/* Asterisco de los campos obligatorios y la nota que lo explica */
+.obligatorio {
+  color: var(--o-rojo-texto, #d1243b);
+  font-weight: 700;
+}
+
+.nota-obligatorios {
+  margin: 0;
+  color: var(--lla-gris);
+  font-size: 0.84rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

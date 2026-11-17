@@ -89,10 +89,6 @@ function EditarDatos({ usuario, onGuardado, onCerrar }) {
           </label>
         </div>
         {campo('direccion', 'Dirección', { maxLength: 200, autoCapitalize: 'sentences' }, true)}
-        <p className="aviso-info aviso-info--chico">
-          El documento no se puede modificar. Al correo llegan los enlaces para cambiar la contraseña. Si cambia su
-          nombre o su apellido, también cambia su nombre de usuario (apellido + inicial del nombre).
-        </p>
         {error && (
           <p className="texto-error" role="alert">
             {error}

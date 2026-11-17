@@ -164,3 +164,22 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Un bloque por rol cuando se ven todos */
+.permisos__rol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.permisos__rol-titulo {
+  margin: 8px 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.permisos__rol-titulo .texto-suave {
+  color: var(--lla-gris);
+  font-size: 0.9rem;
+  font-weight: 500;
+}

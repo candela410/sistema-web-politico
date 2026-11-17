@@ -32,3 +32,17 @@ export function useTema() {
   }, [tema])
   return [tema, () => setTema((t) => (t === 'oscuro' ? 'claro' : 'oscuro'))]
 }
+
+// Tema que se ve ahora ('claro' | 'oscuro'). Se actualiza solo cuando se toca
+// el botón sol/luna (escucha el cambio de data-tema en <html>). Lo usan los
+// gráficos para pedir sus imágenes con los colores del modo oscuro.
+export function useTemaActual() {
+  const leer = () => (document.documentElement.dataset.tema === 'oscuro' ? 'oscuro' : 'claro')
+  const [tema, setTema] = useState(leer)
+  useEffect(() => {
+    const observador = new MutationObserver(() => setTema(leer()))
+    observador.observe(document.documentElement, { attributes: true, attributeFilter: ['data-tema'] })
+    return () => observador.disconnect()
+  }, [])
+  return tema
+}

@@ -85,6 +85,9 @@ def _limpiar(datos, usuario=None):
     apellido = espacios(str(datos.get("apellido", usuario.last_name if usuario else "") or ""))[:150]
     if not nombre:
         return None, "Ingrese el nombre."
+    # Al crear un usuario el apellido y el documento son obligatorios
+    if not usuario and not apellido:
+        return None, "Ingrese el apellido."
     mensaje = nombre_persona(nombre) or nombre_persona(apellido, "El apellido")
     if mensaje:
         return None, mensaje
@@ -115,6 +118,8 @@ def _limpiar(datos, usuario=None):
 
     documento = dato("documento").replace(".", "").replace(" ", "")[:30]
     telefono_ = espacios(dato("telefono"))[:40]
+    if not usuario and not documento:
+        return None, "Ingrese el documento."
     mensaje = validar_documento(documento) or validar_telefono(telefono_)
     if mensaje:
         return None, mensaje

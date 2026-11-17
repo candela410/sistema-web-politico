@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Download, FileDown } from 'lucide-react'
 import { obtenerResumenAnalitica, urlGraficoAnalitica } from '../../api/analitica'
+import { useTemaActual } from '../../tema'
 import Modal from '../comunes/Modal'
 import './analitica.css'
 
@@ -167,6 +168,7 @@ function ElegirGraficosPdf({ graficos, onDescargar, onCerrar }) {
 }
 
 function Analitica({ usuario }) {
+  const tema = useTemaActual()
   const [filtros, setFiltros] = useState(VACIOS)
   const [aplicados, setAplicados] = useState({ ...VACIOS, version: 0 })
   const [resumen, setResumen] = useState(null)
@@ -204,7 +206,15 @@ function Analitica({ usuario }) {
   const version = aplicados.version
 
   const periodo = resumen?.desde ? `${fecha(resumen.desde)} al ${fecha(resumen.hasta)}` : ''
+  // Para el PDF: colores claros. En pantalla: según el modo claro u oscuro.
   const urlDe = (clave) => urlGraficoAnalitica(clave, { desde: resumen.desde, hasta: resumen.hasta, v: version })
+  const urlPantalla = (clave) =>
+    urlGraficoAnalitica(clave, {
+      desde: resumen.desde,
+      hasta: resumen.hasta,
+      v: version,
+      tema: tema === 'oscuro' ? 'oscuro' : '',
+    })
 
   async function pdf(lista, archivo) {
     setErrorPdf('')
@@ -308,7 +318,7 @@ function Analitica({ usuario }) {
               </p>
               <div className="analitica__graficos">
                 {GRAFICOS.map((g) => (
-                  <Grafico key={`${g.clave}-${version}`} grafico={g} url={urlDe(g.clave)} onError={setErrorPdf} />
+                  <Grafico key={`${g.clave}-${version}-${tema}`} grafico={g} url={urlPantalla(g.clave)} onError={setErrorPdf} />
                 ))}
               </div>
             </>

@@ -12,9 +12,19 @@ import { Eye, KeyRound, Pencil } from 'lucide-react'
 import FichaUsuario from '../perfil/FichaUsuario'
 import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
-import { emailValido, MENSAJE_EMAIL, useConCambios } from '../../validaciones'
+import { emailValido, errorDocumento, MENSAJE_EMAIL, useConCambios } from '../../validaciones'
 
 const formatoFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
+
+// Asterisco rojo de los campos obligatorios (solo al crear)
+function Obligatorio({ si }) {
+  if (!si) return null
+  return (
+    <span className="obligatorio" aria-hidden="true">
+      {' '}*
+    </span>
+  )
+}
 
 // Alta y edición. No se escribe contraseña: al crear el usuario le llega por
 // correo una invitación para elegirla, y después se restablece con la llave.
@@ -35,14 +45,26 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
   const conCambios = useConCambios(form)
   const cambiar = (campo) => (e) =>
     setForm((f) => ({ ...f, [campo]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
-  const errorDeEmail = form.email.trim() && !emailValido(form.email) ? MENSAJE_EMAIL : ''
-  const completo = form.nombre.trim() && form.email.trim() && (form.grupo !== null || usuario?.es_superusuario)
+  // Al crear: nombre, apellido, correo y documento son obligatorios (llevan *)
+  const nuevo = !usuario
+  const errores = {
+    nombre: form.nombre.trim() ? '' : 'Ingrese el nombre.',
+    apellido: nuevo && !form.apellido.trim() ? 'Ingrese el apellido.' : '',
+    email: !form.email.trim() ? 'Ingrese el correo electrónico.' : emailValido(form.email) ? '' : MENSAJE_EMAIL,
+    documento: nuevo || form.documento.trim() ? errorDocumento(form.documento.replace(/[.\s]/g, '')) : '',
+    grupo: form.grupo !== null || usuario?.es_superusuario ? '' : 'Seleccione el rol del usuario.',
+  }
+  const verError = (campo) => (tocado ? errores[campo] : '')
 
   async function guardar(e) {
     e.preventDefault()
     setError('')
     setTocado(true)
-    if (errorDeEmail) return
+    const primero = Object.keys(errores).find((c) => errores[c])
+    if (primero) {
+      document.getElementById(`usuario-${primero}`)?.focus()
+      return
+    }
     setGuardando(true)
     const datos = {
       nombre: form.nombre,
@@ -50,7 +72,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
       email: form.email.trim(),
       grupos: form.grupo === null ? [] : [form.grupo],
       activo: form.activo,
-      documento: form.documento,
+      documento: form.documento.replace(/[.\s]/g, ''),
       telefono: form.telefono,
       direccion: form.direccion,
     }
@@ -71,8 +93,12 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
       <form className="formulario-modal" onSubmit={guardar} noValidate>
         <div className="formulario-modal__fila">
           <label>
-            Nombre
+            <span>
+              Nombre
+              <Obligatorio si={nuevo} />
+            </span>
             <input
+              id="usuario-nombre"
               className="entrada"
               value={form.nombre}
               onChange={cambiar('nombre')}
@@ -81,12 +107,19 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
               enterKeyHint="next"
               maxLength={150}
               required
+              aria-required="true"
+              aria-invalid={Boolean(verError('nombre'))}
               autoFocus
             />
+            {verError('nombre') && <small className="texto-error">{errores.nombre}</small>}
           </label>
           <label>
-            Apellido
+            <span>
+              Apellido
+              <Obligatorio si={nuevo} />
+            </span>
             <input
+              id="usuario-apellido"
               className="entrada"
               value={form.apellido}
               onChange={cambiar('apellido')}
@@ -94,12 +127,20 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
               autoComplete="off"
               enterKeyHint="next"
               maxLength={150}
+              required={nuevo}
+              aria-required={nuevo}
+              aria-invalid={Boolean(verError('apellido'))}
             />
+            {verError('apellido') && <small className="texto-error">{errores.apellido}</small>}
           </label>
         </div>
         <label>
-          Correo electrónico
+          <span>
+            Correo electrónico
+            <Obligatorio si={nuevo} />
+          </span>
           <input
+            id="usuario-email"
             className="entrada"
             type="email"
             inputMode="email"
@@ -112,11 +153,11 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
             placeholder="usuario@correo.com"
             value={form.email}
             onChange={cambiar('email')}
-            onBlur={() => setTocado(true)}
-            aria-invalid={Boolean(tocado && errorDeEmail)}
+            aria-invalid={Boolean(verError('email'))}
             required
+            aria-required="true"
           />
-          {tocado && errorDeEmail && <small className="texto-error">{errorDeEmail}</small>}
+          {verError('email') && <small className="texto-error">{errores.email}</small>}
         </label>
 
         <fieldset>
@@ -124,6 +165,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
           {grupos.map((g) => (
             <label key={g.id} className="casilla-texto">
               <input
+                id={grupos[0]?.id === g.id ? 'usuario-grupo' : undefined}
                 type="radio"
                 name="rol"
                 checked={form.grupo === g.id}
@@ -132,12 +174,17 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
               <span>{g.nombre}</span>
             </label>
           ))}
+          {verError('grupo') && <small className="texto-error">{errores.grupo}</small>}
         </fieldset>
 
         <div className="formulario-modal__fila">
           <label>
-            Documento
+            <span>
+              Documento
+              <Obligatorio si={nuevo} />
+            </span>
             <input
+              id="usuario-documento"
               className="entrada"
               inputMode="numeric"
               autoComplete="off"
@@ -146,7 +193,11 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
               placeholder="Sin puntos"
               value={form.documento}
               onChange={cambiar('documento')}
+              required={nuevo}
+              aria-required={nuevo}
+              aria-invalid={Boolean(verError('documento'))}
             />
+            {verError('documento') && <small className="texto-error">{errores.documento}</small>}
           </label>
           <label>
             Teléfono
@@ -182,10 +233,9 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
           Activo
         </label>
 
-        {!usuario && (
-          <p className="aviso-info aviso-info--chico">
-            Al crearlo, el usuario recibirá un correo con su nombre de usuario (apellido + inicial del nombre) y un
-            enlace para elegir su contraseña.
+        {nuevo && (
+          <p className="nota-obligatorios">
+            Los campos marcados con <span className="obligatorio">*</span> son obligatorios.
           </p>
         )}
 
@@ -198,7 +248,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
           <button type="button" className="boton boton--borde" onClick={onCerrar}>
             Cancelar
           </button>
-          <button type="submit" className="boton" disabled={guardando || !completo || !conCambios}>
+          <button type="submit" className="boton" disabled={guardando || !conCambios}>
             {guardando ? 'Guardando…' : usuario ? 'Guardar cambios' : 'Crear usuario'}
           </button>
         </div>

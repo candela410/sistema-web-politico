@@ -226,7 +226,7 @@ def grafico(request, pk, pregunta, clave):
     cuestionario = get_object_or_404(cuestionarios_de_campana(request.campana), pk=pk)
     p = get_object_or_404(cuestionario.preguntas.prefetch_related("opciones"), pk=pregunta)
     tabla, _, respondidas = graficos.tabla_de(p, graficos.respuestas_de(cuestionario))
-    respuesta = HttpResponse(graficos.grafico_png(clave, tabla, respondidas), content_type="image/png")
+    respuesta = HttpResponse(graficos.grafico_png(clave, tabla, respondidas, oscuro=request.GET.get("tema") == "oscuro"), content_type="image/png")
     respuesta["Cache-Control"] = "private, no-cache"
     return respuesta
 

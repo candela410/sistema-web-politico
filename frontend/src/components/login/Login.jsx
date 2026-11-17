@@ -21,14 +21,11 @@ export default function Login({ onIngreso }) {
   const [nombre, setNombre] = useState(ultimoUsuario)
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false) // checkbox "Recordar"
-  // Los errores se muestran mientras se escribe (en cuanto el campo tiene algo)
-  // y, si quedó vacío, al salir del campo o al enviar
   const [tocados, setTocados] = useState({ nombre: false, password: false })
   const [error, setError] = useState('') // error que devuelve el servidor
   const [loading, setLoading] = useState(false)
 
   const errores = { nombre: errorUsuario(nombre), password: errorContrasena(password) }
-  const valores = { nombre, password }
   const tocar = (campo) => () => setTocados((t) => ({ ...t, [campo]: true }))
 
   // ----- AL APRETAR "Iniciar sesión" -----
@@ -53,7 +50,9 @@ export default function Login({ onIngreso }) {
     }
   }
 
-  const verError = (campo) => (tocados[campo] || valores[campo] !== '' ? errores[campo] : '')
+  // Los errores aparecen recién al salir del campo o al enviar (no mientras se escribe),
+  // así el formulario no cambia de tamaño con cada tecla
+  const verError = (campo) => (tocados[campo] ? errores[campo] : '')
 
   return (
     <main className="login">
@@ -71,7 +70,7 @@ export default function Login({ onIngreso }) {
           </div>
 
           {/* ----- NOMBRE DE USUARIO: sin mayúsculas ni corrector ----- */}
-          <label htmlFor="usuario">Nombre de usuario</label>
+          <label htmlFor="usuario">Usuario</label>
           <div className={`login__field${verError('nombre') ? ' login__field--error' : ''}`}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="8" r="4" />
@@ -86,21 +85,20 @@ export default function Login({ onIngreso }) {
               spellCheck={false}
               enterKeyHint="next"
               maxLength={254}
-              placeholder="apellido + inicial del nombre"
+              placeholder="Usuario"
               value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
+              onChange={(e) => {
+                setNombre(e.target.value)
+                setTocados((t) => ({ ...t, nombre: false }))
+              }}
               onBlur={tocar('nombre')}
               aria-invalid={Boolean(verError('nombre'))}
-              aria-describedby={verError('nombre') ? 'usuario-error' : 'usuario-ayuda'}
+              aria-describedby={verError('nombre') ? 'usuario-error' : undefined}
             />
           </div>
-          {verError('nombre') ? (
+          {verError('nombre') && (
             <p id="usuario-error" className="login__ayuda login__ayuda--error">
               {errores.nombre}
-            </p>
-          ) : (
-            <p id="usuario-ayuda" className="login__ayuda">
-              Su apellido y la primera letra de su nombre. Ejemplo: Juan Pérez → <b>perezj</b>
             </p>
           )}
 
@@ -109,8 +107,10 @@ export default function Login({ onIngreso }) {
           <CampoContrasena
             id="password"
             value={password}
-            onChange={setPassword}
-            onBlur={tocar('password')}
+            onChange={(valor) => {
+              setPassword(valor)
+              setTocados((t) => ({ ...t, password: false }))
+            }}
             autoComplete="current-password"
             enterKeyHint="go"
             error={verError('password')}

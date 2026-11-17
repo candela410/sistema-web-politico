@@ -5,18 +5,28 @@
 
 import { useState } from 'react'
 import { f } from './catalogoGraficos'
+import { useTemaActual } from '../../tema'
 
 const IMAGENES = new Set(['barras', 'columnas', 'linea', 'torta', 'distribucion'])
 
 // `version` cambia cuando llega una encuesta nueva: el navegador vuelve a pedir
 // la imagen en lugar de mostrar la que ya tenía
-function Imagen({ cuestionario, pregunta, clave, version }) {
+// En modo oscuro se pide la imagen con ?tema=oscuro (fondo y textos oscuros);
+// el PDF la descarga sin ese parámetro, con los colores claros.
+function Imagen(props) {
+  const tema = useTemaActual()
+  // key: al cambiar de tema se vuelve a cargar la imagen desde cero
+  return <ImagenTema key={tema} tema={tema} {...props} />
+}
+
+function ImagenTema({ cuestionario, pregunta, clave, version, tema }) {
   const [estado, setEstado] = useState('cargando')
+  const oscuro = tema === 'oscuro' ? '&tema=oscuro' : ''
   return (
     <div className={`grafico-imagen grafico-imagen--${estado}`}>
       {estado === 'error' && <p className="texto-error">No se pudo dibujar el gráfico.</p>}
       <img
-        src={`/api/cuestionarios/${cuestionario}/estadisticas/${pregunta.id}/${clave}.png?v=${version ?? 0}`}
+        src={`/api/cuestionarios/${cuestionario}/estadisticas/${pregunta.id}/${clave}.png?v=${version ?? 0}${oscuro}`}
         alt={`Gráfico de ${pregunta.enunciado}`}
         onLoad={() => setEstado('listo')}
         onError={() => setEstado('error')}

@@ -19,6 +19,7 @@ from django.views.decorators.http import require_GET
 from .api import error, requiere_permiso
 from .cuestionarios_views import cuestionarios_de_campana
 from .models import Zona
+from .tema_graficos import oscurecer, pide_oscuro
 
 sys.path.insert(0, str(Path(settings.BASE_DIR).parent / "analitica"))
 import analitica  # noqa: E402
@@ -50,9 +51,12 @@ def _datos(request):
     return todas, desde, hasta
 
 
-def _imagen(fig):
+def _imagen(fig, request):
+    # ?tema=oscuro: la pantalla está en modo oscuro (ver tema_graficos.py)
+    if pide_oscuro(request):
+        oscurecer(fig)
     imagen = io.BytesIO()
-    fig.savefig(imagen, format="png", dpi=110, bbox_inches="tight")
+    fig.savefig(imagen, format="png", dpi=110, bbox_inches="tight", facecolor=fig.get_facecolor())
     analitica.plt.close(fig)
     respuesta = HttpResponse(imagen.getvalue(), content_type="image/png")
     respuesta["Cache-Control"] = "private, no-cache"
@@ -221,7 +225,7 @@ def _respuestas(request):
     fig = analitica.figura_respuestas(respuestas, cuestionario.titulo, zona, request.campana.nombre)
     if fig is None:
         return error("No hay respuestas con ubicación para ese cuestionario en esa zona.", 404)
-    return _imagen(fig)
+    return _imagen(fig, request)
 
 
 @require_GET
@@ -240,4 +244,4 @@ def grafico(request, clave):
     fig = analitica.figura(clave, todas, desde, hasta, request.campana.nombre) if desde else None
     if fig is None:
         return error("No hay encuestas en ese período.", 404)
-    return _imagen(fig)
+    return _imagen(fig, request)

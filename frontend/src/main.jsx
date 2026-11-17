@@ -6,6 +6,8 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import './bootstrap-tema.css'
 import './index.css'
 import './movimiento.css'
+// Modo oscuro: va al final para poder pisar los colores de todo lo anterior
+import './tema-oscuro.css'
 import App from './App.jsx'
 
 createRoot(document.getElementById('root')).render(

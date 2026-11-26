@@ -310,7 +310,7 @@ function EditorCuestionario() {
           ← Cuestionarios
         </Link>
         <span className="editor__estado">{sinGuardar ? 'Cambios sin guardar' : ''}</span>
-        <button type="submit" className="boton" disabled={guardando || !sinGuardar}>
+        <button type="submit" className="boton" disabled={guardando || !sinGuardar || !form.titulo.trim() || !form.categoria}>
           {guardando ? 'Guardando…' : esNuevo ? 'Crear cuestionario' : 'Guardar cambios'}
         </button>
       </div>

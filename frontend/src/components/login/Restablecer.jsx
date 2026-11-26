@@ -146,7 +146,12 @@ export default function Restablecer() {
           )}
 
           {estado === 'formulario' && (
-            <button className="login__submit" type="submit" disabled={guardando}>
+            <button
+              className="login__submit"
+              type="submit"
+              disabled={guardando || Boolean(errores.password || errores.repetida)}
+              aria-busy={guardando}
+            >
               {guardando ? 'Guardando…' : 'Guardar contraseña'}
             </button>
           )}

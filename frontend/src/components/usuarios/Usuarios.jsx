@@ -46,7 +46,8 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
     telefono: separarTelefono(usuario?.telefono).numero,
     direccion: usuario?.direccion ?? '',
   }))
-  const [tocado, setTocado] = useState(false)
+  // Campos ya visitados: su error se muestra al salir de cada uno (on blur)
+  const [tocados, setTocados] = useState({})
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
   const conCambios = useConCambios(form)
@@ -64,12 +65,18 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
     grupo: form.grupo !== null || usuario?.es_superusuario ? '' : 'Seleccione el rol del usuario.',
     ...erroresTelefono(form.codigoArea, form.telefono, usuario?.telefono ?? ''),
   }
-  const verError = (campo) => (tocado ? errores[campo] : '')
+  const verError = (campo) => (tocados[campo] || tocados.todos ? errores[campo] : '')
+  const hayErrores = Object.values(errores).some(Boolean)
+  // Al salir de un campo (los ids son usuario-<campo>) se marca como visitado
+  const alSalir = (e) => {
+    const campo = e.target.id?.replace('usuario-', '')
+    if (campo) setTocados((t) => ({ ...t, [campo]: true }))
+  }
 
   async function guardar(e) {
     e.preventDefault()
     setError('')
-    setTocado(true)
+    setTocados({ todos: true })
     const primero = Object.keys(errores).find((c) => errores[c])
     if (primero) {
       document.getElementById(`usuario-${primero}`)?.focus()
@@ -100,7 +107,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
 
   return (
     <Modal titulo={usuario ? 'Editar usuario' : 'Nuevo usuario'} onCerrar={onCerrar}>
-      <form className="formulario-modal" onSubmit={guardar} noValidate>
+      <form className="formulario-modal" onSubmit={guardar} onBlur={alSalir} noValidate>
         <div className="formulario-modal__fila">
           <label>
             <span>
@@ -286,7 +293,8 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
           <button type="button" className="boton boton--borde" onClick={onCerrar}>
             Cancelar
           </button>
-          <button type="submit" className="boton" disabled={guardando || !conCambios}>
+          {/* Se habilita cuando hay cambios y todos los campos cumplen sus reglas */}
+          <button type="submit" className="boton" disabled={guardando || !conCambios || hayErrores}>
             {guardando ? 'Guardando…' : usuario ? 'Guardar cambios' : 'Crear usuario'}
           </button>
         </div>

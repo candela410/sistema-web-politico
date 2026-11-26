@@ -291,7 +291,16 @@ function ResponderCuestionario() {
         ))}
 
         <div className="acciones">
-          <button type="submit" className="boton boton--grande" disabled={enviando}>
+          {/* Se habilita con los datos de la persona válidos y las obligatorias respondidas */}
+          <button
+            type="submit"
+            className="boton boton--grande"
+            disabled={
+              enviando ||
+              Object.values(erroresPersona).some(Boolean) ||
+              cuestionario.preguntas.some((p) => p.obligatoria && !(respuestas[p.id]?.length > 0))
+            }
+          >
             {enviando ? 'Enviando…' : 'Enviar encuesta'}
           </button>
         </div>

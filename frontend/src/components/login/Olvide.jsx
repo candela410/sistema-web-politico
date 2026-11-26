@@ -170,7 +170,7 @@ export default function Olvide() {
                 </p>
               )}
 
-              <button className="login__submit" type="submit" disabled={enviando || !valor.trim()} aria-busy={enviando}>
+              <button className="login__submit" type="submit" disabled={enviando || Boolean(errorCampo)} aria-busy={enviando}>
                 {enviando ? 'Enviando…' : opcion.boton}
               </button>
             </>

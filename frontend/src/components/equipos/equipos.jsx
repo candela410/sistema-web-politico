@@ -20,7 +20,7 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
   const [elegidos, setElegidos] = useState(() => (equipo?.usuarios ?? []).map((u) => u.id))
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
-  const conCambios = useConCambios({ nombre, ruta, elegidos: [...elegidos].sort((a, b) => a - b) })
+  const conCambios = useConCambios({ nombre, ruta, elegidos: [...elegidos].sort() })
 
   // Los que ya están en este equipo más los que no tienen equipo
   const opciones = [...(equipo?.usuarios ?? []), ...disponibles]
@@ -85,7 +85,9 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
         )}
 
         <fieldset className="equipo__usuarios">
-          <legend>Usuarios</legend>
+          <legend>
+            Usuarios<Obligatorio />
+          </legend>
           {opciones.length === 0 ? (
             <p className="equipo__ayuda">No hay usuarios disponibles para asignar.</p>
           ) : (

@@ -6,6 +6,7 @@ import Logo from '../comunes/Logo'
 import CampoContrasena from './CampoContrasena'
 import FondoLogin from './FondoLogin'
 import './Login.css'
+import Obligatorio from '../comunes/Obligatorio'
 
 // Pantalla del enlace que llega por correo (/restablecer/:uid/:token): elegir la
 // contraseña (la primera vez, desde la invitación, o una nueva). Se ve como el
@@ -100,7 +101,7 @@ export default function Restablecer() {
 
           {estado === 'formulario' && (
             <>
-              <label htmlFor="password">Contraseña nueva</label>
+              <label htmlFor="password">Contraseña nueva<Obligatorio /></label>
               <CampoContrasena
                 id="password"
                 value={password}
@@ -120,7 +121,7 @@ export default function Restablecer() {
                 ))}
               </ul>
 
-              <label htmlFor="repetida">Repita la contraseña</label>
+              <label htmlFor="repetida">Repita la contraseña<Obligatorio /></label>
               <CampoContrasena
                 id="repetida"
                 value={repetida}

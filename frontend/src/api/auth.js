@@ -84,6 +84,9 @@ export const pedirCambioDeContrasena = () => pedir('/api/auth/cambiar-contrasena
 // "¿Olvidó su contraseña?": con el nombre de usuario, el enlace llega al correo asociado
 export const pedirEnlace = (usuario) => pedir('/api/auth/olvide/', { method: 'POST', datos: { usuario } })
 
+// "¿Olvidó su usuario?": envía el nombre de usuario al correo indicado
+export const pedirUsuario = (email) => pedir('/api/auth/olvide-usuario/', { method: 'POST', datos: { email } })
+
 // Enlace del correo para elegir o restablecer la contraseña (/restablecer/:uid/:token)
 export const comprobarEnlace = (uid, token) => pedir(`/api/auth/restablecer/${uid}/${token}/`)
 

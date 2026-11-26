@@ -10,12 +10,17 @@ def vigilar_env(sender, **kwargs):
 
 
 def nombres_con_mayuscula(sender, instance, **kwargs):
-    # Antes de guardar cualquier modelo de core: primera letra en mayúscula
-    from .models import CAMPOS_NOMBRE, con_mayuscula
+    # Antes de guardar: personas con mayúscula en cada palabra, cosas y
+    # títulos con la primera letra en mayúscula
+    from .models import CAMPOS_NOMBRE, CAMPOS_PERSONA, MODELOS_PERSONA, con_mayuscula, nombre_propio
 
-    for campo in CAMPOS_NOMBRE:
+    if sender.__name__ in MODELOS_PERSONA:
+        campos, regla = CAMPOS_PERSONA, nombre_propio
+    else:
+        campos, regla = CAMPOS_NOMBRE, con_mayuscula
+    for campo in campos:
         if hasattr(instance, campo):
-            setattr(instance, campo, con_mayuscula(getattr(instance, campo)))
+            setattr(instance, campo, regla(getattr(instance, campo)))
 
 
 class CoreConfig(AppConfig):
@@ -26,5 +31,5 @@ class CoreConfig(AppConfig):
 
         autoreload_started.connect(vigilar_env)
         for modelo in self.get_models():
-            if any(f.name in ("nombre", "first_name") for f in modelo._meta.fields):
+            if any(f.name in ("nombre", "first_name", "titulo") for f in modelo._meta.fields):
                 pre_save.connect(nombres_con_mayuscula, sender=modelo, dispatch_uid=f"mayuscula-{modelo.__name__}")

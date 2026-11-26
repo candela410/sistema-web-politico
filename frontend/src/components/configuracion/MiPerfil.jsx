@@ -21,6 +21,7 @@ import Confirmacion from '../comunes/Confirmacion'
 import Modal from '../comunes/Modal'
 import FichaUsuario from '../perfil/FichaUsuario'
 import { fotoCuadrada } from './foto'
+import Obligatorio from '../comunes/Obligatorio'
 
 // Mi perfil: los datos del usuario que inició sesión. Puede cambiar su foto,
 // modificar sus datos (nombre, apellido, correo, teléfono y dirección) y pedir
@@ -146,7 +147,8 @@ function EditarDatos({ usuario, onGuardado, onCerrar }) {
   const campo = (nombre, etiqueta, props = {}, opcional = false) => (
     <label>
       <span>
-        {etiqueta} {opcional && <span className="opcional">(opcional)</span>}
+        {etiqueta}
+        {opcional ? <span className="opcional"> (opcional)</span> : <Obligatorio />}
       </span>
       <input
         className="entrada"

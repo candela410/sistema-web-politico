@@ -246,3 +246,79 @@
 .aviso-correo p {
   margin: 0;
 }
+
+/* --- Notificaciones ------------------------------------------------------ */
+
+.config-notificaciones {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.config-notificaciones__encabezado {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.config-notificaciones__encabezado h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.config-notificaciones__encabezado p {
+  margin: 2px 0 0;
+  color: var(--lla-gris);
+  font-size: 0.9rem;
+}
+
+.config-notificaciones__icono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgb(var(--o-tinte, 81 49 143) / 0.1);
+  color: var(--o-violeta-texto, var(--lla-violeta));
+}
+
+.config-notificaciones__lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--lla-borde);
+  border-radius: 12px;
+}
+
+.config-notificaciones__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--o-linea, #ecebf0);
+}
+
+.config-notificaciones__item:last-child {
+  border-bottom: 0;
+}
+
+.config-notificaciones__item > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.config-notificaciones__item span {
+  color: var(--lla-gris);
+  font-size: 0.86rem;
+}
+
+@media (max-width: 560px) {
+  .config-notificaciones__item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

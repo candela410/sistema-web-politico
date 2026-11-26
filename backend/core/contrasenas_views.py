@@ -36,6 +36,7 @@ from .api import error, leer_json, requiere_permiso
 from .bitacora import registrar
 from .limites import ip_de, sumar, superado
 from .notificaciones import contrasena_cambiada
+from .validaciones import email as validar_email
 from .models import Usuario
 
 ENLACE_INVALIDO = "El enlace no es válido o ya venció. Solicite uno nuevo desde «¿Olvidó su contraseña?»."
@@ -112,7 +113,8 @@ def _correo(asunto, contenido, enlace, destino):
         f"{contenido['saludo']}\n\n"
         + "\n\n".join(contenido["parrafos"])
         + f"\n\n{contenido['boton']}:\n{enlace}\n\n"
-        + f"El enlace vence en {contexto['horas']} horas y puede utilizarse una sola vez."
+        + ("" if contenido.get("sin_vencimiento") else
+           f"El enlace vence en {contexto['horas']} horas y puede utilizarse una sola vez.")
         + (contenido["aviso"] or "")
         + "\n\nAtentamente,\nAdministración del Panel de gestión\n\n"
         + "Este es un mensaje automático. Por favor, no responda a este correo.\n"
@@ -183,6 +185,53 @@ def cambiar_propia(request):
 OLVIDE_MAX_POR_IP = 10       # pedidos desde la misma IP...
 OLVIDE_MAX_POR_USUARIO = 3   # ...o para el mismo usuario...
 OLVIDE_VENTANA = 60 * 60     # ...en una hora
+
+
+PEDIDO_USUARIO = (
+    "Si el correo pertenece a un usuario activo, le enviamos su nombre de usuario. "
+    "Revise su bandeja de entrada y la carpeta de spam."
+)
+
+
+@require_POST
+def olvide_usuario(request):
+    """"¿Olvidó su usuario?" del login: POST {email}. Envía el nombre de usuario
+    al correo, si pertenece a un usuario activo. Siempre responde lo mismo, para
+    no revelar qué correos están cargados, y con el mismo límite de pedidos."""
+    datos = leer_json(request)
+    if datos is None:
+        return error("Los datos enviados no son válidos.")
+    email = str(datos.get("email") or "").strip().lower()
+    mensaje = validar_email(email)
+    if mensaje:
+        return error(mensaje)
+    ip = ip_de(request)
+    if superado("olvide-ip", ip, OLVIDE_MAX_POR_IP):
+        return error("Demasiados pedidos. Espere un rato e intente de nuevo.", 429)
+    sumar("olvide-ip", ip, OLVIDE_VENTANA)
+    if superado("olvide-usuario", email, OLVIDE_MAX_POR_USUARIO):
+        return JsonResponse({"ok": True, "mensaje": PEDIDO_USUARIO})
+    sumar("olvide-usuario", email, OLVIDE_VENTANA)
+    usuario = Usuario.objects.filter(email__iexact=email, is_active=True).first()
+    if usuario is not None and _es_real(usuario.email):
+        contenido = {
+            "etiqueta": "Seguridad de la cuenta",
+            "titulo": "Su nombre de usuario",
+            "saludo": f"Estimado/a {usuario.first_name or usuario.email}:",
+            "parrafos": [
+                f"Recibimos una solicitud para recordar su nombre de usuario del Panel de gestión: {usuario.username}",
+                "Ingrese con ese nombre de usuario y su contraseña. Si tampoco recuerda la contraseña, "
+                "use «¿Olvidó su contraseña?» en la pantalla de inicio de sesión.",
+            ],
+            "boton": "Iniciar sesión",
+            "aviso": "Si usted no realizó esta solicitud, puede ignorar este mensaje.",
+            "sin_vencimiento": True,
+        }
+        try:
+            _correo("Su nombre de usuario", contenido, f"{settings.FRONTEND_URL}/login", usuario.email).send()
+        except OSError:
+            return error(SIN_ENVIO, 502)
+    return JsonResponse({"ok": True, "mensaje": PEDIDO_USUARIO})
 
 
 @require_POST

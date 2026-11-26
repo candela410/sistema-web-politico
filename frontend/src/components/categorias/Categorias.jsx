@@ -12,6 +12,7 @@ import AvisoOk from '../comunes/AvisoOk'
 import Interruptor from '../comunes/Interruptor'
 import { tiene } from '../../permisos'
 import { conFiltro, nombreCosa, primeraMayuscula, useConCambios } from '../../validaciones'
+import Obligatorio from '../comunes/Obligatorio'
 
 const ordenar = (lista) => [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
@@ -41,7 +42,7 @@ function FormularioCategoria({ categoria, onGuardada, onCerrar }) {
   return (
     <Modal titulo={categoria ? 'Editar categoría' : 'Nueva categoría'} onCerrar={onCerrar}>
       <form className="formulario-categoria" onSubmit={guardar}>
-        <label htmlFor="cat-nombre">Nombre</label>
+        <label htmlFor="cat-nombre">Nombre<Obligatorio /></label>
         <input
           id="cat-nombre"
           className="entrada"

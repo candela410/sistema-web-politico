@@ -16,9 +16,22 @@ def con_mayuscula(texto):
     return texto[:1].upper() + texto[1:]
 
 
-# Campos que se guardan siempre con la primera letra en mayúscula: todo
-# "nombre" y, en usuarios, el nombre y el apellido. Ver CoreConfig.ready().
-CAMPOS_NOMBRE = ("nombre", "first_name", "last_name")
+def nombre_propio(texto):
+    """Nombre o apellido de una persona: mayúscula al principio de cada palabra
+    ("maría josé" → "María José", "o'connor" → "O'Connor"). Igual que
+    nombrePropio del frontend."""
+    if not isinstance(texto, str):
+        return texto
+    texto = re.sub(r"\s+", " ", texto).strip()
+    return re.sub(r"(^|[\s'\-])(\w)", lambda m: m.group(1) + m.group(2).upper(), texto)
+
+
+# Campos que se guardan siempre empezando con mayúscula (ver CoreConfig.ready()):
+# - nombres de personas (usuarios y encuestados): cada palabra
+# - nombres de cosas y títulos (campaña, zona, cuestionario…): la primera letra
+CAMPOS_PERSONA = ("first_name", "last_name", "nombre", "apellido")
+MODELOS_PERSONA = ("Usuario", "Encuestado")
+CAMPOS_NOMBRE = ("nombre", "titulo")
 
 
 NUMERO = re.compile(r"^\s*-?\d+([.,]\d+)?\s*$")
@@ -626,3 +639,23 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return f"{self.titulo} ({self.usuario_id})"
+
+
+# Qué avisos quiere recibir cada usuario (Configuración → Notificaciones). Una
+# fila por usuario y tipo; si no hay fila, el aviso se recibe.
+class PreferenciaNotificacion(models.Model):
+    pk = models.CompositePrimaryKey("usuario", "tipo")
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        db_column="documento_usuario",
+        related_name="preferencias_notificaciones",
+    )
+    tipo = models.CharField(max_length=30, choices=Notificacion.Tipo)
+    recibir = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "preferencias_notificaciones"
+        verbose_name = "preferencia de notificación"
+        verbose_name_plural = "preferencias de notificaciones"
+        default_permissions = ()

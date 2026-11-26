@@ -3,11 +3,10 @@ import { obtenerHistorial } from '../../api/usuarios'
 import './actividad.css'
 import Esqueleto from '../comunes/Esqueleto'
 import Paginacion, { POR_PAGINA } from '../comunes/Paginacion'
-import { Eye, EyeOff } from 'lucide-react'
 
-// Historial de actividad de la campaña activa: cada movimiento registrado en
-// el log de Django (fecha, hora, quién, qué hizo y, si editó, el valor
-// anterior y el nuevo). Como el resto del sistema, muestra solo la campaña en
+// Historial de actividad de la campaña activa, en un cuadro: cada movimiento
+// registrado en el log de Django (fecha y hora, quién, qué hizo, sobre qué y,
+// si editó, el dato anterior y el nuevo de cada campo). Como el resto del sistema, muestra solo la campaña en
 // la que se está trabajando.
 
 const ACCIONES = {
@@ -18,69 +17,54 @@ const ACCIONES = {
 }
 
 const FILTROS_VACIOS = { usuario: '', accion: '', seccion: '', desde: '', hasta: '' }
-const formatoDia = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-const formatoHora = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+const formatoFecha = new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+const formatoHora = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' })
 
 const valor = (v) => (v === '' || v == null ? <span className="cambios__vacio">(vacío)</span> : String(v))
 
-function Movimiento({ m }) {
-  const [abierto, setAbierto] = useState(false)
-  const accion = ACCIONES[m.accion] ?? ACCIONES.editar
-  const hayCambios = m.cambios.length > 0
+// Dato anterior o nuevo: un renglón por campo que cambió ("Nombre: Juan")
+function Datos({ cambios, lado }) {
+  if (!cambios.length) return <span className="cambios__vacio">—</span>
   return (
-    <li className={`movimiento movimiento--${accion.clase}`}>
-      <span className="movimiento__hora">{formatoHora.format(new Date(m.fecha))}</span>
-      <span className="movimiento__marca" aria-hidden="true" />
-      <div className="movimiento__cuerpo">
-        <p className="movimiento__titulo">
-          <b>{m.usuario.nombre}</b>{' '}
-          <span className={`accion accion--${accion.clase}`}>{accion.texto}</span>{' '}
-          {m.accion !== 'sesion' && (
-            <>
-              <span className="movimiento__seccion">{m.seccion}</span> <b>{m.objeto}</b>
-            </>
-          )}
-          {m.accion === 'sesion' && <span>{m.detalle}</span>}
-        </p>
-        {m.detalle && m.accion !== 'sesion' && <p className="movimiento__detalle">{m.detalle}</p>}
-        {m.desde_admin && <p className="movimiento__detalle">Realizado desde el administrador de Django.</p>}
-        {hayCambios && (
-          <>
-            <button
-              type="button"
-              className="enlace-boton enlace-boton--icono"
-              aria-expanded={abierto}
-              onClick={() => setAbierto((a) => !a)}
-            >
-              {abierto ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
-              {abierto ? 'Ocultar cambios' : `Ver ${m.cambios.length === 1 ? 'el cambio' : `los ${m.cambios.length} cambios`}`}
-            </button>
-            {abierto && (
-              <div className="cambios-envoltura">
-                <table className="cambios">
-                  <thead>
-                    <tr>
-                      <th scope="col">Campo</th>
-                      <th scope="col">Antes</th>
-                      <th scope="col">Después</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {m.cambios.map((c) => (
-                      <tr key={c.campo}>
-                        <th scope="row">{c.campo}</th>
-                        <td className="cambios__antes">{valor(c.antes)}</td>
-                        <td className="cambios__despues">{valor(c.despues)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </li>
+    <ul className="datos">
+      {cambios.map((c) => (
+        <li key={c.campo}>
+          <span className="datos__campo">{c.campo}</span>
+          <span className={`datos__valor datos__valor--${lado}`}>{valor(lado === 'antes' ? c.antes : c.despues)}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// Una fila del cuadro de actividad
+function Fila({ m }) {
+  const accion = ACCIONES[m.accion] ?? ACCIONES.editar
+  const fecha = new Date(m.fecha)
+  const sesion = m.accion === 'sesion'
+  return (
+    <tr>
+      <td className="actividad-tabla__fecha">
+        <span>{formatoFecha.format(fecha)}</span>
+        <small>{formatoHora.format(fecha)}</small>
+      </td>
+      <td className="actividad-tabla__usuario">{m.usuario.nombre}</td>
+      <td>
+        <span className={`accion accion--${accion.clase}`}>{accion.texto}</span>
+      </td>
+      <td>{sesion ? '—' : m.seccion}</td>
+      <td className="actividad-tabla__registro">
+        {sesion ? m.detalle : <b>{m.objeto}</b>}
+        {!sesion && m.detalle && <small>{m.detalle}</small>}
+        {m.desde_admin && <small>Desde el administrador de Django</small>}
+      </td>
+      <td className="actividad-tabla__dato actividad-tabla__dato--antes">
+        <Datos cambios={m.cambios} lado="antes" />
+      </td>
+      <td className="actividad-tabla__dato actividad-tabla__dato--despues">
+        <Datos cambios={m.cambios} lado="despues" />
+      </td>
+    </tr>
   )
 }
 
@@ -117,14 +101,6 @@ function Actividad({ usuario }) {
     setPagina(1)
   }
   const hayFiltros = Object.values(filtros).some(Boolean)
-
-  // Agrupa por día
-  const dias = []
-  for (const m of datos?.movimientos ?? []) {
-    const dia = formatoDia.format(new Date(m.fecha))
-    if (dias.at(-1)?.dia !== dia) dias.push({ dia, movimientos: [] })
-    dias.at(-1).movimientos.push(m)
-  }
 
   return (
     <main className="pagina pagina--ancha">
@@ -213,16 +189,26 @@ function Actividad({ usuario }) {
           <p className="texto-suave">
             {datos.total} movimiento{datos.total === 1 ? '' : 's'}
           </p>
-          {dias.map((d) => (
-            <section key={d.dia} className="dia">
-              <h2 className="dia__titulo">{d.dia}</h2>
-              <ol className="linea-tiempo">
-                {d.movimientos.map((m) => (
-                  <Movimiento key={m.id} m={m} />
+          <div className="actividad-tabla-envoltura">
+            <table className="actividad-tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Fecha y hora</th>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Acción</th>
+                  <th scope="col">Sección</th>
+                  <th scope="col">Registro</th>
+                  <th scope="col">Dato anterior</th>
+                  <th scope="col">Dato nuevo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {datos.movimientos.map((m) => (
+                  <Fila key={m.id} m={m} />
                 ))}
-              </ol>
-            </section>
-          ))}
+              </tbody>
+            </table>
+          </div>
           <Paginacion
             pagina={datos.pagina}
             paginas={datos.paginas}

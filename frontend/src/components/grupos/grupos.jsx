@@ -10,6 +10,7 @@ import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import Buscador from '../comunes/Buscador'
 import { normalizar } from '../comunes/normalizar'
 import { conFiltro, nombreCosa, useConCambios } from '../../validaciones'
+import Obligatorio from '../comunes/Obligatorio'
 
 const ordenar = (lista) =>
   [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
@@ -82,7 +83,7 @@ function FormularioGrupo({ grupo, onGuardado, onCerrar }) {
       onCerrar={onCerrar}
     >
       <form className="formulario-grupo" onSubmit={guardar}>
-        <label htmlFor="grupo-nombre">Nombre del rol</label>
+        <label htmlFor="grupo-nombre">Nombre del rol<Obligatorio /></label>
 
         <input
           id="grupo-nombre"

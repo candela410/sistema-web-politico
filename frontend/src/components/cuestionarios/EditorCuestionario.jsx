@@ -5,6 +5,7 @@ import { obtenerCategorias } from '../../api/categorias'
 import * as api from '../../api/cuestionarios'
 import './cuestionarios.css'
 import { variableDe } from './variable'
+import Obligatorio from '../comunes/Obligatorio'
 
 // Editor de cuestionarios al estilo Google Forms: una tarjeta para el título
 // y una tarjeta por pregunta, con sus opciones.
@@ -326,7 +327,7 @@ function EditorCuestionario() {
             className="campo-linea campo-linea--titulo"
             value={form.titulo}
             onChange={conFiltro(textoLibre, (titulo) => actualizar({ titulo }))}
-            placeholder="Título del cuestionario"
+            placeholder="Título del cuestionario *"
             aria-label="Título del cuestionario"
             maxLength={180}
             autoCapitalize="sentences"
@@ -346,7 +347,9 @@ function EditorCuestionario() {
           />
           <div className="tarjeta-titulo__ajustes">
             <label className="tarjeta-titulo__campo">
-              Categoría
+              <span>
+                Categoría<Obligatorio />
+              </span>
               <select
                 className="entrada"
                 value={form.categoria}

@@ -12,6 +12,7 @@ import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import Buscador from '../comunes/Buscador'
 import { normalizar } from '../comunes/normalizar'
 import { conFiltro, nombreCosa, useConCambios } from '../../validaciones'
+import Obligatorio from '../comunes/Obligatorio'
 
 function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) {
   const [nombre, setNombre] = useState(equipo?.nombre ?? '')
@@ -44,7 +45,7 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
   return (
     <Modal titulo={equipo ? 'Editar equipo' : 'Nuevo equipo'} onCerrar={onCerrar}>
       <form className="formulario-equipo" onSubmit={guardar}>
-        <label htmlFor="equipo-nombre">Nombre</label>
+        <label htmlFor="equipo-nombre">Nombre<Obligatorio /></label>
         <input
           id="equipo-nombre"
           className="entrada"
@@ -59,7 +60,7 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
           required
         />
 
-        <label htmlFor="equipo-ruta">Ruta</label>
+        <label htmlFor="equipo-ruta">Ruta<Obligatorio /></label>
         <select
           id="equipo-ruta"
           className="entrada"

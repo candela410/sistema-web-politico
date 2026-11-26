@@ -6,6 +6,7 @@ import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import * as api from '../../api/mapa'
 import { conFiltro, nombreCosa, primeraMayuscula, useConCambios } from '../../validaciones'
 import { PERFILES, distancia, duracion } from './formato'
+import Obligatorio from '../comunes/Obligatorio'
 
 // Agrupa las rutas por zona (rutas → calles → barrios → zonas). Una ruta que
 // pasa por dos zonas aparece en las dos; las que no pasan por ninguna, al final.
@@ -48,7 +49,7 @@ function FormularioRuta({ modo, setModo, form, cambiar, escribir, guardando, onG
         <p className="texto-suave">{faltan === 2 ? 'Faltan al menos 2 puntos.' : 'Falta al menos 1 punto.'}</p>
       )}
 
-      <label htmlFor="ruta-nombre">Nombre</label>
+      <label htmlFor="ruta-nombre">Nombre<Obligatorio /></label>
       <input
         id="ruta-nombre"
         className="entrada"

@@ -11,6 +11,7 @@ import Logo from '../comunes/Logo'
 import FondoLogin from './FondoLogin'
 import CampoContrasena from './CampoContrasena'
 import './Login.css'
+import Obligatorio from '../comunes/Obligatorio'
 
 // Componente Login. Recibe "onIngreso", una función que se ejecuta cuando el login sale bien
 // (App.jsx la usa para guardar el usuario y redirigir)
@@ -75,7 +76,7 @@ export default function Login({ onIngreso }) {
           </div>
 
           {/* ----- NOMBRE DE USUARIO: sin mayúsculas ni corrector ----- */}
-          <label htmlFor="usuario">Usuario</label>
+          <label htmlFor="usuario">Usuario<Obligatorio /></label>
           <div className={`login__field${verError('nombre') ? ' login__field--error' : ''}`}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="8" r="4" />
@@ -108,7 +109,7 @@ export default function Login({ onIngreso }) {
           )}
 
           {/* ----- CONTRASEÑA: oculta, con el ojito para verla ----- */}
-          <label htmlFor="password">Contraseña</label>
+          <label htmlFor="password">Contraseña<Obligatorio /></label>
           <CampoContrasena
             id="password"
             value={password}
@@ -127,7 +128,7 @@ export default function Login({ onIngreso }) {
               <span>Recordar</span>
             </label>
             <Link to="/olvide" state={{ usuario: nombre.trim() }}>
-              ¿Olvidó su contraseña?
+              ¿Olvidó su usuario o contraseña?
             </Link>
           </div>
 

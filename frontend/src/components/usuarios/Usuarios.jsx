@@ -1,3 +1,4 @@
+import Obligatorio from '../comunes/Obligatorio'
 import { useEffect, useMemo, useState } from 'react'
 import * as api from '../../api/usuarios'
 import { tiene } from '../../permisos'
@@ -30,15 +31,6 @@ import {
 
 const formatoFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
 
-// Asterisco rojo de los campos obligatorios (solo al crear)
-function Obligatorio({ si }) {
-  if (!si) return null
-  return (
-    <span className="obligatorio" aria-hidden="true">
-      {' '}*
-    </span>
-  )
-}
 
 // Alta y edición. No se escribe contraseña: al crear el usuario le llega por
 // correo una invitación para elegirla, y después se restablece con la llave.
@@ -434,27 +426,28 @@ function Usuarios({ usuario: yo }) {
                     </span>
                   </span>
                 </div>
+                {/* Primero el interruptor de activo y después, a la derecha, los botones cuadrados */}
                 <div className="tarjeta-fila__acciones acciones-iconos">
+                  {/* Uno no puede desactivarse a sí mismo: no se muestra el interruptor */}
+                  {puedeEditar && u.id !== yo.id && (
+                    <Interruptor
+                      activo={u.activo}
+                      onCambiar={() => cambiarEstado(u)}
+                      etiqueta={`Usuario ${u.email} activo`}
+                      confirmacion={{
+                        titulo: 'Desactivar usuario',
+                        mensaje: (
+                          <>
+                            ¿Desea desactivar a <b>{`${u.nombre} ${u.apellido}`.trim() || u.email}</b>? No podrá
+                            iniciar sesión hasta que se vuelva a activar.
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
                   <BotonIcono icono={Eye} etiqueta="Ver datos" onClick={() => setViendo(u)} />
                   {puedeEditar && (
                     <>
-                      {/* Uno no puede desactivarse a sí mismo: no se muestra el interruptor */}
-                      {u.id !== yo.id && (
-                        <Interruptor
-                          activo={u.activo}
-                          onCambiar={() => cambiarEstado(u)}
-                          etiqueta={`Usuario ${u.email} activo`}
-                          confirmacion={{
-                            titulo: 'Desactivar usuario',
-                            mensaje: (
-                              <>
-                                ¿Desea desactivar a <b>{`${u.nombre} ${u.apellido}`.trim() || u.email}</b>? No podrá
-                                iniciar sesión hasta que se vuelva a activar.
-                              </>
-                            ),
-                          }}
-                        />
-                      )}
                       <BotonIcono
                         icono={KeyRound}
                         etiqueta="Restablecer contraseña"

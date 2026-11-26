@@ -6,6 +6,7 @@ import Confirmacion from '../comunes/Confirmacion'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import * as api from '../../api/mapa'
 import { COLORES_ZONA } from './formato'
+import Obligatorio from '../comunes/Obligatorio'
 
 function SelectorColor({ valor, onCambio }) {
   return (
@@ -102,7 +103,7 @@ function PanelZonas({ zonas, rutas, modo, setModo, seleccionada, onSeleccionar, 
         )}
         {editando && <p className="paso">Arrastre los vértices en el mapa para cambiar el contorno.</p>}
 
-        <label htmlFor="zona-nombre">Nombre</label>
+        <label htmlFor="zona-nombre">Nombre<Obligatorio /></label>
         <input
           id="zona-nombre"
           className="entrada"

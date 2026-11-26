@@ -143,3 +143,8 @@
     transition: opacity 125ms ease;
   }
 }
+
+/* Interruptor de "activo" al comienzo del grupo, separado de los botones cuadrados */
+.acciones-iconos > .interruptor {
+  margin-right: 8px;
+}

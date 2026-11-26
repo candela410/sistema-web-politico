@@ -315,3 +315,47 @@
     opacity: 0.18;
   }
 }
+/* "¿Qué olvidó?": elegir entre recuperar la contraseña o el usuario */
+.login__elegir {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 20px;
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.login__elegir-opcion {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.login__elegir-opcion:hover {
+  color: var(--purple);
+}
+
+.login__elegir-opcion--activa {
+  background: #fff;
+  color: var(--purple);
+  box-shadow: 0 1px 4px rgba(21, 18, 28, 0.12);
+}
+
+.login__elegir-opcion:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login__elegir-opcion {
+    transition: none;
+  }
+}

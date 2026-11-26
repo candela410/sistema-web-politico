@@ -751,8 +751,8 @@
   color: var(--o-violeta-texto, var(--lla-violeta));
 }
 
-.avisos__item-icono--asignacion,
-.avisos__item-icono--encuesta {
+.avisos__item-icono--cuestionario_asignado,
+.avisos__item-icono--encuesta_cargada {
   background: rgb(195 38 140 / 0.1);
   color: var(--o-magenta-texto, var(--lla-magenta));
 }
@@ -762,7 +762,8 @@
   color: var(--o-verde-texto, #1d8a4e);
 }
 
-.avisos__item-icono--borrar {
+.avisos__item-icono--backup_fallido,
+.avisos__item-icono--contrasena_cambiada {
   background: rgb(192 24 47 / 0.1);
   color: var(--o-rojo-texto, #c0182f);
 }

@@ -111,6 +111,9 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 # usuario (apellido + inicial del nombre); ver core/views.py
 AUTH_USER_MODEL = 'core.Usuario'
 
+# Los permisos de cada usuario son los de su rol (usuarios.id_grupo)
+AUTHENTICATION_BACKENDS = ['core.backends.GrupoBackend']
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators

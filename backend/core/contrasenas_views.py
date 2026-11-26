@@ -26,13 +26,15 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from .api import error, leer_json, requiere_permiso
 from .bitacora import registrar
+from .limites import ip_de, sumar, superado
+from .notificaciones import contrasena_cambiada
 from .models import Usuario
 
 ENLACE_INVALIDO = "El enlace no es válido o ya venció. Solicite uno nuevo desde «¿Olvidó su contraseña?»."
 SIN_ENVIO = "No se pudo enviar el correo. Revise la configuración de correo del servidor."
 PEDIDO_RECIBIDO = (
     "Si el nombre de usuario pertenece a un usuario activo, enviamos a su correo electrónico un enlace "
-    "para elegir una contraseña nueva."
+    "para elegir una contraseña nueva. Revise su bandeja de entrada y la carpeta de spam."
 )
 
 
@@ -170,6 +172,11 @@ def cambiar_propia(request):
     return JsonResponse({"ok": True, "email": destino})
 
 
+OLVIDE_MAX_POR_IP = 10       # pedidos desde la misma IP...
+OLVIDE_MAX_POR_USUARIO = 3   # ...o para el mismo usuario...
+OLVIDE_VENTANA = 60 * 60     # ...en una hora
+
+
 @require_POST
 def olvide(request):
     """"¿Olvidó su contraseña?" del login: POST {usuario}. El enlace se envía
@@ -181,6 +188,16 @@ def olvide(request):
     nombre = str(datos.get("usuario") or "").strip()
     if not nombre:
         return error("Ingrese su nombre de usuario.")
+    # Límite de pedidos: por IP se avisa; por usuario se responde igual que
+    # siempre pero sin mandar otro correo (no revela si el usuario existe y
+    # evita llenarle la casilla a alguien)
+    ip = ip_de(request)
+    if superado("olvide-ip", ip, OLVIDE_MAX_POR_IP):
+        return error("Demasiados pedidos. Espere un rato e intente de nuevo.", 429)
+    sumar("olvide-ip", ip, OLVIDE_VENTANA)
+    if superado("olvide-usuario", nombre, OLVIDE_MAX_POR_USUARIO):
+        return JsonResponse({"ok": True, "mensaje": PEDIDO_RECIBIDO})
+    sumar("olvide-usuario", nombre, OLVIDE_VENTANA)
     usuario = buscar_por_nombre(nombre)
     if usuario is not None and _es_real(usuario.email):
         _, mensaje = enviar_enlace_a(usuario)
@@ -231,6 +248,10 @@ def restablecer(request, uid, token):
         validate_password(password, usuario)
     except ValidationError as e:
         return error(" ".join(e.messages))
+    tenia = usuario.has_usable_password()
     usuario.set_password(password)
     usuario.save(update_fields=["password"])
+    # Al elegirla por primera vez (invitación) no se avisa: no es un cambio
+    if tenia:
+        contrasena_cambiada(usuario)
     return JsonResponse({"ok": True})

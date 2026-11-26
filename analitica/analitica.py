@@ -167,12 +167,12 @@ def leer_encuestas(conn, campana):
     sql = """
         SELECT e.id_encuesta,
                e.realizada_en,
-               u.id AS id_usuario,
+               u.documento AS documento_usuario,
                COALESCE(NULLIF(TRIM(u.first_name || ' ' || u.last_name), ''), u.email) AS militante,
                COALESCE(eq.nombre, 'Sin equipo') AS equipo,
                u.id_campana
         FROM encuestas e
-        JOIN usuarios u ON u.id = e.id_usuario
+        JOIN usuarios u ON u.documento = e.documento_usuario
         LEFT JOIN equipos eq ON eq.id_equipo = u.id_equipo
     """
     parametros = {}

@@ -20,11 +20,11 @@ COSA = re.compile(r"^[^\W_](?:[^\W_]|[ .,\-'()/º°])*$")
 SIMBOLOS = re.compile(r"[@#$^*_=<>{}\[\]|\\~`]")
 TELEFONO = re.compile(r"^\+?[\d\s()\-]+$")
 # Iguales a las del frontend (validaciones.js)
-EMAIL = re.compile(r"[^\s@]+@[^\s@.]+(\.[^\s@.]+)+")
-CONTRASENA = re.compile(r"(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{6,}")
+EMAIL = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}")
+CONTRASENA = re.compile(r"(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}")
 
 MENSAJE_EMAIL = "Ingrese un correo electrónico válido (por ejemplo, usuario@correo.com)."
-MENSAJE_CONTRASENA = "La contraseña debe tener al menos 6 caracteres, con una mayúscula, una minúscula y un número."
+MENSAJE_CONTRASENA = "La contraseña debe tener al menos 8 caracteres, con una mayúscula, una minúscula y un número."
 
 
 def espacios(texto):
@@ -87,7 +87,7 @@ def email(texto):
 
 
 def contrasena(texto):
-    """6 o más caracteres con una mayúscula, una minúscula y un número."""
+    """8 o más caracteres con una mayúscula, una minúscula y un número."""
     if not isinstance(texto, str) or not CONTRASENA.fullmatch(texto):
         return MENSAJE_CONTRASENA
     return None

@@ -21,7 +21,7 @@ from .validaciones import nombre_cosa
 def _integrantes(group, campana):
     """Usuarios del grupo. Los usuarios son de una campaña: se muestran los de la
     campaña activa (o todos si no hay una elegida)."""
-    usuarios = group.user_set.all()
+    usuarios = group.usuarios.all()
     if campana is not None:
         usuarios = usuarios.filter(campana=campana)
     return [
@@ -42,7 +42,7 @@ def grupo_json(group, campana=None):
         "permisos": sorted(p.pk for p in group.permissions.all() if p.content_type.app_label == "core"),
         "usuarios": _integrantes(group, campana),
         # De todas las campañas: con alguno no se puede borrar
-        "total_usuarios": group.user_set.count(),
+        "total_usuarios": group.usuarios.count(),
     }
 
 
@@ -132,7 +132,7 @@ def grupo_detalle(request, pk):
     group = get_object_or_404(Group, pk=pk)
 
     if request.method == "DELETE":
-        cantidad = group.user_set.count()
+        cantidad = group.usuarios.count()
         if cantidad:
             return error(
                 f"No se puede eliminar el rol porque tiene {cantidad} usuario{'s' if cantidad != 1 else ''} asignado{'s' if cantidad != 1 else ''}.",

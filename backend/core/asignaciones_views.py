@@ -1,6 +1,6 @@
 """Asignación de cuestionarios a militantes.
 
-La tabla usuariosxcuestionarios guarda una fila por usuario (id_usuario,
+La tabla usuariosxcuestionarios guarda una fila por usuario (documento_usuario,
 id_cuestionario). En la pantalla se eligen equipos completos o personas
 sueltas, pero lo que se guarda siempre es usuario por usuario:
 - Si alguien entra a un equipo después, no recibe el cuestionario solo.
@@ -18,7 +18,8 @@ from .api import error, leer_json, requiere_permiso
 from .bitacora import registrar
 from .cuestionarios_views import cuestionarios_de_campana
 from .equipos_views import equipos_de_campana
-from .models import AsignacionCuestionario, Usuario
+from . import notificaciones
+from .models import AsignacionCuestionario, Encuesta, Usuario
 
 PERMISOS = {
     "GET": "core.view_asignacioncuestionario",
@@ -63,7 +64,7 @@ def asignaciones(request, pk):
     if datos is None:
         return error("Los datos enviados no son válidos.")
     ids = datos.get("usuarios")
-    if not isinstance(ids, list) or not all(isinstance(i, int) and not isinstance(i, bool) for i in ids):
+    if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
         return error("La lista de usuarios no es válida.")
     elegidos = set(ids)
     antes = _asignados(cuestionario)
@@ -74,10 +75,10 @@ def asignaciones(request, pk):
         if validos != nuevos:
             return error("Alguno de los usuarios seleccionados no existe o no está activo.")
     quitados = antes - elegidos
-    # encuestas.(id_usuario, id_cuestionario) es FK a esta asignación: a quien ya
+    # encuestas.(documento_usuario, id_cuestionario) es FK a esta asignación: a quien ya
     # cargó encuestas de este cuestionario no se le puede quitar
     con_encuestas = set(
-        cuestionario.encuestas.filter(usuario_id__in=quitados).values_list("usuario_id", flat=True)
+        Encuesta.objects.filter(id_cuestionario=cuestionario.pk, documento_usuario__in=quitados).values_list("documento_usuario", flat=True)
     )
     if con_encuestas:
         nombres = ", ".join(sorted(_nombre(u) for u in Usuario.objects.filter(pk__in=con_encuestas)))
@@ -89,6 +90,8 @@ def asignaciones(request, pk):
             AsignacionCuestionario.objects.bulk_create(
                 [AsignacionCuestionario(cuestionario=cuestionario, usuario_id=i) for i in nuevos]
             )
+        if nuevos:
+            notificaciones.cuestionario_asignado(Usuario.objects.filter(pk__in=nuevos), cuestionario)
         nombres = {u.pk: _nombre(u) for u in Usuario.objects.filter(pk__in=antes | elegidos)}
         lista = lambda ids_: ", ".join(sorted(nombres[i] for i in ids_)) or "Nadie"
         partes = []

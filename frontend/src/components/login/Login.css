@@ -293,7 +293,8 @@
 @media (prefers-reduced-motion: reduce) {
   .login__submit:active:not(:disabled) { transform: none; }
 }
-.login__submit:disabled { opacity: 0.7; cursor: wait; }
+.login__submit:disabled { opacity: 0.55; cursor: not-allowed; }
+.login__submit[aria-busy='true'] { opacity: 0.7; cursor: wait; }
 /* Mismo botón, pero como enlace (pantalla de restablecer contraseña) */
 .login__submit--enlace {
   display: flex;

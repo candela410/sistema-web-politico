@@ -219,6 +219,9 @@ def revisar():
             except ErrorNeon as e:
                 registro.warning("Backup automático: %s", e)
                 ConfiguracionBackup.objects.filter(pk=1).update(ultimo_error=str(e))
+                from .notificaciones import backup_fallido
+
+                backup_fallido(e)
             else:
                 ConfiguracionBackup.objects.filter(pk=1).update(ultimo_automatico=timezone.now(), ultimo_error="")
     return max(30.0, (proximo(config, ahora) - ahora).total_seconds() + 5)

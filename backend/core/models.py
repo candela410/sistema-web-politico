@@ -231,6 +231,8 @@ def username_libre(nombre, apellido, usuario=None):
 
 # Usuario del sistema: reemplaza a auth_user. Los grupos y permisos
 # son los de Django (auth_group, auth_permission, auth_group_permissions).
+# Sin usuarios_groups ni usuarios_user_permissions: el rol es solo
+# usuarios.id_grupo y los permisos salen de ese grupo (core/backends.py).
 class Usuario(AbstractUser):
     # Se ingresa con el nombre de usuario (username: apellido + inicial del
     # nombre, ver base_username). El correo es único: a él llegan los enlaces
@@ -247,7 +249,7 @@ class Usuario(AbstractUser):
     )
     # Rol del usuario: FK a la tabla de grupos de Django (auth_group). Un
     # usuario tiene un solo grupo y un grupo muchos usuarios. Los permisos se
-    # toman de ese grupo (usuarios_groups se mantiene igual a este campo).
+    # toman de ese grupo (auth_group_permissions).
     grupo = models.ForeignKey(
         "auth.Group",
         on_delete=models.SET_NULL,
@@ -258,7 +260,10 @@ class Usuario(AbstractUser):
     )
 
     # Datos de la persona (antes estaban en la tabla militantes)
-    documento = models.CharField(max_length=30, unique=True, null=True, blank=True)
+    # Clave primaria: el documento identifica al usuario (no hay columna id).
+    # Lo usan como FK usuariosxcuestionarios, encuestas y django_admin_log,
+    # por eso no se puede cambiar después de crear el usuario.
+    documento = models.CharField(max_length=30, primary_key=True)
     telefono = models.CharField(max_length=40, blank=True, null=True)
     direccion = models.TextField(blank=True, null=True)
     # Foto de perfil: imagen chica (256 px) como "data:image/jpeg;base64,...".
@@ -273,8 +278,13 @@ class Usuario(AbstractUser):
         related_name="usuarios",
     )
 
+    # Se quitan las relaciones de AbstractUser con grupos y permisos sueltos
+    # (tablas usuarios_groups y usuarios_user_permissions)
+    groups = None
+    user_permissions = None
+
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username"]
+    REQUIRED_FIELDS = ["username", "documento"]
 
     class Meta:
         db_table = "usuarios"
@@ -316,12 +326,12 @@ class ConfiguracionBackup(models.Model):
 
 
 class Encuestado(models.Model):
-    id_encuestado = models.AutoField(primary_key=True)
+    # Clave primaria: el documento identifica a la persona (no hay columna
+    # id). Que responda una sola vez cada cuestionario lo controla Encuesta
+    # (uq_encuesta_encuestado_cuestionario).
+    documento = models.CharField(max_length=30, primary_key=True)
     nombre = models.CharField(max_length=100, blank=True, null=True)
     apellido = models.CharField(max_length=100, blank=True, null=True)
-    # Único: identifica a la persona. Que responda una sola vez cada
-    # cuestionario lo controla Encuesta (uq_encuesta_encuestado_cuestionario).
-    documento = models.CharField(max_length=30, unique=True)
     # Quién lo encuestó y con qué cuestionario queda en la tabla encuestas.
 
     # Ubicación del domicilio para mostrarlo como punto en el mapa
@@ -403,14 +413,14 @@ class Cuestionario(models.Model):
 
 
 class AsignacionCuestionario(models.Model):
-    # Clave primaria compuesta (id_usuario, id_cuestionario), sin id propio.
-    # encuestas.(id_usuario, id_cuestionario) es FK a esta tabla (la crea la
+    # Clave primaria compuesta (documento_usuario, id_cuestionario), sin id propio.
+    # encuestas.(documento_usuario, id_cuestionario) es FK a esta tabla (la crea la
     # migración 0020 en la base: Django no maneja FK hacia claves compuestas).
     pk = models.CompositePrimaryKey("usuario", "cuestionario")
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        db_column="id_usuario",
+        db_column="documento_usuario",
     )
     cuestionario = models.ForeignKey(
         Cuestionario,
@@ -514,24 +524,18 @@ class Encuesta(models.Model):
     encuestado = models.ForeignKey(
         Encuestado,
         on_delete=models.PROTECT,
-        db_column="id_encuestado",
+        db_column="documento_encuestado",
         related_name="encuestas",
     )
-    cuestionario = models.ForeignKey(
-        Cuestionario,
-        on_delete=models.PROTECT,
-        db_column="id_cuestionario",
-        related_name="encuestas",
-    )
-    # Quién cargó la encuesta
-    usuario = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        db_column="id_usuario",
-        null=True,
-        blank=True,
-        related_name="encuestas_cargadas",
-    )
+    # documento_usuario + id_cuestionario forman la FK compuesta hacia
+    # usuariosxcuestionarios (fk_encuesta_usuariosxcuestionarios): una encuesta
+    # solo se carga con un cuestionario asignado a quien la carga. Como en el
+    # DER no hay FK directas a cuestionarios ni a usuarios: son columnas
+    # simples y el cuestionario o el usuario se buscan con subconsultas
+    # (ver encuestas_de en cuestionarios_views y mapa_encuestas).
+    id_cuestionario = models.IntegerField(db_column="id_cuestionario")
+    # Quién cargó la encuesta (su documento)
+    documento_usuario = models.CharField(max_length=30, db_column="documento_usuario")
     latitud = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitud = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     realizada_en = models.DateTimeField(auto_now_add=True)
@@ -542,13 +546,13 @@ class Encuesta(models.Model):
         constraints = [
             # Una persona responde una sola vez cada cuestionario
             models.UniqueConstraint(
-                fields=["encuestado", "cuestionario"],
+                fields=["encuestado", "id_cuestionario"],
                 name="uq_encuesta_encuestado_cuestionario",
             )
         ]
 
     def __str__(self):
-        return f"{self.encuestado} - {self.cuestionario}"
+        return f"{self.encuestado} - cuestionario {self.id_cuestionario}"
 
 
 class RespuestaCargada(models.Model):
@@ -571,3 +575,53 @@ class RespuestaCargada(models.Model):
         db_table = "respuesta_cargada"
         verbose_name = "respuesta cargada"
         verbose_name_plural = "respuestas cargadas"
+
+
+# ---------------------------------------------------------------------------
+# Notificaciones (campanita de la barra superior)
+# ---------------------------------------------------------------------------
+
+
+# Un aviso para un usuario. Los avisos a un rol se crean como una fila por cada
+# usuario de ese rol (ver core/notificaciones.py), así lo leído queda guardado
+# por persona. Quién recibe cada tipo se elige con los permisos "Recibir aviso
+# de ..." de la pantalla de permisos.
+class Notificacion(models.Model):
+    class Tipo(models.TextChoices):
+        CUESTIONARIO_ASIGNADO = "cuestionario_asignado", "Cuestionario asignado"
+        ENCUESTA_CARGADA = "encuesta_cargada", "Encuesta cargada"
+        BACKUP_FALLIDO = "backup_fallido", "Backup fallido"
+        CONTRASENA_CAMBIADA = "contrasena_cambiada", "Contraseña cambiada"
+
+    id_notificacion = models.AutoField(primary_key=True)
+    # A quién va dirigida
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        db_column="documento_usuario",
+        related_name="notificaciones",
+    )
+    tipo = models.CharField(max_length=30, choices=Tipo)
+    titulo = models.CharField(max_length=150)
+    mensaje = models.TextField()
+    # Pantalla a la que lleva al tocarla
+    enlace = models.CharField(max_length=200, blank=True, null=True)
+    leida = models.BooleanField(default=False)
+    leida_en = models.DateTimeField(blank=True, null=True)
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "notificaciones"
+        verbose_name = "notificación"
+        verbose_name_plural = "notificaciones"
+        ordering = ["-creada_en"]
+        indexes = [models.Index(fields=["usuario", "leida"], name="ix_notificacion_usuario_leida")]
+        # Sin ver/crear/editar/borrar: solo los permisos para recibir avisos
+        default_permissions = ()
+        permissions = [
+            ("recibir_encuesta_cargada", "Recibir aviso de encuesta cargada"),
+            ("recibir_backup_fallido", "Recibir aviso de backup fallido"),
+        ]
+
+    def __str__(self):
+        return f"{self.titulo} ({self.usuario_id})"

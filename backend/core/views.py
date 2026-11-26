@@ -11,8 +11,8 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from .api import campana_activa, error, leer_json, permisos_de, puede_elegir_campana, requiere_sesion
 from .bitacora import diferencias, registrar
 from .contrasenas_views import buscar_por_nombre
+from .limites import ip_de, limpiar, sumar, superado
 from .models import Usuario, username_libre
-from .validaciones import contrasena as validar_contrasena
 from .validaciones import email as validar_email
 from .validaciones import espacios, nombre_persona
 from .validaciones import telefono as validar_telefono
@@ -31,7 +31,7 @@ def usuario_json(request):
         "nombre": usuario.first_name,
         "apellido": usuario.last_name,
         "es_superusuario": usuario.is_superuser,
-        "grupos": list(usuario.groups.values_list("name", flat=True)),
+        "grupos": [usuario.grupo.name] if usuario.grupo else [],
         # Permisos de Django ("core.add_cuestionario", …): el frontend arma el menú con esto
         "permisos": sorted(permisos_de(usuario)),
         "puede_elegir_campana": puede_elegir_campana(usuario),
@@ -54,6 +54,13 @@ def csrf(request):
     return JsonResponse({"ok": True})
 
 
+CREDENCIALES_INVALIDAS = "Credenciales inválidas. Por favor, verifique su usuario y contraseña."
+DEMASIADOS_INTENTOS = "Demasiados intentos fallidos. Espere unos minutos e intente de nuevo."
+LOGIN_MAX_POR_USUARIO = 5   # intentos fallidos con el mismo usuario...
+LOGIN_MAX_POR_IP = 20       # ...o desde la misma IP...
+LOGIN_VENTANA = 15 * 60     # ...en 15 minutos
+
+
 @require_POST
 def login_view(request):
     try:
@@ -65,18 +72,26 @@ def login_view(request):
     password = datos.get("password") or ""
     if not nombre or not password:
         return JsonResponse({"error": "Ingrese su nombre de usuario y su contraseña."}, status=400)
-    # Misma regla que el formulario del frontend (validaciones.js)
-    mensaje = validar_contrasena(password)
-    if mensaje:
-        return JsonResponse({"error": mensaje}, status=400)
+
+    # Límite de intentos fallidos: por usuario y por IP (frena a quien prueba
+    # contraseñas). Se avisa sin decir si el usuario existe.
+    ip = ip_de(request)
+    if superado("login-usuario", nombre, LOGIN_MAX_POR_USUARIO) or superado("login-ip", ip, LOGIN_MAX_POR_IP):
+        return JsonResponse({"error": DEMASIADOS_INTENTOS}, status=429)
 
     # Se ingresa con el nombre de usuario; Django autentica con el correo
-    # (USERNAME_FIELD), así que primero se busca a quién pertenece
+    # (USERNAME_FIELD), así que primero se busca a quién pertenece.
+    # La regla de la contraseña (8 caracteres, etc.) no se revisa acá: se
+    # exige al crearla o cambiarla. En el login, cualquier error da el mismo
+    # mensaje, para no revelar si el usuario existe o si falló la contraseña.
     cuenta = buscar_por_nombre(nombre)
     usuario = authenticate(request, email=cuenta.email, password=password) if cuenta else None
     if usuario is None:
-        return JsonResponse({"error": "El nombre de usuario o la contraseña son incorrectos."}, status=401)
+        sumar("login-usuario", nombre, LOGIN_VENTANA)
+        sumar("login-ip", ip, LOGIN_VENTANA)
+        return JsonResponse({"error": CREDENCIALES_INVALIDAS}, status=401)
 
+    limpiar("login-usuario", nombre)
     login(request, usuario)
     if not datos.get("recordar"):
         # Sin "Recordar", la sesión termina al cerrar el navegador

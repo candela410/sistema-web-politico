@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import Dropdown from 'react-bootstrap/Dropdown'
-import { Bell, BellOff, CirclePlus, ClipboardCheck, ClipboardList, Pencil, Trash2 } from 'lucide-react'
-import { obtenerAvisos } from '../../api/avisos'
+import { Bell, BellOff, ClipboardCheck, ClipboardList, DatabaseBackup, KeyRound } from 'lucide-react'
+import { marcarLeidos, obtenerAvisos } from '../../api/avisos'
 import { tiene } from '../../permisos'
 
-// Campanita de la barra superior con los avisos automáticos del sistema
-// (los arma el backend en core/avisos_views.py). El número rojo son los avisos
-// nuevos desde la última vez que se abrió; eso lo recuerda el navegador.
+// Campanita de la barra superior con las notificaciones del usuario (tabla
+// notificaciones, ver core/avisos_views.py). El número rojo son las que no leyó;
+// al abrirla quedan leídas en la base, así no vuelven a aparecer en otra computadora.
 // Se actualiza sola cada minuto mientras la pestaña está a la vista.
 
 const CADA = 60 * 1000
-const ICONOS = { asignacion: ClipboardList, encuesta: ClipboardCheck, crear: CirclePlus, editar: Pencil, borrar: Trash2 }
+const ICONOS = {
+  cuestionario_asignado: ClipboardList,
+  encuesta_cargada: ClipboardCheck,
+  backup_fallido: DatabaseBackup,
+  contrasena_cambiada: KeyRound,
+}
 
 // Igual que el menú del usuario: 8px debajo del botón, alineado a la derecha
 const UBICACION = {
@@ -36,38 +41,25 @@ function hace(iso) {
   return fechaLarga.format(new Date(iso))
 }
 
-// Momento (en milisegundos) de la última vez que se abrió la campanita; 0 = nunca
-function leerVisto(clave) {
-  try {
-    return Number(localStorage.getItem(clave)) || 0
-  } catch {
-    return 0
-  }
-}
-
-function guardarVisto(clave, valor) {
-  try {
-    localStorage.setItem(clave, String(valor))
-  } catch {
-    // sin localStorage, el número vuelve a aparecer al recargar
-  }
-}
-
 function Avisos({ usuario }) {
-  const clave = `avisos-vistos-${usuario.id}`
   const [avisos, setAvisos] = useState(null)
+  const [sinLeer, setSinLeer] = useState(0)
   const [error, setError] = useState(false)
-  const [visto, setVisto] = useState(() => leerVisto(clave))
-  // Mientras está abierto se resaltan los que eran nuevos al abrirlo
-  const [nuevosDesde, setNuevosDesde] = useState(null)
+  // Mientras está abierto se resaltan los que no estaban leídos al abrirlo
+  const [nuevos, setNuevos] = useState(null)
 
   const cargar = useCallback(() => {
-    obtenerAvisos()
-      .then((lista) => {
-        setAvisos(lista)
+    return obtenerAvisos()
+      .then((r) => {
+        setAvisos(r.avisos)
+        setSinLeer(r.sin_leer)
         setError(false)
+        return r.avisos
       })
-      .catch(() => setError(true))
+      .catch(() => {
+        setError(true)
+        return null
+      })
   }, [])
 
   useEffect(() => {
@@ -83,21 +75,17 @@ function Avisos({ usuario }) {
     }
   }, [cargar, usuario.campana?.id])
 
-  const esNuevo = (a, desde) => new Date(a.fecha).getTime() > desde
-  const sinLeer = (avisos ?? []).filter((a) => esNuevo(a, visto)).length
-
-  function alAbrirOCerrar(abierto) {
-    if (abierto) {
-      cargar()
-      setNuevosDesde(visto)
-      // Al abrir, todo queda leído
-      // (si el reloj de la compu atrasa, se toma la fecha del aviso más nuevo)
-      const masNuevo = avisos?.length ? new Date(avisos[0].fecha).getTime() : 0
-      const marca = Math.max(Date.now(), masNuevo)
-      setVisto(marca)
-      guardarVisto(clave, marca)
-    } else {
-      setNuevosDesde(null)
+  async function alAbrirOCerrar(abierto) {
+    if (!abierto) {
+      setNuevos(null)
+      return
+    }
+    const lista = (await cargar()) ?? avisos ?? []
+    setNuevos(new Set(lista.filter((a) => !a.leida).map((a) => a.id)))
+    if (lista.some((a) => !a.leida)) {
+      // Al abrir, todo queda leído (en la base)
+      setSinLeer(0)
+      marcarLeidos().catch(() => cargar())
     }
   }
 
@@ -132,7 +120,7 @@ function Avisos({ usuario }) {
           <ul className="avisos__lista">
             {avisos.map((a) => {
               const Icono = ICONOS[a.tipo] ?? Bell
-              const nuevo = nuevosDesde !== null && esNuevo(a, nuevosDesde)
+              const nuevo = nuevos?.has(a.id) ?? false
               return (
                 <li key={a.id}>
                   <Dropdown.Item as={Link} to={a.enlace} className={`avisos__item${nuevo ? ' avisos__item--nuevo' : ''}`}>

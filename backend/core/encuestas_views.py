@@ -4,17 +4,18 @@
 from datetime import date, timedelta
 
 from django.db import IntegrityError, transaction
-from django.db.models import Count
+from django.db.models import CharField, Count, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce, Concat, NullIf, Trim
 from django.db.models.functions import TruncDate
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
-from . import graficos
-from .cuestionarios_views import cuestionarios_de_campana
+from . import graficos, notificaciones
+from .cuestionarios_views import cuestionarios_de_campana, encuestas_de
 from .api import error, leer_json, permisos_de, requiere_permiso
 from .bitacora import registrar
-from .models import AsignacionCuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada
+from .models import AsignacionCuestionario, Cuestionario, Encuesta, Encuestado, Pregunta, RespuestaCargada, Usuario
 from .validaciones import documento as validar_documento
 from .validaciones import espacios, nombre_persona
 
@@ -147,13 +148,13 @@ def responder(request, pk):
                 for campo, valor in encuestado_datos.items():
                     setattr(encuestado, campo, valor)
                 encuestado.save()
-            # encuestas.(id_usuario, id_cuestionario) es FK a usuariosxcuestionarios:
+            # encuestas.(documento_usuario, id_cuestionario) es FK a usuariosxcuestionarios:
             # quien carga sin estar asignado (por ejemplo, quien administra) queda asignado
             AsignacionCuestionario.objects.get_or_create(usuario=request.user, cuestionario=cuestionario)
             encuesta = Encuesta.objects.create(
                 encuestado=encuestado,
-                cuestionario=cuestionario,
-                usuario=request.user,
+                id_cuestionario=cuestionario.pk,
+                documento_usuario=request.user.pk,
             )
             RespuestaCargada.objects.bulk_create(respuestas)
     except IntegrityError:
@@ -162,6 +163,7 @@ def responder(request, pk):
         request, encuesta, "crear",
         detalle=f"Cargó una encuesta de {cuestionario.titulo} (documento {encuestado.documento})",
     )
+    notificaciones.encuesta_cargada(request.user, cuestionario, request.campana)
     return JsonResponse({"ok": True, "encuesta": encuesta.pk}, status=201)
 
 
@@ -174,8 +176,8 @@ def responder(request, pk):
 @requiere_permiso("core.view_cuestionario", "core.view_encuesta")
 def estadisticas(request, pk):
     cuestionario = get_object_or_404(cuestionarios_de_campana(request.campana).select_related("categoria"), pk=pk)
-    total = cuestionario.encuestas.count()
-    ultima = cuestionario.encuestas.order_by("-realizada_en").values_list("realizada_en", flat=True).first()
+    total = encuestas_de(cuestionario).count()
+    ultima = encuestas_de(cuestionario).order_by("-realizada_en").values_list("realizada_en", flat=True).first()
     # Todas las respuestas en un DataFrame de pandas; de ahí salen las frecuencias
     respuestas = graficos.respuestas_de(cuestionario)
 
@@ -212,7 +214,7 @@ def estadisticas(request, pk):
         "generado_por": request.user.get_full_name().strip() or request.user.email,
         "total_encuestas": total,
         "ultima_encuesta": ultima.isoformat() if ultima else None,
-        "militantes": cuestionario.encuestas.exclude(usuario=None).values("usuario").distinct().count(),
+        "militantes": encuestas_de(cuestionario).values("documento_usuario").distinct().count(),
         "preguntas": preguntas,
     })
 
@@ -236,11 +238,21 @@ def grafico(request, pk, pregunta, clave):
 def mapa_encuestas(request):
     """Puntos del mapa: dónde se hizo cada encuesta de la campaña (latitud y
     longitud que dio el celular). Las encuestas sin ubicación no aparecen."""
+    # Sin FK a cuestionarios ni a usuarios: el título y el nombre de quien la
+    # cargó salen de subconsultas por id_cuestionario e documento_usuario
+    titulo = Cuestionario.objects.filter(pk=OuterRef("id_cuestionario")).values("titulo")[:1]
+    militante = Usuario.objects.filter(pk=OuterRef("documento_usuario")).annotate(
+        nombre=Coalesce(
+            NullIf(Trim(Concat("first_name", Value(" "), "last_name", output_field=CharField())), Value("")),
+            "email",
+            output_field=CharField(),
+        )
+    ).values("nombre")[:1]
     encuestas = (
-        Encuesta.objects.filter(cuestionario__in=cuestionarios_de_campana(request.campana))
+        Encuesta.objects.filter(id_cuestionario__in=cuestionarios_de_campana(request.campana).values("pk"))
         .exclude(latitud=None)
         .exclude(longitud=None)
-        .select_related("cuestionario", "usuario")
+        .annotate(titulo=Subquery(titulo), militante=Subquery(militante))
         .order_by("-realizada_en")
     )
     return JsonResponse({
@@ -251,8 +263,8 @@ def mapa_encuestas(request):
                 "geometry": {"type": "Point", "coordinates": [float(e.longitud), float(e.latitud)]},
                 "properties": {
                     "id": e.pk,
-                    "cuestionario": e.cuestionario.titulo,
-                    "militante": (e.usuario.get_full_name().strip() or e.usuario.email) if e.usuario else "",
+                    "cuestionario": e.titulo,
+                    "militante": e.militante or "",
                     "fecha": e.realizada_en.isoformat(),
                 },
             }
@@ -276,7 +288,7 @@ def por_dia(request):
         return error("El rango debe ser de 1 a 62 días.")
     conteo = dict(
         Encuesta.objects.filter(
-            cuestionario__in=cuestionarios_de_campana(request.campana),
+            id_cuestionario__in=cuestionarios_de_campana(request.campana).values("pk"),
             realizada_en__date__range=(desde, hasta),
         )
         .annotate(dia=TruncDate("realizada_en"))  # día en la hora local (TIME_ZONE)

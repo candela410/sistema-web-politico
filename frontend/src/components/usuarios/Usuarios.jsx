@@ -193,6 +193,9 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
               placeholder="Sin puntos"
               value={form.documento}
               onChange={cambiar('documento')}
+              /* El documento es la clave del usuario: no se cambia después de crearlo */
+              disabled={!nuevo}
+              readOnly={!nuevo}
               required={nuevo}
               aria-required={nuevo}
               aria-invalid={Boolean(verError('documento'))}

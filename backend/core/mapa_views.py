@@ -434,7 +434,7 @@ def mi_ruta(request):
         SELECT r.* FROM rutas r
         JOIN equipos e ON e.id_ruta = r.id_ruta
         JOIN usuarios u ON u.id_equipo = e.id_equipo
-        WHERE u.id = %s AND e.activo
+        WHERE u.documento = %s AND e.activo
     """
     equipo = request.user.equipo
     if equipo is None:

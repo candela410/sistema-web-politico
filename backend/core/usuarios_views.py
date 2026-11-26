@@ -45,7 +45,7 @@ def _usuario_json(u):
         "apellido": u.last_name,
         "activo": u.is_active,
         "es_superusuario": u.is_superuser,
-        "grupos": [{"id": g.pk, "nombre": g.name} for g in u.groups.all()],
+        "grupos": [{"id": u.grupo.pk, "nombre": u.grupo.name}] if u.grupo else [],
         "grupo": u.grupo_id,
         "documento": u.documento or "",
         "telefono": u.telefono or "",
@@ -62,7 +62,7 @@ def _foto(u):
         "Nombre": u.first_name,
         "Apellido": u.last_name,
         "Activo": "Sí" if u.is_active else "No",
-        "Rol": ", ".join(sorted(u.groups.values_list("name", flat=True))),
+        "Rol": u.grupo.name if u.grupo else "",
         "Documento": u.documento or "",
         "Teléfono": u.telefono or "",
         "Dirección": u.direccion or "",
@@ -94,7 +94,7 @@ def _limpiar(datos, usuario=None):
 
     grupos_ids = datos.get("grupos")
     if grupos_ids is None:
-        grupos = list(usuario.groups.all()) if usuario else []
+        grupos = [usuario.grupo] if usuario and usuario.grupo else []
     else:
         if not isinstance(grupos_ids, list):
             return None, "El rol seleccionado no es válido."
@@ -120,6 +120,9 @@ def _limpiar(datos, usuario=None):
     telefono_ = espacios(dato("telefono"))[:40]
     if not usuario and not documento:
         return None, "Ingrese el documento."
+    # El documento es la clave del usuario: no se cambia una vez creado
+    if usuario and documento != usuario.documento:
+        return None, "El documento no se puede cambiar."
     mensaje = validar_documento(documento) or validar_telefono(telefono_)
     if mensaje:
         return None, mensaje
@@ -148,13 +151,13 @@ def _guardar(usuario, d):
     # Si cambia el nombre o el apellido, cambia el nombre de usuario
     usuario.username = username_libre(d["nombre"], d["apellido"], usuario)
     usuario.is_active = d["activo"]
-    usuario.documento = d["documento"]
+    if usuario._state.adding:
+        usuario.documento = d["documento"]
     usuario.telefono = d["telefono"]
     usuario.direccion = d["direccion"]
     # usuarios.id_grupo apunta al grupo de Django (auth_group) elegido
     usuario.grupo = d["grupos"][0] if d["grupos"] else None
     usuario.save()
-    usuario.groups.set(d["grupos"])
 
 
 @require_http_methods(["GET", "POST"])
@@ -163,7 +166,7 @@ def usuarios(request):
     if request.method == "GET":
         lista = (
             Usuario.objects.filter(campana=request.campana)
-            .prefetch_related("groups")
+            .select_related("grupo")
             .order_by("-is_active", "first_name", "last_name")
         )
         return JsonResponse({
@@ -270,7 +273,7 @@ def permisos(request):
     grupos = Group.objects.prefetch_related("permissions__content_type").order_by("name")
     usuarios = (
         Usuario.objects.filter(campana=request.campana, is_active=True)
-        .prefetch_related("groups")
+        .select_related("grupo")
         .order_by("first_name")
     )
     return JsonResponse({
@@ -278,7 +281,7 @@ def permisos(request):
             {
                 "id": g.pk,
                 "nombre": g.name,
-                "usuarios": g.user_set.filter(campana=request.campana).count(),
+                "usuarios": g.usuarios.filter(campana=request.campana).count(),
                 "permisos": _agrupar(g.permissions.all()),
             }
             for g in grupos
@@ -289,7 +292,7 @@ def permisos(request):
                 "nombre": f"{u.first_name} {u.last_name}".strip() or u.email,
                 "email": u.email,
                 "superusuario": u.is_superuser,
-                "grupos": [g.name for g in u.groups.all()],
+                "grupos": [u.grupo.name] if u.grupo else [],
             }
             for u in usuarios
         ],

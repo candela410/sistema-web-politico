@@ -2,14 +2,15 @@
 en un solo pedido, como un formulario de Google Forms."""
 
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, IntegerField, OuterRef, Q, Subquery, Value
+from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
 from .api import crud, error, leer_json, requiere_permiso
 from .bitacora import diferencias, registrar
-from .models import Categoria, Cuestionario, Opcion, Pregunta
+from .models import Categoria, Cuestionario, Encuesta, Opcion, Pregunta
 from .validaciones import texto_libre
 
 MAX_PREGUNTAS = 15
@@ -23,8 +24,8 @@ def cuestionarios_de_campana(campana):
     SQL equivalente:
         SELECT DISTINCT c.* FROM cuestionarios c
         LEFT JOIN usuariosxcuestionarios uc ON uc.id_cuestionario = c.id_cuestionario
-        LEFT JOIN usuarios u ON u.id = uc.id_usuario
-        WHERE u.id_campana = %s OR uc.id_usuario IS NULL
+        LEFT JOIN usuarios u ON u.documento = uc.documento_usuario
+        WHERE u.id_campana = %s OR uc.documento_usuario IS NULL
     """
     return Cuestionario.objects.filter(Q(usuarios__campana=campana) | Q(usuarios__isnull=True)).distinct()
 
@@ -46,8 +47,26 @@ def _resumen_json(c):
     }
 
 
+def encuestas_de(cuestionario):
+    """Encuestas de un cuestionario. encuestas no tiene FK a cuestionarios:
+    se filtra por la columna id_cuestionario."""
+    return Encuesta.objects.filter(id_cuestionario=cuestionario.pk)
+
+
+def _cantidad_encuestas():
+    """Subconsulta: cuántas encuestas tiene cada cuestionario (por id_cuestionario)."""
+    cuenta = (
+        Encuesta.objects.filter(id_cuestionario=OuterRef("pk"))
+        .order_by()
+        .values("id_cuestionario")
+        .annotate(n=Count("pk"))
+        .values("n")
+    )
+    return Coalesce(Subquery(cuenta, output_field=IntegerField()), Value(0))
+
+
 def _detalle_json(c):
-    encuestas = c.encuestas.count()
+    encuestas = encuestas_de(c).count()
     return {
         "id": c.pk,
         "titulo": c.titulo,
@@ -173,7 +192,7 @@ def cuestionarios(request):
             .select_related("categoria")
             .annotate(
                 cantidad_preguntas=Count("preguntas", distinct=True),
-                cantidad_encuestas=Count("encuestas", distinct=True),
+                cantidad_encuestas=_cantidad_encuestas(),
             )
             .order_by("-creado_en")
         )
@@ -206,7 +225,7 @@ def cuestionario_detalle(request, pk):
         return JsonResponse({"cuestionario": _detalle_json(cuestionario)})
 
     if request.method == "DELETE":
-        if cuestionario.encuestas.exists():
+        if encuestas_de(cuestionario).exists():
             return error("No se puede eliminar el cuestionario porque tiene encuestas cargadas. Puede desactivarlo.", 409)
         if cuestionario.usuarios.exists():
             return error("No se puede eliminar el cuestionario porque está asignado a usuarios.", 409)
@@ -218,7 +237,7 @@ def cuestionario_detalle(request, pk):
     datos = leer_json(request)
     if datos is None:
         return error("Los datos enviados no son válidos.")
-    bloqueado = cuestionario.encuestas.exists()
+    bloqueado = encuestas_de(cuestionario).exists()
     try:
         cabecera = _limpiar_cabecera(datos)
         preguntas = None if bloqueado else _limpiar_preguntas(datos.get("preguntas"))

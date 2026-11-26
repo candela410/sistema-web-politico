@@ -42,7 +42,7 @@ def equipos_de_campana(campana):
     SQL equivalente:
         SELECT DISTINCT e.* FROM equipos e
         LEFT JOIN usuarios u ON u.id_equipo = e.id_equipo
-        WHERE u.id_campana = %s OR u.id IS NULL
+        WHERE u.id_campana = %s OR u.documento IS NULL
     """
     return Equipo.objects.filter(Q(usuarios__campana=campana) | Q(usuarios__isnull=True)).distinct()
 
@@ -128,7 +128,7 @@ def _validar_usuarios(request, datos, equipo=None):
     if ids is None:
         # Al crear, los usuarios son obligatorios; al editar, si no vienen no se tocan
         return (None, SIN_USUARIOS) if equipo is None else (None, None)
-    if not isinstance(ids, list) or not all(isinstance(i, int) and not isinstance(i, bool) for i in ids):
+    if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
         return None, "La lista de usuarios no es válida."
     ids = set(ids)
     if not ids:

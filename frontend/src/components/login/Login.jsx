@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 // iniciarSesion: habla con Django (src/api/auth.js)
 import { iniciarSesion, ultimoUsuario } from '../../api/auth'
 // Mismas reglas que el backend
-import { errorContrasena, errorUsuario } from '../../validaciones'
+import { errorUsuario } from '../../validaciones'
 // Logo del águila (src/assets/logo.png)
 import logo from '../../assets/logo.png'
 // Olas de colores y foto del fondo (las comparte con Olvide y Restablecer)
@@ -25,7 +25,12 @@ export default function Login({ onIngreso }) {
   const [error, setError] = useState('') // error que devuelve el servidor
   const [loading, setLoading] = useState(false)
 
-  const errores = { nombre: errorUsuario(nombre), password: errorContrasena(password) }
+  // En el login solo se pide que la contraseña esté escrita: la regla de 8 caracteres,
+  // mayúscula, etc. se exige al crearla. Si es incorrecta, el servidor responde
+  // siempre el mismo mensaje (no dice si falló el usuario o la contraseña).
+  const errores = { nombre: errorUsuario(nombre), password: password ? '' : 'Ingrese su contraseña.' }
+  // "Iniciar sesión" se habilita recién cuando los dos campos tienen algo escrito
+  const completo = Boolean(nombre.trim() && password)
   const tocar = (campo) => () => setTocados((t) => ({ ...t, [campo]: true }))
 
   // ----- AL APRETAR "Iniciar sesión" -----
@@ -44,7 +49,7 @@ export default function Login({ onIngreso }) {
       const usuario = await iniciarSesion(nombre.trim(), password, remember)
       onIngreso?.(usuario)
     } catch (err) {
-      setError(err.message || 'El nombre de usuario o la contraseña son incorrectos.')
+      setError(err.message || 'Credenciales inválidas. Por favor, verifique su usuario y contraseña.')
     } finally {
       setLoading(false)
     }
@@ -132,8 +137,8 @@ export default function Login({ onIngreso }) {
             </p>
           )}
 
-          {/* Se deshabilita mientras espera al servidor para evitar el doble clic */}
-          <button className="login__submit" type="submit" disabled={loading}>
+          {/* Deshabilitado hasta completar los dos campos y mientras espera al servidor (evita el doble clic) */}
+          <button className="login__submit" type="submit" disabled={loading || !completo} aria-busy={loading}>
             {loading ? 'Ingresando…' : 'Iniciar sesión'}
           </button>
         </form>

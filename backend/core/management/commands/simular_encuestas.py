@@ -190,7 +190,7 @@ class Command(BaseCommand):
             personas = Encuestado.objects.bulk_create(personas, batch_size=500)
             encuestas = Encuesta.objects.bulk_create(
                 [
-                    Encuesta(encuestado=persona, cuestionario=c, usuario=u, latitud=lat, longitud=lng)
+                    Encuesta(encuestado=persona, id_cuestionario=c.pk, documento_usuario=u.pk, latitud=lat, longitud=lng)
                     for persona, (u, c, _, lat, lng) in zip(personas, plan)
                 ],
                 batch_size=500,
@@ -221,7 +221,7 @@ class Command(BaseCommand):
             p = Encuestado.objects.filter(pk__in=creado["encuestados"], encuestas__isnull=True).delete()[0]
             a = 0
             for usuario, cuestionario in creado["asignaciones"]:
-                if not Encuesta.objects.filter(usuario_id=usuario, cuestionario_id=cuestionario).exists():
+                if not Encuesta.objects.filter(documento_usuario=usuario, id_cuestionario=cuestionario).exists():
                     a += AsignacionCuestionario.objects.filter(usuario_id=usuario, cuestionario_id=cuestionario).delete()[0]
         archivo.rename(archivo.with_suffix(".deshecha.json"))
         self.stdout.write(self.style.SUCCESS(

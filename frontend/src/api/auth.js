@@ -67,10 +67,16 @@ function recordarUsuario(nombre) {
   }
 }
 
-// Configuración → Mi perfil. Las tres devuelven el usuario actualizado.
-export const guardarPerfil = (datos) => pedir('/api/auth/perfil/', { method: 'PATCH', datos }).then((r) => r.usuario)
+// Configuración → Mi perfil. guardarPerfil devuelve { usuario, correo_pendiente }:
+// para cambiar el correo se manda también { password } y el correo nuevo queda
+// pendiente hasta que se confirme desde el enlace que le llega.
+export const guardarPerfil = (datos) => pedir('/api/auth/perfil/', { method: 'PATCH', datos })
 export const guardarFoto = (foto) => pedir('/api/auth/foto/', { method: 'PUT', datos: { foto } }).then((r) => r.usuario)
 export const quitarFoto = () => pedir('/api/auth/foto/', { method: 'DELETE' }).then((r) => r.usuario)
+
+// Enlace del correo para confirmar el correo nuevo (/confirmar-correo/:token).
+// Devuelve { email, username }
+export const confirmarCorreo = (token) => pedir('/api/auth/confirmar-correo/', { method: 'POST', datos: { token } })
 
 // Mi perfil → "Cambiar contraseña": el enlace llega al correo del usuario. Devuelve { email }
 export const pedirCambioDeContrasena = () => pedir('/api/auth/cambiar-contrasena/', { method: 'POST' })

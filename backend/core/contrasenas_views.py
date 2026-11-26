@@ -8,15 +8,23 @@ El usuario elige su contraseña siempre desde un enlace que le llega por correo
   nombre de usuario: el enlace llega al correo asociado a ese usuario.
 - Desde "Mi perfil", "Cambiar contraseña" se lo envía a su propio correo.
 
+También el cambio de correo de "Mi perfil": se pide la contraseña y el correo
+nuevo recién se guarda cuando la persona abre el enlace que le llega a ese
+correo (/confirmar-correo/<token> en el frontend). Así se comprueba que el
+correo existe y es suyo. Al correo anterior le llega un aviso.
+
 El token es el de Django (PasswordResetTokenGenerator): vence a las
 PASSWORD_RESET_TIMEOUT segundos y deja de servir cuando cambia la contraseña o
 el usuario vuelve a ingresar."""
 
+from types import SimpleNamespace
+
 from django.conf import settings
+from django.core import signing
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -208,9 +216,11 @@ def olvide(request):
 
 def buscar_por_nombre(nombre):
     """Usuario activo con ese nombre de usuario (sin distinguir mayúsculas).
-    Si se escribe un correo, se busca por correo."""
-    campo = "email__iexact" if "@" in nombre else "username__iexact"
-    return Usuario.objects.filter(**{campo: nombre}, is_active=True).first()
+    Solo por nombre de usuario (apellido + inicial del nombre): con el correo
+    no se encuentra a nadie."""
+    if "@" in nombre:
+        return None
+    return Usuario.objects.filter(username__iexact=nombre, is_active=True).first()
 
 
 def _usuario_del_enlace(uid, token):
@@ -255,3 +265,91 @@ def restablecer(request, uid, token):
     if tenia:
         contrasena_cambiada(usuario)
     return JsonResponse({"ok": True})
+
+
+# ---------------------------------------------------------------------------
+# Cambio de correo (Mi perfil)
+# ---------------------------------------------------------------------------
+
+SAL_CORREO = "cambio-de-correo"
+CORREO_INVALIDO = (
+    "El enlace no es válido, ya se usó o venció. Vuelva a cambiar el correo desde "
+    "Configuración → Mi perfil para recibir uno nuevo."
+)
+
+
+def enviar_verificacion_correo(usuario, nuevo):
+    """Envía al correo nuevo el enlace para confirmarlo, y un aviso al anterior.
+    El enlace lleva firmados el usuario, el correo actual y el nuevo: deja de
+    servir si el correo ya cambió (se usa una sola vez) y vence a las
+    PASSWORD_RESET_TIMEOUT segundos. Devuelve None o el mensaje de error."""
+    if not _es_real(nuevo):
+        return f"{nuevo} es un correo de prueba: no puede recibir el enlace de verificación."
+    token = signing.dumps({"u": usuario.pk, "de": usuario.email.lower(), "a": nuevo}, salt=SAL_CORREO, compress=True)
+    enlace = f"{settings.FRONTEND_URL}/confirmar-correo/{token}"
+    contenido = {
+        "etiqueta": "Verificación de correo",
+        "titulo": "Confirme su nuevo correo",
+        "saludo": f"Estimado/a {usuario.first_name or usuario.username}:",
+        "parrafos": [
+            f"Usted pidió usar este correo ({nuevo}) en su cuenta del Panel de gestión "
+            f"(nombre de usuario: {usuario.username}).",
+            "Para confirmarlo, presione el siguiente botón. Hasta que lo haga, su cuenta sigue usando el correo anterior.",
+        ],
+        "boton": "Confirmar mi correo",
+        "aviso": " Si usted no pidió este cambio, ignore este mensaje: no se modificará nada.",
+    }
+    try:
+        _correo("Confirme su nuevo correo electrónico", contenido, enlace, nuevo).send()
+    except OSError:
+        return SIN_ENVIO
+
+    # Aviso al correo anterior, por si el cambio no lo pidió la persona. Si
+    # falla, el cambio sigue igual: el enlace ya se envió.
+    if _es_real(usuario.email):
+        aviso = EmailMessage(
+            "Se pidió cambiar el correo de su cuenta",
+            f"Estimado/a {usuario.first_name or usuario.username}:\n\n"
+            f"Se pidió cambiar el correo de su cuenta del Panel de gestión (usuario {usuario.username}) "
+            f"a {nuevo}. El cambio se hará cuando se confirme desde ese correo.\n\n"
+            "Si no fue usted, ingrese al sistema y cambie su contraseña, o avise a un administrador.\n\n"
+            "Atentamente,\nAdministración del Panel de gestión\n\n"
+            "Este es un mensaje automático. Por favor, no responda a este correo.\n",
+            None,
+            [usuario.email],
+        )
+        try:
+            aviso.send()
+        except OSError:
+            pass
+    return None
+
+
+@require_POST
+def confirmar_correo(request):
+    """POST {token}: aplica el cambio de correo del enlace. No hace falta haber
+    iniciado sesión (el enlace prueba que la persona tiene acceso a ese correo)."""
+    datos = leer_json(request)
+    token = str((datos or {}).get("token") or "")
+    try:
+        cambio = signing.loads(token, salt=SAL_CORREO, max_age=settings.PASSWORD_RESET_TIMEOUT)
+    except signing.BadSignature:  # también si venció (SignatureExpired)
+        return error(CORREO_INVALIDO, 400)
+    usuario = Usuario.objects.filter(pk=cambio.get("u"), is_active=True).first()
+    # Si el correo ya no es el de cuando se pidió, el enlace ya se usó
+    if usuario is None or usuario.email.lower() != cambio.get("de"):
+        return error(CORREO_INVALIDO, 400)
+    nuevo = cambio["a"]
+    if Usuario.objects.filter(email__iexact=nuevo).exclude(pk=usuario.pk).exists():
+        return error("Ese correo ya lo usa otro usuario. El correo no se cambió.", 409)
+    anterior = usuario.email
+    usuario.email = nuevo
+    usuario.save(update_fields=["email"])
+    registrar(
+        SimpleNamespace(user=usuario, campana=usuario.campana),
+        usuario,
+        "editar",
+        cambios=[{"campo": "Email", "antes": anterior, "despues": nuevo}],
+        detalle="Confirmó su nuevo correo desde el enlace de verificación",
+    )
+    return JsonResponse({"ok": True, "email": nuevo, "username": usuario.username})

@@ -85,6 +85,9 @@ function Grafico({ grafico, url, onError, mensajeError = 'No se pudo generar el 
         <img
           src={url}
           alt={`${grafico.titulo}: ${grafico.pregunta}`}
+          loading="lazy"
+          decoding="async"
+          draggable={false}
           onLoad={() => setEstado('listo')}
           onError={fallo}
         />

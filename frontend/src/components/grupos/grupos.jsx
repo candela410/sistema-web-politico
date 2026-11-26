@@ -9,7 +9,7 @@ import AvisoOk from '../comunes/AvisoOk'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import Buscador from '../comunes/Buscador'
 import { normalizar } from '../comunes/normalizar'
-import { useConCambios } from '../../validaciones'
+import { conFiltro, nombreCosa, useConCambios } from '../../validaciones'
 
 const ordenar = (lista) =>
   [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
@@ -88,9 +88,12 @@ function FormularioGrupo({ grupo, onGuardado, onCerrar }) {
           id="grupo-nombre"
           className="entrada"
           value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
+          onChange={conFiltro(nombreCosa, setNombre)}
           placeholder="Ej.: Coordinador de zona"
           maxLength={120}
+          autoCapitalize="sentences"
+          autoComplete="off"
+          enterKeyHint="next"
           autoFocus
           required
         />

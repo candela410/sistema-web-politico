@@ -78,7 +78,9 @@ function Restaurar({ backup, onCerrar }) {
             onChange={(e) => setTexto(e.target.value.toUpperCase())}
             autoComplete="off"
             autoCapitalize="characters"
+            autoCorrect="off"
             spellCheck={false}
+            enterKeyHint="done"
             disabled={trabajando}
           />
         </label>

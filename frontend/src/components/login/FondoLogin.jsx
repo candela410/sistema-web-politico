@@ -42,7 +42,7 @@ export default function FondoLogin() {
 
       {/* LADO IZQUIERDO: foto difuminada que se funde con el blanco hacia la derecha */}
       <div className="login__photo" aria-hidden="true">
-        <img src={fondo} alt="" />
+        <img src={fondo} alt="" width={596} height={530} decoding="async" draggable={false} />
       </div>
     </>
   )

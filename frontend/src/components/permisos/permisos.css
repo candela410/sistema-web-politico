@@ -165,7 +165,7 @@
   white-space: nowrap;
 }
 
-/* Un bloque por rol cuando se ven todos */
+/* Bloque de la tabla de permisos (todos o los de un rol) */
 .permisos__rol {
   display: flex;
   flex-direction: column;
@@ -182,4 +182,17 @@
   color: var(--lla-gris);
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+/* Nombre de un rol en la tabla general: al tocarlo se filtra por ese rol */
+.permisos__rol-boton {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.permisos__rol-boton:hover,
+.permisos__rol-boton:focus-visible {
+  filter: brightness(0.95);
+  text-decoration: underline;
 }

@@ -4,9 +4,9 @@ import { Link } from 'react-router'
 // iniciarSesion: habla con Django (src/api/auth.js)
 import { iniciarSesion, ultimoUsuario } from '../../api/auth'
 // Mismas reglas que el backend
-import { errorUsuario } from '../../validaciones'
+import { conFiltro, errorUsuario, sinEspaciosMinusculas } from '../../validaciones'
 // Logo del águila (src/assets/logo.png)
-import logo from '../../assets/logo.png'
+import Logo from '../comunes/Logo'
 // Olas de colores y foto del fondo (las comparte con Olvide y Restablecer)
 import FondoLogin from './FondoLogin'
 import CampoContrasena from './CampoContrasena'
@@ -65,7 +65,7 @@ export default function Login({ onIngreso }) {
 
       <section className="login__panel">
         <form className="login__form" onSubmit={handleSubmit} noValidate>
-          <img className="login__logo" src={logo} alt="Logo" />
+          <Logo className="login__logo" fetchPriority="high" />
 
           <h1>Iniciar sesión</h1>
           <p className="login__subtitle">Ingrese a su cuenta para continuar</p>
@@ -92,10 +92,10 @@ export default function Login({ onIngreso }) {
               maxLength={254}
               placeholder="Usuario"
               value={nombre}
-              onChange={(e) => {
-                setNombre(e.target.value)
+              onChange={conFiltro(sinEspaciosMinusculas, (valor) => {
+                setNombre(valor)
                 setTocados((t) => ({ ...t, nombre: false }))
-              }}
+              })}
               onBlur={tocar('nombre')}
               aria-invalid={Boolean(verError('nombre'))}
               aria-describedby={verError('nombre') ? 'usuario-error' : undefined}

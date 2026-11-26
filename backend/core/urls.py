@@ -28,6 +28,7 @@ urlpatterns = [
     path("auth/olvide/", contrasenas_views.olvide, name="auth-olvide"),
     path("auth/cambiar-contrasena/", contrasenas_views.cambiar_propia, name="auth-cambiar-contrasena"),
     path("auth/restablecer/<str:uid>/<str:token>/", contrasenas_views.restablecer, name="auth-restablecer"),
+    path("auth/confirmar-correo/", contrasenas_views.confirmar_correo, name="auth-confirmar-correo"),
     path("avisos/", avisos_views.avisos, name="avisos"),
     path("avisos/leidas/", avisos_views.marcar_leidas, name="avisos-leidas"),
     path("backup/", backup_views.backups, name="backups"),

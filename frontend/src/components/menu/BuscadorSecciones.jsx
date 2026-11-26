@@ -59,13 +59,24 @@ function BuscadorSecciones({ secciones }) {
         type="search"
         placeholder="Buscar sección…"
         aria-label="Buscar sección"
+        inputMode="search"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="none"
+        spellCheck={false}
+        enterKeyHint="go"
+        maxLength={60}
         value={texto}
         onChange={(e) => {
           setTexto(e.target.value)
           setMarcado(0)
           setAbierto(true)
         }}
-        onFocus={() => setAbierto(true)}
+        onFocus={(e) => {
+          // Como selectTextOnFocus: con Ctrl K se vuelve a escribir encima de la búsqueda anterior
+          e.target.select()
+          setAbierto(true)
+        }}
         onBlur={() => setAbierto(false)}
         onKeyDown={alTeclear}
       />

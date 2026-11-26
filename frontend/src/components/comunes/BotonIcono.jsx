@@ -3,12 +3,16 @@ import { Link } from 'react-router'
 import Overlay from 'react-bootstrap/Overlay'
 import Tooltip from 'react-bootstrap/Tooltip'
 import './BotonIcono.css'
+import usePresionLarga from './usePresionLarga'
 
 // Botón cuadrado con solo un ícono. El texto ("Editar", "Borrar"…) va como
 // nombre accesible y aparece en un cartelito (Tooltip de react-bootstrap) al
 // pasar el cursor o al llegar con Tab.
 // variante: "borde" (por defecto), "peligro" o "lleno". Con `to` es un enlace.
 // `ayuda` reemplaza el texto del cartelito (por ejemplo, por qué está deshabilitado).
+// En pantallas táctiles no hay cursor: el cartelito aparece al mantener
+// apretado el botón (pulsación larga, ver usePresionLarga), y en ese caso no
+// se ejecuta la acción.
 
 // El cartelito espera un poco antes de aparecer, para no saltar al pasar el
 // mouse de largo. Pero si otro cartelito se cerró hace un instante (se está
@@ -20,11 +24,15 @@ let ultimoCierre = 0
 const conMouse = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches
 
 const UBICACION = { modifiers: [{ name: 'offset', options: { offset: [0, 8] } }] }
+// Cuánto queda a la vista el cartelito de una pulsación larga al soltar el dedo
+const CARTEL_TACTIL = 1500
 
 function BotonIcono({ icono: Icono, etiqueta, ayuda, variante = 'borde', to, className = '', ...resto }) {
   const boton = useRef(null)
   const espera = useRef(null)
   const [cartel, setCartel] = useState({ visible: false, instantaneo: false })
+
+  const presion = usePresionLarga(() => mostrar(true))
 
   useEffect(() => () => clearTimeout(espera.current), [])
 
@@ -66,8 +74,22 @@ function BotonIcono({ icono: Icono, etiqueta, ayuda, variante = 'borde', to, cla
     // Al tocarlo se esconde: si abre una ventana, el cartelito no queda encima
     onPointerDown: (e) => {
       ocultar()
+      presion.onPointerDown(e)
       resto.onPointerDown?.(e)
     },
+    // Al soltar después de una pulsación larga, el cartelito queda un momento
+    onPointerUp: (e) => {
+      presion.onPointerUp(e)
+      if (presion.fueLarga()) {
+        clearTimeout(espera.current)
+        espera.current = setTimeout(ocultar, CARTEL_TACTIL)
+      }
+      resto.onPointerUp?.(e)
+    },
+    onPointerMove: presion.onPointerMove,
+    onPointerCancel: presion.onPointerCancel,
+    onClickCapture: presion.onClickCapture,
+    onContextMenu: presion.onContextMenu,
   }
 
   const props = {

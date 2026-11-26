@@ -11,7 +11,7 @@ import AvisoOk from '../comunes/AvisoOk'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import Buscador from '../comunes/Buscador'
 import { normalizar } from '../comunes/normalizar'
-import { useConCambios } from '../../validaciones'
+import { conFiltro, nombreCosa, useConCambios } from '../../validaciones'
 
 function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) {
   const [nombre, setNombre] = useState(equipo?.nombre ?? '')
@@ -49,10 +49,11 @@ function FormularioEquipo({ equipo, rutas, disponibles, onGuardado, onCerrar }) 
           id="equipo-nombre"
           className="entrada"
           value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
+          onChange={conFiltro(nombreCosa, setNombre)}
           placeholder="Ej.: Equipo Norte"
           maxLength={120}
           autoCapitalize="sentences"
+          autoComplete="off"
           enterKeyHint="next"
           autoFocus
           required

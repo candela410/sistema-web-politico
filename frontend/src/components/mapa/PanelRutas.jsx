@@ -4,7 +4,7 @@ import BotonIcono from '../comunes/BotonIcono'
 import Confirmacion from '../comunes/Confirmacion'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
 import * as api from '../../api/mapa'
-import { useConCambios } from '../../validaciones'
+import { conFiltro, nombreCosa, primeraMayuscula, useConCambios } from '../../validaciones'
 import { PERFILES, distancia, duracion } from './formato'
 
 // Agrupa las rutas por zona (rutas → calles → barrios → zonas). Una ruta que
@@ -20,7 +20,7 @@ function porZona(rutas) {
   return [...grupos].sort(([a], [b]) => (a === null) - (b === null) || String(a).localeCompare(String(b)))
 }
 
-function FormularioRuta({ modo, setModo, form, cambiar, guardando, onGuardar }) {
+function FormularioRuta({ modo, setModo, form, cambiar, escribir, guardando, onGuardar }) {
   const conCambios = useConCambios({ ...form, paradas: modo.paradas })
   const quitar = (i) => setModo((m) => ({ ...m, paradas: m.paradas.filter((_, j) => j !== i) }))
   const faltan = Math.max(0, 2 - modo.paradas.length)
@@ -53,10 +53,11 @@ function FormularioRuta({ modo, setModo, form, cambiar, guardando, onGuardar }) 
         id="ruta-nombre"
         className="entrada"
         value={form.nombre}
-        onChange={cambiar('nombre')}
+        onChange={escribir('nombre', nombreCosa)}
         placeholder="Ej.: Recorrido del sábado"
         maxLength={120}
         autoCapitalize="sentences"
+        autoComplete="off"
         enterKeyHint="next"
         required
       />
@@ -76,8 +77,9 @@ function FormularioRuta({ modo, setModo, form, cambiar, guardando, onGuardar }) 
         className="entrada"
         rows={2}
         maxLength={500}
+        autoCapitalize="sentences"
         value={form.descripcion}
-        onChange={cambiar('descripcion')}
+        onChange={escribir('descripcion', primeraMayuscula)}
       />
 
       <div className="acciones">
@@ -99,6 +101,7 @@ function PanelRutas({ rutas, modo, setModo, seleccionada, onSeleccionar, onGuard
   const rutaActiva = rutas.find((r) => r.id === seleccionada)
   const marcando = modo?.tipo === 'ruta'
   const cambiar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: e.target.value }))
+  const escribir = (campo, filtro) => conFiltro(filtro, (valor) => setForm((f) => ({ ...f, [campo]: valor })))
 
   function empezar(ruta) {
     setForm({
@@ -147,6 +150,7 @@ function PanelRutas({ rutas, modo, setModo, seleccionada, onSeleccionar, onGuard
         setModo={setModo}
         form={form}
         cambiar={cambiar}
+        escribir={escribir}
         guardando={guardando}
         onGuardar={guardar}
       />

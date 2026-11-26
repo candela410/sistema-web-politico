@@ -12,7 +12,21 @@ import { Eye, KeyRound, Pencil } from 'lucide-react'
 import FichaUsuario from '../perfil/FichaUsuario'
 import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
-import { emailValido, errorDocumento, MENSAJE_EMAIL, useConCambios } from '../../validaciones'
+import {
+  armarTelefono,
+  cifrasDelNumero,
+  conFiltro,
+  emailValido,
+  errorDocumento,
+  erroresTelefono,
+  MENSAJE_EMAIL,
+  nombrePropio,
+  primeraMayuscula,
+  separarTelefono,
+  sinEspaciosMinusculas,
+  soloNumeros,
+  useConCambios,
+} from '../../validaciones'
 
 const formatoFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -29,22 +43,25 @@ function Obligatorio({ si }) {
 // Alta y edición. No se escribe contraseña: al crear el usuario le llega por
 // correo una invitación para elegirla, y después se restablece con la llave.
 function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     nombre: usuario?.nombre ?? '',
     apellido: usuario?.apellido ?? '',
     email: usuario?.email ?? '',
     grupo: usuario?.grupos[0]?.id ?? null,
     activo: usuario?.activo ?? true,
     documento: usuario?.documento ?? '',
-    telefono: usuario?.telefono ?? '',
+    codigoArea: separarTelefono(usuario?.telefono).codigo,
+    telefono: separarTelefono(usuario?.telefono).numero,
     direccion: usuario?.direccion ?? '',
-  })
+  }))
   const [tocado, setTocado] = useState(false)
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
   const conCambios = useConCambios(form)
   const cambiar = (campo) => (e) =>
     setForm((f) => ({ ...f, [campo]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
+  // Campos de texto: lo que no corresponde no se puede escribir (ver conFiltro)
+  const escribir = (campo, filtro) => conFiltro(filtro, (valor) => setForm((f) => ({ ...f, [campo]: valor })))
   // Al crear: nombre, apellido, correo y documento son obligatorios (llevan *)
   const nuevo = !usuario
   const errores = {
@@ -53,6 +70,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
     email: !form.email.trim() ? 'Ingrese el correo electrónico.' : emailValido(form.email) ? '' : MENSAJE_EMAIL,
     documento: nuevo || form.documento.trim() ? errorDocumento(form.documento.replace(/[.\s]/g, '')) : '',
     grupo: form.grupo !== null || usuario?.es_superusuario ? '' : 'Seleccione el rol del usuario.',
+    ...erroresTelefono(form.codigoArea, form.telefono, usuario?.telefono ?? ''),
   }
   const verError = (campo) => (tocado ? errores[campo] : '')
 
@@ -73,7 +91,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
       grupos: form.grupo === null ? [] : [form.grupo],
       activo: form.activo,
       documento: form.documento.replace(/[.\s]/g, ''),
-      telefono: form.telefono,
+      telefono: armarTelefono(form.codigoArea, form.telefono),
       direccion: form.direccion,
     }
     try {
@@ -101,7 +119,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
               id="usuario-nombre"
               className="entrada"
               value={form.nombre}
-              onChange={cambiar('nombre')}
+              onChange={escribir('nombre', nombrePropio)}
               autoCapitalize="words"
               autoComplete="off"
               enterKeyHint="next"
@@ -122,7 +140,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
               id="usuario-apellido"
               className="entrada"
               value={form.apellido}
-              onChange={cambiar('apellido')}
+              onChange={escribir('apellido', nombrePropio)}
               autoCapitalize="words"
               autoComplete="off"
               enterKeyHint="next"
@@ -152,7 +170,7 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
             maxLength={254}
             placeholder="usuario@correo.com"
             value={form.email}
-            onChange={cambiar('email')}
+            onChange={escribir('email', sinEspaciosMinusculas)}
             aria-invalid={Boolean(verError('email'))}
             required
             aria-required="true"
@@ -177,43 +195,67 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
           {verError('grupo') && <small className="texto-error">{errores.grupo}</small>}
         </fieldset>
 
-        <div className="formulario-modal__fila">
+        <label>
+          <span>
+            Documento
+            <Obligatorio si={nuevo} />
+          </span>
+          <input
+            id="usuario-documento"
+            className="entrada"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="off"
+            enterKeyHint="next"
+            maxLength={8}
+            placeholder="Solo números, sin puntos"
+            value={form.documento}
+            onChange={escribir('documento', soloNumeros)}
+            /* El documento es la clave del usuario: no se cambia después de crearlo */
+            disabled={!nuevo}
+            readOnly={!nuevo}
+            required={nuevo}
+            aria-required={nuevo}
+            aria-invalid={Boolean(verError('documento'))}
+          />
+          {verError('documento') && <small className="texto-error">{errores.documento}</small>}
+        </label>
+        <div className="formulario-modal__fila formulario-modal__fila--telefono">
           <label>
-            <span>
-              Documento
-              <Obligatorio si={nuevo} />
-            </span>
+            Código de área
             <input
-              id="usuario-documento"
+              id="usuario-codigo"
               className="entrada"
               inputMode="numeric"
+              pattern="[0-9]*"
               autoComplete="off"
               enterKeyHint="next"
-              maxLength={10}
-              placeholder="Sin puntos"
-              value={form.documento}
-              onChange={cambiar('documento')}
-              /* El documento es la clave del usuario: no se cambia después de crearlo */
-              disabled={!nuevo}
-              readOnly={!nuevo}
-              required={nuevo}
-              aria-required={nuevo}
-              aria-invalid={Boolean(verError('documento'))}
+              maxLength={4}
+              placeholder="Ej.: 387"
+              value={form.codigoArea}
+              onChange={escribir('codigoArea', (texto) => soloNumeros(texto).replace(/^0+/, ''))}
+              aria-invalid={Boolean(verError('codigo'))}
             />
-            {verError('documento') && <small className="texto-error">{errores.documento}</small>}
+            {verError('codigo') && <small className="texto-error">{errores.codigo}</small>}
           </label>
           <label>
-            Teléfono
+            <span>
+              Teléfono <span className="opcional">(opcional)</span>
+            </span>
             <input
+              id="usuario-telefono"
               className="entrada"
               type="tel"
               inputMode="tel"
               autoComplete="off"
               enterKeyHint="next"
-              maxLength={20}
+              maxLength={cifrasDelNumero(form.codigoArea)}
+              placeholder="Sin el 15"
               value={form.telefono}
-              onChange={cambiar('telefono')}
+              onChange={escribir('telefono', (texto) => soloNumeros(texto).slice(0, cifrasDelNumero(form.codigoArea)))}
+              aria-invalid={Boolean(verError('telefono'))}
             />
+            {verError('telefono') && <small className="texto-error">{errores.telefono}</small>}
           </label>
         </div>
         <label>
@@ -224,9 +266,10 @@ function FormularioUsuario({ usuario, grupos, onGuardado, onCerrar }) {
             className="entrada"
             autoCapitalize="sentences"
             autoComplete="off"
+            enterKeyHint="done"
             maxLength={200}
             value={form.direccion}
-            onChange={cambiar('direccion')}
+            onChange={escribir('direccion', primeraMayuscula)}
           />
         </label>
 

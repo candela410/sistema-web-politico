@@ -283,8 +283,9 @@ class Usuario(AbstractUser):
     groups = None
     user_permissions = None
 
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username", "documento"]
+    # Se ingresa con el nombre de usuario, nunca con el correo (también en /admin)
+    USERNAME_FIELD = "username"
+    REQUIRED_FIELDS = ["email", "documento"]
 
     class Meta:
         db_table = "usuarios"

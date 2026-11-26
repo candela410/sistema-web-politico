@@ -8,7 +8,7 @@ el que ingresa lo arma el sistema: apellido + primera letra del nombre."""
 from datetime import date, datetime, time
 
 from django.contrib.admin.models import LogEntry
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -269,14 +269,17 @@ def _agrupar(permisos):
 @require_http_methods(["GET"])
 @requiere_permiso("auth.view_group")
 def permisos(request):
-    """Qué permite cada rol, por sección (la pantalla muestra un rol por vez)."""
+    """Todos los permisos del sistema, por sección ("todos"), y qué permite
+    cada rol ("grupos"). La pantalla muestra todos y filtra por rol."""
     grupos = Group.objects.prefetch_related("permissions__content_type").order_by("name")
+    todos = Permission.objects.select_related("content_type")
     usuarios = (
         Usuario.objects.filter(campana=request.campana, is_active=True)
         .select_related("grupo")
         .order_by("first_name")
     )
     return JsonResponse({
+        "todos": _agrupar(todos),
         "grupos": [
             {
                 "id": g.pk,

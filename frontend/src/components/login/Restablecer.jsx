@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { comprobarEnlace, restablecerContrasena } from '../../api/auth'
 import { contrasenaValida, MENSAJE_CONTRASENA, requisitosContrasena } from '../../validaciones'
-import logo from '../../assets/logo.png'
+import Logo from '../comunes/Logo'
 import CampoContrasena from './CampoContrasena'
 import FondoLogin from './FondoLogin'
 import './Login.css'
@@ -77,7 +77,7 @@ export default function Restablecer() {
 
       <section className="login__panel">
         <form className="login__form" onSubmit={guardar} noValidate>
-          <img className="login__logo" src={logo} alt="Logo" />
+          <Logo className="login__logo" />
 
           <h1>{titulo}</h1>
           <p className="login__subtitle">

@@ -1,0 +1,13 @@
+/* La foto (o la inicial) llena el círculo del avatar. object-fit: cover
+   (como resizeMode 'cover'): la foto ocupa todo el círculo sin deformarse,
+   aunque se recorten los bordes. */
+.avatar-foto {
+  overflow: hidden;
+}
+
+.avatar-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { pedirEnlace, ultimoUsuario } from '../../api/auth'
-import { errorUsuario } from '../../validaciones'
-import logo from '../../assets/logo.png'
+import { conFiltro, errorUsuario, sinEspaciosMinusculas } from '../../validaciones'
+import Logo from '../comunes/Logo'
 import FondoLogin from './FondoLogin'
 import './Login.css'
 
@@ -47,7 +47,7 @@ export default function Olvide() {
 
       <section className="login__panel">
         <form className="login__form" onSubmit={enviar} noValidate>
-          <img className="login__logo" src={logo} alt="Logo" />
+          <Logo className="login__logo" />
 
           <h1>{enviado ? 'Revise su correo' : 'Recuperar contraseña'}</h1>
           <p className="login__subtitle">
@@ -82,7 +82,7 @@ export default function Olvide() {
                   maxLength={254}
                   placeholder="apellido + inicial del nombre"
                   value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
+                  onChange={conFiltro(sinEspaciosMinusculas, setNombre)}
                   onBlur={() => setTocado(true)}
                   autoFocus
                   aria-invalid={Boolean(verError)}

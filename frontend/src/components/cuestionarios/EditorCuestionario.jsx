@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { conFiltro, primeraMayuscula, textoLibre } from '../../validaciones'
 import { Link, useNavigate, useParams } from 'react-router'
 import { obtenerCategorias } from '../../api/categorias'
 import * as api from '../../api/cuestionarios'
@@ -110,9 +111,10 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
           className="campo-linea campo-linea--pregunta"
           rows={1}
           value={pregunta.enunciado}
-          onChange={(e) => cambiar({ enunciado: e.target.value })}
+          onChange={conFiltro(textoLibre, (enunciado) => cambiar({ enunciado }))}
           placeholder="Escriba la pregunta"
           aria-label={`Texto de la pregunta ${numero}`}
+          autoCapitalize="sentences"
           disabled={bloqueado}
         />
       </div>
@@ -125,8 +127,11 @@ function TarjetaPregunta({ pregunta, numero, total, activa, bloqueado, onActivar
               ref={(el) => (refsOpciones.current[o.clave] = el)}
               className="campo-linea"
               value={o.texto}
-              onChange={(e) => cambiarOpcion(o.clave, e.target.value)}
+              onChange={conFiltro(textoLibre, (texto) => cambiarOpcion(o.clave, texto))}
               placeholder={`Opción ${i + 1}`}
+              autoCapitalize="sentences"
+              autoComplete="off"
+              enterKeyHint="next"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
@@ -320,21 +325,24 @@ function EditorCuestionario() {
           <input
             className="campo-linea campo-linea--titulo"
             value={form.titulo}
-            onChange={(e) => actualizar({ titulo: e.target.value })}
+            onChange={conFiltro(textoLibre, (titulo) => actualizar({ titulo }))}
             placeholder="Título del cuestionario"
             aria-label="Título del cuestionario"
             maxLength={180}
             autoCapitalize="sentences"
+            autoComplete="off"
+            enterKeyHint="next"
             required
           />
           <textarea
             className="campo-linea"
             rows={2}
             value={form.descripcion}
-            onChange={(e) => actualizar({ descripcion: e.target.value })}
+            onChange={conFiltro(primeraMayuscula, (descripcion) => actualizar({ descripcion }))}
             placeholder="Descripción"
             aria-label="Descripción"
             maxLength={1000}
+            autoCapitalize="sentences"
           />
           <div className="tarjeta-titulo__ajustes">
             <label className="tarjeta-titulo__campo">

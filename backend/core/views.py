@@ -10,7 +10,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 
 from .api import campana_activa, error, leer_json, permisos_de, puede_elegir_campana, requiere_sesion
 from .bitacora import diferencias, registrar
-from .contrasenas_views import buscar_por_nombre
+from .contrasenas_views import SIN_ENVIO, buscar_por_nombre, enviar_verificacion_correo
 from .limites import ip_de, limpiar, sumar, superado
 from .models import Usuario, username_libre
 from .validaciones import email as validar_email
@@ -59,6 +59,8 @@ DEMASIADOS_INTENTOS = "Demasiados intentos fallidos. Espere unos minutos e inten
 LOGIN_MAX_POR_USUARIO = 5   # intentos fallidos con el mismo usuario...
 LOGIN_MAX_POR_IP = 20       # ...o desde la misma IP...
 LOGIN_VENTANA = 15 * 60     # ...en 15 minutos
+CORREO_MAX_INTENTOS = 5     # contraseñas equivocadas al cambiar el correo, en 15 minutos
+CONTRASENA_INCORRECTA = "La contraseña no es correcta. Su correo no se cambió."
 
 
 @require_POST
@@ -79,13 +81,13 @@ def login_view(request):
     if superado("login-usuario", nombre, LOGIN_MAX_POR_USUARIO) or superado("login-ip", ip, LOGIN_MAX_POR_IP):
         return JsonResponse({"error": DEMASIADOS_INTENTOS}, status=429)
 
-    # Se ingresa con el nombre de usuario; Django autentica con el correo
-    # (USERNAME_FIELD), así que primero se busca a quién pertenece.
+    # Se ingresa solo con el nombre de usuario (USERNAME_FIELD); con el correo
+    # no se puede. Se busca la cuenta sin distinguir mayúsculas.
     # La regla de la contraseña (8 caracteres, etc.) no se revisa acá: se
     # exige al crearla o cambiarla. En el login, cualquier error da el mismo
     # mensaje, para no revelar si el usuario existe o si falló la contraseña.
     cuenta = buscar_por_nombre(nombre)
-    usuario = authenticate(request, email=cuenta.email, password=password) if cuenta else None
+    usuario = authenticate(request, username=cuenta.username, password=password) if cuenta else None
     if usuario is None:
         sumar("login-usuario", nombre, LOGIN_VENTANA)
         sumar("login-ip", ip, LOGIN_VENTANA)
@@ -140,7 +142,10 @@ def _foto_perfil(u):
 @require_http_methods(["PATCH"])
 @requiere_sesion
 def perfil(request):
-    """PATCH {nombre, apellido, email, telefono, direccion}: solo cambia lo que se envía."""
+    """PATCH {nombre, apellido, email, telefono, direccion}: solo cambia lo que se envía.
+    Para cambiar el correo hay que mandar también {password} (la contraseña de
+    la cuenta). El correo nuevo no se guarda acá: se le envía un enlace y se
+    guarda cuando la persona lo confirma (contrasenas_views.confirmar_correo)."""
     datos = leer_json(request)
     if datos is None:
         return error("Los datos enviados no son válidos.")
@@ -167,8 +172,24 @@ def perfil(request):
     if Usuario.objects.filter(email__iexact=email).exclude(pk=u.pk).exists():
         return error("Ya existe un usuario con ese correo electrónico.")
 
+    # Cambio de correo: con la contraseña de la cuenta, y queda pendiente hasta
+    # que se confirme desde el enlace que le llega al correo nuevo
+    correo_pendiente = None
+    if email != (u.email or "").lower():
+        clave = datos.get("password") or ""
+        if superado("perfil-correo", str(u.pk), CORREO_MAX_INTENTOS):
+            return error(DEMASIADOS_INTENTOS, 429)
+        if not isinstance(clave, str) or not clave or not u.check_password(clave):
+            sumar("perfil-correo", str(u.pk), LOGIN_VENTANA)
+            return error(CONTRASENA_INCORRECTA, 400, codigo="contrasena")
+        limpiar("perfil-correo", str(u.pk))
+        mensaje = enviar_verificacion_correo(u, email)
+        if mensaje:
+            return error(mensaje, 502 if mensaje == SIN_ENVIO else 409)
+        correo_pendiente = email
+
     antes = _foto_perfil(u)
-    u.first_name, u.last_name, u.email = nombre, apellido, email
+    u.first_name, u.last_name = nombre, apellido
     u.telefono, u.direccion = telefono or None, direccion or None
     u.username = username_libre(nombre, apellido, u)
     u.save()
@@ -177,7 +198,10 @@ def perfil(request):
     if cambios:
         registrar(request, u, "editar", cambios=cambios, detalle="Modificó sus datos desde Mi perfil",
                   campana=campana_activa(request))
-    return JsonResponse({"usuario": usuario_json(request)})
+    if correo_pendiente:
+        registrar(request, u, "editar", detalle=f"Pidió cambiar su correo a {correo_pendiente} (falta confirmarlo)",
+                  campana=campana_activa(request))
+    return JsonResponse({"usuario": usuario_json(request), "correo_pendiente": correo_pendiente})
 
 
 @require_http_methods(["PUT", "DELETE"])

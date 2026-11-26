@@ -1,0 +1,92 @@
+/* Campos, botones e imágenes: equivalentes web de las propiedades de
+   TextInput, Pressable e Image de React Native. Son valores por defecto: cada
+   pantalla los puede pisar con sus propias clases. */
+
+/* --- Campos de texto (TextInput) ---------------------------------------- */
+
+/* placeholderTextColor: el texto orientativo, más claro que lo escrito */
+.entrada::placeholder {
+  color: #807d8a;
+  opacity: 1;
+}
+
+/* selectionColor: el cursor y el texto seleccionado con el violeta del sistema */
+.entrada,
+.campo-linea {
+  caret-color: var(--lla-violeta);
+}
+
+::selection {
+  background: rgb(var(--o-tinte, 81 49 143) / 0.2);
+}
+
+/* multiline: los textos largos crecen con lo que se escribe (en los
+   navegadores que lo permiten) hasta un máximo, y después se desplazan */
+textarea.entrada {
+  min-height: 4.5em;
+  max-height: 40vh;
+  field-sizing: content;
+}
+
+/* Teléfono (Usuarios y Mi perfil): el código de área angosto al lado del número */
+.formulario-modal__fila.formulario-modal__fila--telefono {
+  grid-template-columns: 140px 1fr;
+}
+
+/* editable={false}: se puede leer y copiar, pero no escribir */
+.entrada[readonly]:not(:disabled) {
+  background: var(--o-superficie-2, #f7f6fa);
+  cursor: default;
+}
+
+/* --- Botones (Pressable) ------------------------------------------------- */
+
+/* Sin la demora del doble toque para hacer zoom: el botón responde al instante */
+button,
+a,
+label,
+select,
+summary,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/* Estos botones ya cambian al presionarlos (:active, como el estilo con
+   pressed): sin el destello gris que agrega el navegador del celular */
+.boton,
+.accion-icono,
+.enlace-boton {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* La pulsación larga muestra el nombre del botón (usePresionLarga): sin el
+   menú del navegador ni la selección del texto */
+.accion-icono {
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+/* hitSlop: en pantallas táctiles el área que responde al dedo es más grande
+   que el botón (34 px se ven, 46 px responden). A los costados se agranda
+   poco para no pisar al botón de al lado (los separan 6 px). */
+@media (pointer: coarse) {
+  .accion-icono::before {
+    content: '';
+    position: absolute;
+    inset: -6px -3px;
+  }
+}
+
+/* --- Imágenes (Image) ---------------------------------------------------- */
+
+/* resizeMode 'contain': el logo se ve entero, sin recortar ni deformar */
+.logo {
+  max-width: 100%;
+  object-fit: contain;
+}
+
+/* Gráficos que arma el servidor: completos dentro de su lugar */
+.grafico-imagen img,
+.analitica__imagen img {
+  object-fit: contain;
+}

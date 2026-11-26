@@ -16,6 +16,7 @@ import Login from './components/login/Login'
 import Olvide from './components/login/Olvide'
 import Configuracion from './components/configuracion/Configuracion'
 import Restablecer from './components/login/Restablecer'
+import ConfirmarCorreo from './components/login/ConfirmarCorreo'
 import Tutorial from './components/tutorial/tutorial'
 import Mapa from './components/mapa/Mapa'
 import MiRuta from './components/mapa/MiRuta'
@@ -25,13 +26,14 @@ import ListaResponder from './components/responder/ListaResponder'
 import ResponderCuestionario from './components/responder/ResponderCuestionario'
 import Usuarios from './components/usuarios/Usuarios'
 import { inicioDe, tiene } from './permisos'
-import logo from './assets/logo.png'
+import Logo from './components/comunes/Logo'
 
 // Rutas de la app. Cada sección pide un permiso de Django (el mismo que usa el
 // menú lateral en components/menu/opciones.js):
 //   /login        ingreso
 //   /olvide       "¿Olvidó su contraseña?": pedir el enlace por correo
 //   /restablecer/:uid/:token  elegir la contraseña (enlace del correo)
+//   /confirmar-correo/:token  confirmar el correo nuevo de Mi perfil (enlace del correo)
 //   /inicio       panel de inicio (todos los que tienen campaña)
 //   /campana      elegir, crear o desactivar campañas (superusuario o permiso "Ver campañas")
 //   /mapa, /cuestionarios(/nuevo|/:id|/:id/estadisticas), /categorias, /responder(/:id)
@@ -40,7 +42,7 @@ import logo from './assets/logo.png'
 //   /mi-ruta      la ruta del equipo del usuario (todos; pensada para el militante)
 //   /configuracion         Mi perfil: datos propios, foto y cambiar la contraseña
 //   /configuracion/backup  Backup de la base (solo superusuarios)
-// Todo lo que no sea /login, /olvide, /restablecer o /campana necesita una campaña elegida.
+// Todo lo que no sea /login, /olvide, /restablecer, /confirmar-correo o /campana necesita una campaña elegida.
 
 function RequiereSesion({ usuario, children }) {
   const ubicacion = useLocation()
@@ -108,7 +110,7 @@ function Rutas() {
   if (cargando)
     return (
       <main className="arranque" role="status">
-        <img className="arranque__logo" src={logo} alt="" />
+        <Logo className="arranque__logo" alt="" fetchPriority="high" />
         <span className="arranque__puntos" aria-hidden="true">
           <i />
           <i />
@@ -132,6 +134,9 @@ function Rutas() {
       <Route path="/restablecer/:uid/:token" element={<Restablecer />} />
       {/* Enlace cortado al copiarlo (le falta el token): se avisa en vez de ir al login */}
       <Route path="/restablecer/*" element={<Restablecer />} />
+      {/* Enlace del correo nuevo para confirmarlo (no pide sesión) */}
+      <Route path="/confirmar-correo/:token" element={<ConfirmarCorreo usuario={usuario} onCambio={setUsuario} />} />
+      <Route path="/confirmar-correo/*" element={<ConfirmarCorreo usuario={usuario} onCambio={setUsuario} />} />
       <Route
         path="/campana"
         element={

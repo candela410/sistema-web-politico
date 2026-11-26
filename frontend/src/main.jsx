@@ -6,6 +6,8 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import './bootstrap-tema.css'
 import './index.css'
 import './movimiento.css'
+// Campos, botones e imágenes (equivalentes de TextInput, Pressable e Image)
+import './interaccion.css'
 // Modo oscuro: va al final para poder pisar los colores de todo lo anterior
 import './tema-oscuro.css'
 import App from './App.jsx'

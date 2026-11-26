@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router'
 import { Menu as IconoMenu, Moon, Sun } from 'lucide-react'
 import { salirDeCampana } from '../../api/campanas'
-import logo from '../../assets/logo.png'
+import Logo from '../comunes/Logo'
 import { useTema } from '../../tema'
 import Avisos from './avisos'
 import BuscadorSecciones from './BuscadorSecciones'
@@ -84,7 +84,7 @@ function Menu({ usuario, onCambio, onSalir }) {
             <IconoMenu size={22} />
           </button>
           <div className="panel__marca">
-            <img className="panel__logo" src={logo} alt="Logo" />
+            <Logo className="panel__logo" />
             <div className="panel__titulo">
               <strong>Panel de gestión</strong>
               <span>{actual?.texto ?? 'Inicio'}</span>

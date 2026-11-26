@@ -35,6 +35,7 @@
 
 .elegir__logo {
   width: min(220px, 60%);
+  height: auto;
   margin: 0 auto;
 }
 

@@ -28,6 +28,9 @@ function ImagenTema({ cuestionario, pregunta, clave, version, tema }) {
       <img
         src={`/api/cuestionarios/${cuestionario}/estadisticas/${pregunta.id}/${clave}.png?v=${version ?? 0}${oscuro}`}
         alt={`Gráfico de ${pregunta.enunciado}`}
+        loading="lazy"
+        decoding="async"
+        draggable={false}
         onLoad={() => setEstado('listo')}
         onError={() => setEstado('error')}
       />

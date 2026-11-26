@@ -16,7 +16,10 @@ function Buscador({ valor, onCambio, placeholder, etiqueta }) {
         value={valor}
         onChange={(e) => onCambio(e.target.value)}
         onKeyDown={(e) => e.key === 'Escape' && valor && onCambio('')}
+        inputMode="search"
         autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         enterKeyHint="search"
         maxLength={100}
       />

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Pencil, Plus } from 'lucide-react'
 import * as api from '../../api/campanas'
-import logo from '../../assets/logo.png'
+import Logo from '../comunes/Logo'
 import { tiene } from '../../permisos'
-import { useConCambios } from '../../validaciones'
+import { conFiltro, nombreCosa, primeraMayuscula, useConCambios } from '../../validaciones'
 import BotonIcono from '../comunes/BotonIcono'
 import Modal from '../comunes/Modal'
 import Paginacion, { usePaginado } from '../comunes/Paginacion'
@@ -21,6 +21,7 @@ function FormularioCampana({ campana, onGuardada, onCerrar }) {
   const conCambios = useConCambios(form)
   const cambiar = (campo) => (e) =>
     setForm((f) => ({ ...f, [campo]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
+  const escribir = (campo, filtro) => conFiltro(filtro, (valor) => setForm((f) => ({ ...f, [campo]: valor })))
 
   async function guardar(e) {
     e.preventDefault()
@@ -42,9 +43,10 @@ function FormularioCampana({ campana, onGuardada, onCerrar }) {
           <input
             className="entrada"
             value={form.nombre}
-            onChange={cambiar('nombre')}
+            onChange={escribir('nombre', nombreCosa)}
             maxLength={150}
             autoCapitalize="sentences"
+            autoComplete="off"
             enterKeyHint="next"
             required
             autoFocus
@@ -52,7 +54,14 @@ function FormularioCampana({ campana, onGuardada, onCerrar }) {
         </label>
         <label>
           Descripción
-          <textarea className="entrada" rows={2} value={form.descripcion} onChange={cambiar('descripcion')} maxLength={500} />
+          <textarea
+            className="entrada"
+            rows={2}
+            value={form.descripcion}
+            onChange={escribir('descripcion', primeraMayuscula)}
+            maxLength={500}
+            autoCapitalize="sentences"
+          />
         </label>
         <label className="interruptor">
           <input type="checkbox" checked={form.activa} onChange={cambiar('activa')} />
@@ -133,7 +142,7 @@ function ElegirCampana({ usuario, onElegida, onSalir }) {
       </svg>
 
       <main className="elegir__contenido">
-        <img className="elegir__logo" src={logo} alt="Logo" />
+        <Logo className="elegir__logo" />
         <header className="elegir__encabezado">
           <div>
             <h1>Seleccione la campaña</h1>

@@ -11,7 +11,7 @@ import BotonIcono from '../comunes/BotonIcono'
 import AvisoOk from '../comunes/AvisoOk'
 import Interruptor from '../comunes/Interruptor'
 import { tiene } from '../../permisos'
-import { useConCambios } from '../../validaciones'
+import { conFiltro, nombreCosa, primeraMayuscula, useConCambios } from '../../validaciones'
 
 const ordenar = (lista) => [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
@@ -46,10 +46,11 @@ function FormularioCategoria({ categoria, onGuardada, onCerrar }) {
           id="cat-nombre"
           className="entrada"
           value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
+          onChange={conFiltro(nombreCosa, setNombre)}
           placeholder="Ej.: Seguridad"
           maxLength={120}
           autoCapitalize="sentences"
+          autoComplete="off"
           enterKeyHint="next"
           autoFocus
           required
@@ -61,9 +62,10 @@ function FormularioCategoria({ categoria, onGuardada, onCerrar }) {
           className="entrada"
           rows={3}
           value={descripcion}
-          onChange={(e) => setDescripcion(e.target.value)}
+          onChange={conFiltro(primeraMayuscula, setDescripcion)}
           placeholder="Qué tipo de cuestionarios agrupa"
           maxLength={500}
+          autoCapitalize="sentences"
         />
 
         {error && (

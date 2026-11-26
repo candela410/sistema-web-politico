@@ -44,18 +44,6 @@
   gap: 10px;
 }
 
-/* La foto (o la inicial) llena el círculo del avatar */
-.avatar-foto {
-  overflow: hidden;
-}
-
-.avatar-foto img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
 /* Avatar de Mi perfil: es un botón para cambiar la foto */
 .foto-perfil {
   position: relative;
@@ -195,4 +183,66 @@
 .backup__campos .entrada:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Contraseña para cambiar el correo (Editar mis datos): el ojito va adentro del campo */
+.campo-clave {
+  position: relative;
+  display: block;
+}
+
+.campo-clave .entrada {
+  padding-right: 44px;
+}
+
+.campo-clave__ojo {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--lla-gris);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.campo-clave__ojo:hover,
+.campo-clave__ojo:focus-visible {
+  background: rgb(var(--o-tinte, 81 49 143) / 0.1);
+  color: var(--o-violeta-texto, var(--lla-violeta));
+}
+
+.campo-clave__ayuda {
+  color: var(--lla-gris);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+/* Aviso de Mi perfil: el correo nuevo falta confirmarlo desde el enlace */
+.aviso-correo {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgb(var(--o-tinte, 81 49 143) / 0.25);
+  border-radius: 10px;
+  background: rgb(var(--o-tinte, 81 49 143) / 0.08);
+  color: var(--lla-texto);
+  font-size: 0.9rem;
+}
+
+.aviso-correo svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--o-violeta-texto, var(--lla-violeta));
+}
+
+.aviso-correo p {
+  margin: 0;
 }

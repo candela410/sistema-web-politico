@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { conFiltro, nombreCosa } from '../../validaciones'
 import { Pencil, Trash2 } from 'lucide-react'
 import BotonIcono from '../comunes/BotonIcono'
 import Confirmacion from '../comunes/Confirmacion'
@@ -106,10 +107,12 @@ function PanelZonas({ zonas, rutas, modo, setModo, seleccionada, onSeleccionar, 
           id="zona-nombre"
           className="entrada"
           value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
+          onChange={conFiltro(nombreCosa, setNombre)}
           placeholder="Ej.: Zona Norte"
           maxLength={100}
           autoCapitalize="sentences"
+          autoComplete="off"
+          enterKeyHint="done"
           required
         />
 

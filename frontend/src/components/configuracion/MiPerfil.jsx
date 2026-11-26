@@ -1,7 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
-import { Camera, KeyRound, Pencil, Trash2 } from 'lucide-react'
+import { Camera, Eye, EyeOff, KeyRound, MailCheck, Pencil, Trash2 } from 'lucide-react'
 import { guardarFoto, guardarPerfil, pedirCambioDeContrasena, quitarFoto, usuarioActual } from '../../api/auth'
-import { errorEmail, errorPersona, useConCambios } from '../../validaciones'
+import {
+  armarTelefono,
+  cifrasDelNumero,
+  conFiltro,
+  errorEmail,
+  errorPersona,
+  erroresTelefono,
+  nombrePropio,
+  primeraMayuscula,
+  separarTelefono,
+  sinEspaciosMinusculas,
+  soloNumeros,
+  useConCambios,
+} from '../../validaciones'
 import Avatar from '../comunes/Avatar'
 import AvisoOk from '../comunes/AvisoOk'
 import Confirmacion from '../comunes/Confirmacion'
@@ -14,32 +27,90 @@ import { fotoCuadrada } from './foto'
 // el enlace para cambiar la contraseña. El documento, el rol, la campaña y el
 // equipo los cambia la administración; el nombre de usuario lo arma el sistema.
 
-function errorTelefono(valor) {
-  const texto = valor.trim()
-  if (!texto) return ''
-  const cifras = texto.replace(/\D/g, '').length
-  return /^\+?[\d\s()-]+$/.test(texto) && cifras >= 8 && cifras <= 15 ? '' : 'El teléfono debe tener entre 8 y 15 números.'
+// Contraseña de la cuenta, para confirmar el cambio de correo. Oculta lo
+// escrito (como secureTextEntry) y tiene el ojito para mostrarla.
+function ContrasenaActual({ valor, onCambio, error, entrada }) {
+  const [ver, setVer] = useState(false)
+  return (
+    <label>
+      <span>Contraseña actual</span>
+      <span className="campo-clave">
+        <input
+          ref={entrada}
+          id="perfil-password"
+          className="entrada"
+          type={ver ? 'text' : 'password'}
+          autoComplete="current-password"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="done"
+          maxLength={128}
+          value={valor}
+          onChange={(e) => onCambio(e.target.value)}
+          aria-invalid={Boolean(error)}
+          aria-describedby="perfil-password-ayuda"
+        />
+        <button
+          type="button"
+          className="campo-clave__ojo"
+          onClick={() => setVer((v) => !v)}
+          aria-label={ver ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
+          aria-pressed={ver}
+        >
+          {ver ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+        </button>
+      </span>
+      {error ? (
+        <small id="perfil-password-ayuda" className="texto-error">
+          {error}
+        </small>
+      ) : (
+        <small id="perfil-password-ayuda" className="campo-clave__ayuda">
+          Para cambiar el correo, ingrese la contraseña con la que entra al sistema. Le enviaremos un enlace al correo
+          nuevo para confirmarlo.
+        </small>
+      )}
+    </label>
+  )
 }
 
 function EditarDatos({ usuario, onGuardado, onCerrar }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     nombre: usuario.nombre ?? '',
     apellido: usuario.apellido ?? '',
     email: usuario.email ?? '',
-    telefono: usuario.telefono ?? '',
+    // El teléfono se edita en dos campos: código de área y número
+    codigoArea: separarTelefono(usuario.telefono).codigo,
+    telefono: separarTelefono(usuario.telefono).numero,
     direccion: usuario.direccion ?? '',
-  })
+  }))
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
+  // Contraseña para cambiar el correo (aparte del form: no cuenta como "cambio")
+  const [password, setPassword] = useState('')
+  const [errorPassword, setErrorPassword] = useState('')
+  const entradaPassword = useRef(null)
   const conCambios = useConCambios(form)
-  const cambiar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: e.target.value }))
+  const cambiaCorreo = form.email.trim().toLowerCase() !== (usuario.email ?? '').toLowerCase()
+  // Lo que no corresponde a cada campo no se puede escribir (ver conFiltro)
+  const FILTROS = {
+    nombre: nombrePropio,
+    apellido: nombrePropio,
+    email: sinEspaciosMinusculas,
+    codigoArea: (texto) => soloNumeros(texto).replace(/^0+/, ''),
+    // Hasta las cifras que corresponden al código de área (387: 7, 11: 8, 3878: 6)
+    telefono: (texto) => soloNumeros(texto).slice(0, cifrasDelNumero(form.codigoArea)),
+    direccion: primeraMayuscula,
+  }
+  const cambiar = (campo) => conFiltro(FILTROS[campo], (valor) => setForm((f) => ({ ...f, [campo]: valor })))
 
   // Se validan mientras se escribe
   const errores = {
     nombre: form.nombre.trim() ? errorPersona(form.nombre) : 'Ingrese el nombre.',
     apellido: errorPersona(form.apellido, 'El apellido'),
     email: errorEmail(form.email),
-    telefono: errorTelefono(form.telefono),
+    ...erroresTelefono(form.codigoArea, form.telefono, usuario.telefono ?? ''),
   }
   const valido = !Object.values(errores).some(Boolean)
 
@@ -47,12 +118,28 @@ function EditarDatos({ usuario, onGuardado, onCerrar }) {
     e.preventDefault()
     if (!valido) return
     setError('')
+    setErrorPassword('')
+    if (cambiaCorreo && !password) {
+      setErrorPassword('Ingrese su contraseña para cambiar el correo.')
+      entradaPassword.current?.focus()
+      return
+    }
     setGuardando(true)
     try {
-      onGuardado(await guardarPerfil(form))
+      const { codigoArea, ...datos } = form
+      const r = await guardarPerfil({
+        ...datos,
+        telefono: armarTelefono(codigoArea, form.telefono),
+        ...(cambiaCorreo && { password }),
+      })
+      onGuardado(r.usuario, r.correo_pendiente)
     } catch (err) {
-      setError(err.message)
       setGuardando(false)
+      if (err.codigo === 'contrasena') {
+        setErrorPassword(err.message)
+        setPassword('')
+        entradaPassword.current?.focus()
+      } else setError(err.message)
     }
   }
 
@@ -66,7 +153,7 @@ function EditarDatos({ usuario, onGuardado, onCerrar }) {
         value={form[nombre]}
         onChange={cambiar(nombre)}
         aria-invalid={Boolean(errores[nombre])}
-        autoComplete="off"
+        enterKeyHint="next"
         {...props}
       />
       {errores[nombre] && <small className="texto-error">{errores[nombre]}</small>}
@@ -77,18 +164,65 @@ function EditarDatos({ usuario, onGuardado, onCerrar }) {
     <Modal titulo="Editar mis datos" onCerrar={onCerrar}>
       <form className="formulario-modal" onSubmit={guardar} noValidate>
         <div className="formulario-modal__fila">
-          {campo('nombre', 'Nombre', { maxLength: 150, autoCapitalize: 'words' })}
-          {campo('apellido', 'Apellido', { maxLength: 150, autoCapitalize: 'words' }, true)}
+          {campo('nombre', 'Nombre', { maxLength: 150, autoCapitalize: 'words', autoComplete: 'given-name' })}
+          {campo('apellido', 'Apellido', { maxLength: 150, autoCapitalize: 'words', autoComplete: 'family-name' }, true)}
         </div>
-        {campo('email', 'Correo electrónico', { type: 'email', inputMode: 'email', maxLength: 254 })}
-        <div className="formulario-modal__fila">
-          {campo('telefono', 'Teléfono', { type: 'tel', inputMode: 'tel', maxLength: 20 }, true)}
+        {campo('email', 'Correo electrónico', {
+          type: 'email',
+          inputMode: 'email',
+          autoComplete: 'email',
+          autoCapitalize: 'none',
+          autoCorrect: 'off',
+          spellCheck: false,
+          maxLength: 254,
+        })}
+        {cambiaCorreo && (
+          <ContrasenaActual
+            valor={password}
+            onCambio={(valor) => {
+              setPassword(valor)
+              setErrorPassword('')
+            }}
+            error={errorPassword}
+            entrada={entradaPassword}
+          />
+        )}
+        <div className="formulario-modal__fila formulario-modal__fila--telefono">
           <label>
-            Documento
-            <input className="entrada" value={usuario.documento || 'Sin cargar'} disabled readOnly />
+            Código de área
+            <input
+              className="entrada"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="tel-area-code"
+              enterKeyHint="next"
+              maxLength={4}
+              placeholder="Ej.: 387"
+              value={form.codigoArea}
+              onChange={cambiar('codigoArea')}
+              aria-invalid={Boolean(errores.codigo)}
+            />
+            {errores.codigo && <small className="texto-error">{errores.codigo}</small>}
           </label>
+          {campo(
+            'telefono',
+            'Teléfono',
+            {
+              type: 'tel',
+              inputMode: 'tel',
+              autoComplete: 'tel-local',
+              maxLength: cifrasDelNumero(form.codigoArea),
+              placeholder: 'Sin el 15',
+            },
+            true,
+          )}
         </div>
-        {campo('direccion', 'Dirección', { maxLength: 200, autoCapitalize: 'sentences' }, true)}
+        <label>
+          Documento
+          {/* Solo lectura (editable={false}): el documento lo cambia la administración */}
+          <input className="entrada" value={usuario.documento || 'Sin cargar'} disabled readOnly tabIndex={-1} />
+        </label>
+        {campo('direccion', 'Dirección', { maxLength: 200, autoCapitalize: 'sentences', autoComplete: 'street-address', enterKeyHint: 'done' }, true)}
         {error && (
           <p className="texto-error" role="alert">
             {error}
@@ -113,6 +247,8 @@ function MiPerfil({ usuario, onCambio }) {
   const [subiendo, setSubiendo] = useState(false)
   const [aviso, setAviso] = useState('')
   const [error, setError] = useState('')
+  // Correo nuevo que todavía falta confirmar desde el enlace
+  const [correoPendiente, setCorreoPendiente] = useState('')
   const archivo = useRef(null)
 
   // Datos frescos (por si cambiaron desde que se inició sesión)
@@ -168,7 +304,7 @@ function MiPerfil({ usuario, onCambio }) {
     }
   }
 
-  function guardado(nuevo) {
+  function guardado(nuevo, correoPendiente) {
     const cambioUsuario = nuevo.username !== usuario.username
     onCambio(nuevo)
     setEditando(false)
@@ -177,6 +313,7 @@ function MiPerfil({ usuario, onCambio }) {
         ? `Sus datos se guardaron. Su nombre de usuario ahora es «${nuevo.username}»: úselo para ingresar.`
         : 'Sus datos se guardaron correctamente.',
     )
+    setCorreoPendiente(correoPendiente || '')
   }
 
   const avatar = (
@@ -220,6 +357,15 @@ function MiPerfil({ usuario, onCambio }) {
       </div>
 
       <AvisoOk>{aviso}</AvisoOk>
+      {correoPendiente && (
+        <div className="aviso-correo" role="status">
+          <MailCheck size={20} aria-hidden="true" />
+          <p>
+            Le enviamos un enlace a <b>{correoPendiente}</b>. Ábralo para confirmar el correo nuevo: hasta entonces su
+            cuenta sigue usando <b>{usuario.email}</b>. El enlace vence en 24 horas. Revise también la carpeta de spam.
+          </p>
+        </div>
+      )}
       {error && (
         <p className="aviso-error" role="alert">
           {error}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import * as api from '../../api/encuestas'
-import { errorDocumento, errorPersona } from '../../validaciones'
+import { conFiltro, errorDocumento, errorPersona, nombrePropio, soloNumeros } from '../../validaciones'
 import '../cuestionarios/cuestionarios.css'
 import './responder.css'
 
@@ -91,13 +91,14 @@ function ResponderCuestionario() {
       .catch((e) => setError(e.message))
   }, [id])
 
-  const cambiarEncuestado = (campo) => (e) => {
-    // El documento admite solo números, hasta 8
-    const valor = campo === 'documento' ? e.target.value.replace(/\D/g, '').slice(0, 8) : e.target.value
-    setEncuestado((d) => ({ ...d, [campo]: valor }))
-    // Si hay letras o símbolos en un nombre, el error aparece mientras se escribe
-    if (campo !== 'documento' && errorPersona(valor)) setTocados((t) => ({ ...t, [campo]: true }))
-  }
+  // El documento admite solo números, hasta 8; el nombre y el apellido, solo
+  // letras, con mayúscula al principio de cada palabra
+  const cambiarEncuestado = (campo) =>
+    conFiltro(campo === 'documento' ? (texto) => soloNumeros(texto).slice(0, 8) : nombrePropio, (valor) => {
+      setEncuestado((d) => ({ ...d, [campo]: valor }))
+      // Un nombre muy corto muestra el error mientras se escribe
+      if (campo !== 'documento' && errorPersona(valor.trim())) setTocados((t) => ({ ...t, [campo]: true }))
+    })
 
   function responder(pregunta, valor) {
     setRespuestas((r) => ({ ...r, [pregunta]: valor }))
@@ -237,7 +238,9 @@ function ResponderCuestionario() {
                 onChange={cambiarEncuestado('documento')}
                 onBlur={tocar('documento')}
                 placeholder="Sin puntos, 7 u 8 números"
-                maxLength={10}
+                maxLength={8}
+                autoCorrect="off"
+                spellCheck={false}
                 aria-invalid={Boolean(errorDe('documento'))}
                 required
               />

@@ -124,7 +124,7 @@ export default function Olvide() {
                 returnKeyType="send"
                 onSubmitEditing={enviar}
                 maxLength={254}
-                placeholder="apellido + inicial del nombre"
+                placeholder="Ingrese su usuario"
                 autoFocus
                 error={verError || ''}
                 ayuda="Su apellido y la primera letra de su nombre. Ejemplo: Juan Pérez → perezj"

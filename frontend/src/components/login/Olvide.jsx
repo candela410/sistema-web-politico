@@ -139,7 +139,7 @@ export default function Olvide() {
                   spellCheck={false}
                   enterKeyHint="send"
                   maxLength={254}
-                  placeholder={porUsuario ? 'apellido + inicial del nombre' : 'usuario@correo.com'}
+                  placeholder={porUsuario ? 'Ingrese su usuario' : 'usuario@correo.com'}
                   value={valor}
                   onChange={conFiltro(sinEspaciosMinusculas, porUsuario ? setNombre : setEmail)}
                   onBlur={() => setTocado(true)}

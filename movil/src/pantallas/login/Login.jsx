@@ -76,7 +76,7 @@ export default function Login({ onIngreso }) {
           textContentType="username"
           returnKeyType="next"
           maxLength={254}
-          placeholder="apellido + inicial del nombre"
+          placeholder="Ingrese su usuario"
           error={verError('nombre')}
           ayuda="Su apellido y la primera letra de su nombre. Ejemplo: Juan Pérez → perezj"
         />

@@ -106,7 +106,7 @@ export default function Login({ onIngreso }) {
               spellCheck={false}
               enterKeyHint="next"
               maxLength={254}
-              placeholder="Usuario"
+              placeholder="Ingrese su usuario"
               value={nombre}
               onChange={conFiltro(sinEspaciosMinusculas, (valor) => {
                 setNombre(valor)

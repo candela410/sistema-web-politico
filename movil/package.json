@@ -1,0 +1,55 @@
+{
+  "name": "sistema-politico-app",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@expo-google-fonts/arimo": "^0.4.3",
+    "@expo-google-fonts/montserrat": "^0.4.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "9.2.1",
+    "@react-navigation/drawer": "^7.14.5",
+    "@react-navigation/native": "^7.5.2",
+    "expo": "~58.1.0",
+    "expo-asset": "~58.0.21",
+    "expo-constants": "~58.0.16",
+    "expo-file-system": "~58.0.14",
+    "expo-font": "~58.0.12",
+    "expo-image-manipulator": "~58.0.16",
+    "expo-image-picker": "~58.0.10",
+    "expo-linking": "~58.0.17",
+    "expo-location": "~58.0.23",
+    "expo-print": "~58.0.9",
+    "expo-router": "~58.0.33",
+    "expo-secure-store": "~58.0.3",
+    "expo-sharing": "~58.0.24",
+    "expo-status-bar": "~58.0.5",
+    "expo-system-ui": "~58.0.7",
+    "expo-video": "~58.0.14",
+    "lucide-react-native": "^1.79.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-gesture-handler": "~3.3.0",
+    "react-native-maps": "1.29.11",
+    "react-native-reanimated": "4.7.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-svg": "15.16.0",
+    "react-native-worklets": "0.13.0"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "test": "jest"
+  },
+  "private": true,
+  "devDependencies": {
+    "@testing-library/react-native": "^14.1.0",
+    "jest": "^30.5.2",
+    "jest-expo": "~58.0.16"
+  },
+  "jest": {
+    "preset": "jest-expo"
+  }
+}

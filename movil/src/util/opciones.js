@@ -1,0 +1,160 @@
+import {
+  ChartColumn,
+  ClipboardList,
+  ClipboardPen,
+  GraduationCap,
+  House,
+  Map,
+  Network,
+  Route,
+  ScrollText,
+  Settings,
+  ShieldCheck,
+  Tags,
+  Users,
+  UsersRound,
+} from 'lucide-react-native'
+import { tiene } from './permisos'
+
+// Opciones del menú lateral, agrupadas por sección.
+// Para sumar una pantalla nueva: agregar su Route en App.jsx y una línea acá.
+//   ruta         dirección de la pantalla (la misma que en App.jsx)
+//   texto        lo que se ve en el menú
+//   descripcion  subtítulo de la tarjeta en la pantalla de Inicio
+//   icono        ícono de lucide-react (https://lucide.dev/icons)
+//   permiso      permiso de Django que hace falta para verla (el mismo que pide App.jsx)
+//   sinCampana   true = se muestra aunque no haya una campaña elegida
+//   soloSi       función (usuario) => true/false para mostrarla según otro dato del usuario
+//   exacta       true = solo se marca activa en esa dirección exacta (no en sus subrutas)
+export const SECCIONES = [
+  {
+    titulo: null,
+    opciones: [{ ruta: '/inicio', texto: 'Inicio', icono: House, exacta: true }],
+  },
+  {
+    titulo: 'Territorio',
+    opciones: [
+      { ruta: '/mapa', texto: 'Mapa', descripcion: 'Barrios, zonas y rutas', icono: Map, permiso: 'core.view_zona' },
+      {
+        // La ruta del equipo del usuario. La ve quien tiene equipo y también
+        // quien no puede ver el Mapa (el militante), aunque todavía no tenga equipo
+        ruta: '/mi-ruta',
+        texto: 'Mi ruta',
+        descripcion: 'El recorrido de mi equipo',
+        icono: Route,
+        soloSi: (usuario) => Boolean(usuario.equipo) || !tiene(usuario, 'core.view_ruta'),
+      },
+      {
+        ruta: '/equipos',
+        texto: 'Equipos',
+        descripcion: 'Equipos y sus rutas',
+        icono: Network,
+        permiso: 'core.view_equipo',
+      },
+    ],
+  },
+  {
+    titulo: 'Encuestas',
+    opciones: [
+      {
+        ruta: '/cuestionarios',
+        texto: 'Cuestionarios',
+        descripcion: 'Formularios de campo',
+        icono: ClipboardList,
+        permiso: 'core.view_cuestionario',
+      },
+      {
+        ruta: '/categorias',
+        texto: 'Categorías',
+        descripcion: 'Temas de las preguntas',
+        icono: Tags,
+        permiso: 'core.view_categoria',
+      },
+      {
+        ruta: '/responder',
+        texto: 'Cargar encuesta',
+        descripcion: 'Responder en territorio',
+        icono: ClipboardPen,
+        permiso: 'core.add_encuesta',
+      },
+      {
+        ruta: '/dashboard',
+        texto: 'Dashboard',
+        descripcion: 'Gráficos de la campaña',
+        icono: ChartColumn,
+        permiso: 'core.view_encuesta',
+      },
+    ],
+  },
+  {
+    titulo: 'Gestión',
+    opciones: [
+      { ruta: '/usuarios', texto: 'Usuarios', descripcion: 'Cuentas y roles', icono: Users, permiso: 'core.view_usuario' },
+      {
+        ruta: '/grupos',
+        texto: 'Roles',
+        descripcion: 'Roles con sus permisos',
+        icono: UsersRound,
+        permiso: 'core.view_grupo',
+      },
+      {
+        ruta: '/permisos',
+        texto: 'Permisos',
+        descripcion: 'Qué puede hacer cada rol',
+        icono: ShieldCheck,
+        permiso: 'auth.view_group',
+      },
+      {
+        ruta: '/actividad',
+        texto: 'Actividad',
+        descripcion: 'Historial de cambios',
+        icono: ScrollText,
+        permiso: 'admin.view_logentry',
+      },
+    ],
+  },
+  {
+    titulo: 'Sistema',
+    // Sin permiso: todos entran a "Mi perfil"; la pestaña Backup es solo para superusuarios
+    opciones: [
+      {
+        ruta: '/configuracion',
+        texto: 'Configuración',
+        descripcion: 'Mi perfil y backup',
+        icono: Settings,
+      },
+    ],
+  },
+  {
+    titulo: 'Ayuda',
+    // Sin permiso: todos la ven, y cada uno ve solo los videos de sus funciones
+    opciones: [
+      {
+        ruta: '/tutorial',
+        texto: 'Tutorial',
+        descripcion: 'Videos paso a paso',
+        icono: GraduationCap,
+      },
+    ],
+  },
+]
+
+// Secciones con solo las opciones que puede ver este usuario (sin secciones vacías).
+// Sin campaña elegida solo quedan las opciones marcadas con sinCampana.
+export function seccionesPara(usuario) {
+  return SECCIONES.map((s) => ({
+    ...s,
+    opciones: s.opciones.filter(
+      (o) =>
+        (!o.permiso || tiene(usuario, o.permiso)) &&
+        (!o.soloSi || o.soloSi(usuario)) &&
+        (usuario.campana || o.sinCampana),
+    ),
+  })).filter((s) => s.opciones.length > 0)
+}
+
+// Opción que corresponde a la dirección actual (ej: /cuestionarios/5 → Cuestionarios)
+export function opcionActual(secciones, pathname) {
+  const todas = secciones.flatMap((s) => s.opciones)
+  return todas.find((o) => pathname === o.ruta || (!o.exacta && pathname.startsWith(`${o.ruta}/`)))
+}

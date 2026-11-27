@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "Panel de gestión",
+    "slug": "sistema-politico",
+    "scheme": "sistemapolitico",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/img/logo.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/img/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sistemapolitico.panel",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        },
+        "NSPhotoLibraryUsageDescription": "Para elegir su foto de perfil.",
+        "NSCameraUsageDescription": "Para sacar su foto de perfil."
+      }
+    },
+    "android": {
+      "package": "com.sistemapolitico.panel",
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/img/logo.png",
+        "backgroundColor": "#ffffff"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": ""
+        }
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sharing",
+      "expo-video",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Para elegir su foto de perfil.",
+          "cameraPermission": "Para sacar su foto de perfil."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Para registrar dónde se realiza cada encuesta.",
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
+      "expo-font",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "apiUrl": ""
+    }
+  }
+}

@@ -78,7 +78,7 @@ export default function Login({ onIngreso }) {
           maxLength={254}
           placeholder="Ingrese su usuario"
           error={verError('nombre')}
-          ayuda="Su apellido y la primera letra de su nombre. Ejemplo: Juan Pérez → perezj"
+          ayuda=""
         />
         <Entrada
           etiqueta="Contraseña"

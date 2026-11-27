@@ -140,7 +140,7 @@ export default function ElegirCampana({ usuario, onElegida, onSalir }) {
       </View>
       <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>
         <ScrollView contentContainerStyle={{ padding: 20, gap: 14, maxWidth: 760, width: '100%', alignSelf: 'center' }}>
-          <Texto estilo="suave">Seleccione la campaña en la que va a trabajar: se mostrarán solo sus datos.</Texto>
+          <Texto estilo="suave"></Texto>
           {puedeCrear && <Boton titulo="Nueva campaña" icono={Plus} onPress={() => setEditando('nueva')} grande />}
           <TextoError>{error}</TextoError>
 

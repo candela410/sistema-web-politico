@@ -153,8 +153,7 @@ function EditarDatos({ usuario, onGuardado, onCerrar, onFoto, onQuitarFoto, onCo
       </Fila>
       <Entrada etiqueta="Dirección (opcional)" value={form.direccion} onChangeText={cambiar('direccion')} maxLength={200} autoCapitalize="sentences" />
       <Texto estilo="chico" style={{ backgroundColor: c.superficie2, padding: 10, borderRadius: 10 }}>
-        El documento no se puede modificar. Al correo llegan los enlaces para cambiar la contraseña. Si cambia su nombre o su apellido, también cambia su nombre
-        de usuario (apellido + inicial del nombre).
+        
       </Texto>
       <TextoError>{error}</TextoError>
       <Acciones onCancelar={onCerrar}>

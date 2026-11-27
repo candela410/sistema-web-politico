@@ -183,10 +183,6 @@ function Rutas() {
         <Route path="/tutorial" element={s(null, <Tutorial usuario={usuario} />)} />
         <Route path="/configuracion" element={s(null, <Configuracion usuario={usuario} onCambio={setUsuario} />)} />
         <Route
-          path="/configuracion/notificaciones"
-          element={s(null, <Configuracion usuario={usuario} onCambio={setUsuario} pestana="notificaciones" />)}
-        />
-        <Route
           path="/configuracion/backup"
           element={
             usuario?.es_superusuario ? (

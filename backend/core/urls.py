@@ -32,7 +32,6 @@ urlpatterns = [
     path("auth/confirmar-correo/", contrasenas_views.confirmar_correo, name="auth-confirmar-correo"),
     path("avisos/", avisos_views.avisos, name="avisos"),
     path("avisos/leidas/", avisos_views.marcar_leidas, name="avisos-leidas"),
-    path("avisos/preferencias/", avisos_views.preferencias, name="avisos-preferencias"),
     path("backup/", backup_views.backups, name="backups"),
     path("backup/programacion/", backup_views.programacion, name="backup-programacion"),
     path("backup/<str:pk>/", backup_views.backup_detalle, name="backup"),
@@ -75,5 +74,6 @@ urlpatterns = [
     path("mapa/encuestas/", encuestas_views.mapa_encuestas, name="mapa-encuestas"),
     path("encuestas/por-dia/", encuestas_views.por_dia, name="encuestas-por-dia"),
     path("analitica/", analitica_views.resumen, name="analitica"),
+    path("analitica/respuestas-por-zona/", analitica_views.respuestas_por_zona, name="analitica-respuestas-zona"),
     path("analitica/<str:clave>.png", analitica_views.grafico, name="analitica-grafico"),
 ]

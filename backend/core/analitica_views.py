@@ -245,3 +245,112 @@ def grafico(request, clave):
     if fig is None:
         return error("No hay encuestas en ese período.", 404)
     return _imagen(fig, request)
+
+
+# ---------------------------------------------------------------------------
+# Respuestas por zona y cuestionario (filtros del Dashboard)
+# ---------------------------------------------------------------------------
+#
+# La zona es la ADMINISTRATIVA, no el GPS: una encuesta es de una zona cuando
+# el usuario que la cargó tiene un equipo cuya ruta pasa por calles de barrios
+# de esa zona:
+#   encuestas → usuarios (documento_usuario) → equipos → rutas → calles → barrios → zonas
+#
+# Las respuestas se cuentan con: respuesta_cargada → opciones → preguntas →
+# cuestionarios. respuesta_cargada no guarda a qué encuesta pertenece, así que
+# las respuestas de un cuestionario solo se pueden atribuir a una zona cuando
+# TODAS las encuestas de ese cuestionario son de esa zona. Si el cuestionario
+# también se cargó en otras zonas (o por usuarios sin zona), no se pueden
+# separar y no se muestran como si fueran de la zona.
+
+_ZONAS_DE_ENCUESTA = """
+    SELECT DISTINCT b.id_zona
+    FROM usuarios u
+    JOIN equipos q ON q.id_equipo = u.id_equipo
+    JOIN calles ca ON ca.id_ruta = q.id_ruta
+    JOIN barrios b ON b.id_barrio = ca.id_barrio
+    WHERE u.documento = e.documento_usuario AND b.id_zona IS NOT NULL
+"""
+
+
+def _filas(sql, parametros):
+    with connection.cursor() as cur:
+        cur.execute(sql, parametros)
+        return cur.fetchall()
+
+
+@require_GET
+@requiere_permiso("core.view_encuesta")
+def respuestas_por_zona(request):
+    """GET ?zona=&cuestionario= → encuestas de ese cuestionario en esa zona y,
+    si se pueden atribuir a la zona, las preguntas con sus respuestas."""
+    zona_id, cuestionario_id = request.GET.get("zona", ""), request.GET.get("cuestionario", "")
+    if not zona_id.isdigit() or not cuestionario_id.isdigit():
+        return error("Seleccione una zona y un cuestionario.")
+    zona = Zona.objects.filter(pk=int(zona_id)).first()
+    if zona is None:
+        return error("La zona no existe.", 404)
+    cuestionario = cuestionarios_de_campana(request.campana).filter(pk=int(cuestionario_id)).first()
+    if cuestionario is None:
+        return error("El cuestionario no existe en esta campaña.", 404)
+
+    # Cada encuesta del cuestionario con las zonas de quien la cargó
+    encuestas = _filas(
+        f"""
+        SELECT e.id_encuesta, u.id_campana,
+               ARRAY(SELECT z.nombre FROM zonas z WHERE z.id_zona IN ({_ZONAS_DE_ENCUESTA}) ORDER BY z.nombre)
+        FROM encuestas e
+        JOIN usuarios u ON u.documento = e.documento_usuario
+        WHERE e.id_cuestionario = %s
+        """,
+        [cuestionario.pk],
+    )
+    total = len(encuestas)
+    en_zona = sum(1 for _, campana, zonas in encuestas if zona.nombre in zonas and campana == request.campana.pk)
+    # Dónde se cargó el resto (para explicar por qué no se pueden separar)
+    reparto = {}
+    for _, _, zonas in encuestas:
+        for nombre in zonas or ["Sin zona"]:
+            reparto[nombre] = reparto.get(nombre, 0) + 1
+    exacto = total > 0 and en_zona == total
+
+    preguntas = []
+    if exacto:
+        filas = _filas(
+            """
+            SELECT p.id_pregunta, p.orden, p.enunciado, p.tipo, o.id_opcion, o.texto, COUNT(r.id_respuesta)
+            FROM preguntas p
+            JOIN opciones o ON o.id_pregunta = p.id_pregunta
+            LEFT JOIN respuesta_cargada r ON r.id_opcion = o.id_opcion
+            WHERE p.id_cuestionario = %s
+            GROUP BY p.id_pregunta, p.orden, p.enunciado, p.tipo, o.id_opcion, o.orden, o.texto
+            ORDER BY p.orden, o.orden
+            """,
+            [cuestionario.pk],
+        )
+        por_id = {}
+        for id_p, orden, enunciado, tipo, id_o, texto, cantidad in filas:
+            p = por_id.get(id_p)
+            if p is None:
+                p = por_id[id_p] = {
+                    "id": id_p, "orden": orden, "enunciado": enunciado, "tipo": tipo,
+                    "multiple": tipo == "opcion_multiple", "opciones": [], "respuestas": 0,
+                }
+                preguntas.append(p)
+            p["opciones"].append({"id": id_o, "texto": texto, "cantidad": cantidad})
+            p["respuestas"] += cantidad
+        for p in preguntas:
+            for o in p["opciones"]:
+                # Porcentaje sobre las encuestas de la zona (en opción múltiple
+                # una persona puede elegir varias, así que no suman 100 %)
+                o["porcentaje"] = round(100 * o["cantidad"] / total, 1)
+
+    return JsonResponse({
+        "zona": {"id": zona.pk, "nombre": zona.nombre},
+        "cuestionario": {"id": cuestionario.pk, "titulo": cuestionario.titulo},
+        "encuestas": en_zona,
+        "encuestas_cuestionario": total,
+        "separable": exacto,
+        "reparto": [{"zona": z, "encuestas": n} for z, n in sorted(reparto.items(), key=lambda x: (-x[1], x[0]))],
+        "preguntas": preguntas,
+    })

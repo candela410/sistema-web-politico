@@ -3,6 +3,7 @@ import { Download, FileDown } from 'lucide-react'
 import { obtenerResumenAnalitica, urlGraficoAnalitica } from '../../api/analitica'
 import { useTemaActual } from '../../tema'
 import Modal from '../comunes/Modal'
+import RespuestasPorZona from './RespuestasPorZona'
 import './analitica.css'
 
 // Dashboard: los gráficos del Módulo de Analítica de la campaña activa. Los
@@ -326,6 +327,7 @@ function Analitica({ usuario }) {
               </div>
             </>
           )}
+          <RespuestasPorZona zonas={resumen.zonas ?? []} cuestionarios={resumen.cuestionarios ?? []} />
         </>
       )}
       {eligiendoPdf && (

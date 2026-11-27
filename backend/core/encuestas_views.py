@@ -2,6 +2,7 @@
 (vista de la administración)."""
 
 from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
 
 from django.db import IntegrityError, transaction
 from django.db.models import CharField, Count, OuterRef, Subquery, Value
@@ -121,6 +122,36 @@ def _limpiar_respuestas(cuestionario, respuestas):
     return limpias
 
 
+UBICACION_INVALIDA = "La ubicación enviada no es válida. Vuelva a obtener la ubicación del dispositivo."
+
+
+def _coordenada(valor, minimo, maximo):
+    """Número con 6 decimales dentro del rango; None si no es válido."""
+    if isinstance(valor, bool):
+        return None
+    try:
+        numero = round(Decimal(str(valor)), 6)
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    return numero if numero.is_finite() and minimo <= numero <= maximo else None
+
+
+def _ubicacion(datos):
+    """Ubicación GPS del dispositivo que cargó la encuesta: {latitud, longitud}.
+    Es opcional (la web no la manda; la app móvil sí). Si viene, tienen que
+    venir las dos y ser coordenadas reales; nunca se completa con valores por
+    defecto. Devuelve (latitud, longitud) o (None, None); RespuestaInvalida si
+    vino mal."""
+    latitud, longitud = datos.get("latitud"), datos.get("longitud")
+    if latitud is None and longitud is None:
+        return None, None
+    lat, lng = _coordenada(latitud, -90, 90), _coordenada(longitud, -180, 180)
+    # (0, 0) es lo que devuelven algunos GPS sin señal: no es una ubicación real
+    if lat is None or lng is None or (lat == 0 and lng == 0):
+        raise RespuestaInvalida(UBICACION_INVALIDA)
+    return lat, lng
+
+
 @require_http_methods(["GET", "POST"])
 @requiere_permiso("core.add_encuesta")
 def responder(request, pk):
@@ -134,6 +165,7 @@ def responder(request, pk):
     try:
         encuestado_datos = _limpiar_encuestado(datos.get("encuestado"))
         respuestas = _limpiar_respuestas(cuestionario, datos.get("respuestas"))
+        latitud, longitud = _ubicacion(datos)
     except RespuestaInvalida as e:
         return error(str(e))
     if not respuestas:
@@ -155,7 +187,13 @@ def responder(request, pk):
                 encuestado=encuestado,
                 id_cuestionario=cuestionario.pk,
                 documento_usuario=request.user.pk,
+                latitud=latitud,
+                longitud=longitud,
             )
+            # Cada respuesta guarda la misma ubicación (de ahí sale la zona real
+            # donde se respondió, para el dashboard)
+            for respuesta in respuestas:
+                respuesta.latitud, respuesta.longitud = latitud, longitud
             RespuestaCargada.objects.bulk_create(respuestas)
     except IntegrityError:
         return error("Esta persona ya respondió este cuestionario.", 409)

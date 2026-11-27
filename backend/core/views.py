@@ -5,6 +5,7 @@ import json
 
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
+from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
@@ -51,7 +52,8 @@ def usuario_json(request):
 @ensure_csrf_cookie
 def csrf(request):
     # Deja la cookie csrftoken para que el frontend pueda hacer POST
-    return JsonResponse({"ok": True})
+    # El token también va en el JSON: la app móvil (React Native) no puede leer las cookies
+    return JsonResponse({"ok": True, "csrfToken": get_token(request)})
 
 
 CREDENCIALES_INVALIDAS = "Credenciales inválidas. Por favor, verifique su usuario y contraseña."
@@ -99,7 +101,8 @@ def login_view(request):
         # Sin "Recordar", la sesión termina al cerrar el navegador
         request.session.set_expiry(0)
     registrar(request, usuario, "sesion", detalle="Inició sesión", campana=usuario.campana)
-    return JsonResponse({"usuario": usuario_json(request)})
+    # login() rota el token CSRF: se devuelve el nuevo para la app móvil
+    return JsonResponse({"usuario": usuario_json(request), "csrfToken": get_token(request)})
 
 
 @require_POST

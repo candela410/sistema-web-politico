@@ -14,28 +14,18 @@ import logging
 from django.db.models import Q
 from django.utils import timezone
 
-from .models import Notificacion, PreferenciaNotificacion, Usuario
+from .models import Notificacion, Usuario
 
 registro = logging.getLogger(__name__)
 Tipo = Notificacion.Tipo
 
 
-def quiere_recibir(usuarios, tipo):
-    """Saca a quienes desactivaron ese tipo de aviso en Configuración → Notificaciones."""
-    usuarios = list(usuarios)
-    no = set(
-        PreferenciaNotificacion.objects.filter(usuario__in=usuarios, tipo=tipo, recibir=False)
-        .values_list("usuario_id", flat=True)
-    )
-    return [u for u in usuarios if u.pk not in no]
-
-
 def notificar(usuarios, tipo, titulo, mensaje, enlace=None):
-    """Una notificación igual para cada usuario de la lista que quiera recibirla."""
+    """Una notificación igual para cada usuario de la lista."""
     try:
         Notificacion.objects.bulk_create(
             [Notificacion(usuario=u, tipo=tipo, titulo=titulo, mensaje=mensaje, enlace=enlace)
-             for u in quiere_recibir(usuarios, tipo)]
+             for u in usuarios]
         )
     except Exception:  # noqa: BLE001
         registro.exception("No se pudo crear la notificación %s", tipo)
@@ -108,26 +98,6 @@ def contrasena_cambiada(usuario):
         [usuario], Tipo.CONTRASENA_CAMBIADA, "Se cambió su contraseña",
         "Si no fue usted, avise a un administrador y pida restablecerla.", "/configuracion",
     )
-
-
-# Qué avisos puede recibir cada usuario, para la pantalla de preferencias
-DESCRIPCIONES = {
-    Tipo.CUESTIONARIO_ASIGNADO: "Cuando le asignan un cuestionario para cargar encuestas.",
-    Tipo.ENCUESTA_CARGADA: "Cuando se cargan encuestas en su campaña (un aviso por día y cuestionario).",
-    Tipo.BACKUP_FALLIDO: "Cuando falla el backup automático de la base de datos.",
-    Tipo.CONTRASENA_CAMBIADA: "Cuando se cambia la contraseña de su usuario.",
-}
-PERMISO_DE_TIPO = {
-    Tipo.CUESTIONARIO_ASIGNADO: "core.add_encuesta",
-    Tipo.ENCUESTA_CARGADA: "core.recibir_encuesta_cargada",
-    Tipo.BACKUP_FALLIDO: "core.recibir_backup_fallido",
-}
-
-
-def tipos_de(usuario):
-    """Tipos de aviso que le pueden llegar al usuario según sus permisos
-    (el de contraseña cambiada le llega a todos)."""
-    return [t for t in Tipo if t not in PERMISO_DE_TIPO or usuario.has_perm(PERMISO_DE_TIPO[t])]
 
 
 def nombre(usuario):

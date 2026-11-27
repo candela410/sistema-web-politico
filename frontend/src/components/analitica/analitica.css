@@ -149,3 +149,113 @@
   color: var(--lla-gris);
   font-size: 0.8rem;
 }
+
+/* --- Respuestas por zona y cuestionario --------------------------------- */
+.zona-respuestas {
+  margin-top: 32px;
+  display: grid;
+  gap: 16px;
+}
+
+.zona-respuestas header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.zona-respuestas header p {
+  margin: 4px 0 0;
+  color: var(--lla-gris);
+  font-size: 0.9rem;
+}
+
+.zona-respuestas .aviso-info p {
+  margin: 0 0 6px;
+}
+
+.zona-respuestas .aviso-info ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.zona-preguntas {
+  display: grid;
+  gap: 16px;
+}
+
+.zona-pregunta {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--lla-borde);
+  border-radius: 12px;
+}
+
+.zona-pregunta h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.zona-pregunta__tipo {
+  margin: 4px 0 12px;
+  color: var(--lla-gris);
+  font-size: 0.82rem;
+}
+
+.zona-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.zona-tabla th {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--lla-borde);
+  color: var(--lla-gris);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.zona-tabla td {
+  padding: 8px;
+  border-bottom: 1px solid var(--o-linea, #ecebf0);
+  vertical-align: middle;
+}
+
+.zona-tabla tr:last-child td {
+  border-bottom: 0;
+}
+
+.zona-tabla__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.zona-tabla td:last-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+}
+
+.zona-barra {
+  flex: 1;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(var(--o-tinte, 81 49 143) / 0.12);
+}
+
+.zona-barra__relleno {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--o-violeta-texto, var(--lla-violeta));
+}
+
+.zona-barra__texto {
+  flex: none;
+  width: 56px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

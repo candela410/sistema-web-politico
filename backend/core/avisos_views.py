@@ -9,11 +9,10 @@ from datetime import timedelta
 
 from django.http import JsonResponse
 from django.utils import timezone
-from django.views.decorators.http import require_GET, require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_POST
 
-from .api import error, leer_json, requiere_permiso
-from .models import Notificacion, PreferenciaNotificacion
-from .notificaciones import DESCRIPCIONES, tipos_de
+from .api import requiere_permiso
+from .models import Notificacion
 
 # Avisos de los últimos DIAS días, como mucho MAXIMO
 DIAS = 30
@@ -51,30 +50,3 @@ def marcar_leidas(request):
         leida=True, leida_en=timezone.now()
     )
     return JsonResponse({"ok": True, "leidas": cantidad})
-
-
-@require_http_methods(["GET", "PUT"])
-@requiere_permiso(campana=False)
-def preferencias(request):
-    """Configuración → Notificaciones: qué avisos quiere recibir el usuario.
-    GET: los tipos que le pueden llegar, con "recibir" sí/no.
-    PUT {tipo: true/false, ...}: guarda lo elegido."""
-    usuario = request.user
-    tipos = tipos_de(usuario)
-    if request.method == "PUT":
-        datos = leer_json(request)
-        if not isinstance(datos, dict) or not all(isinstance(v, bool) for v in datos.values()):
-            return error("Los datos enviados no son válidos.")
-        for tipo, recibir in datos.items():
-            if tipo not in tipos:
-                return error("Ese tipo de aviso no existe o no le corresponde.")
-            PreferenciaNotificacion.objects.update_or_create(usuario=usuario, tipo=tipo, defaults={"recibir": recibir})
-    no = set(
-        PreferenciaNotificacion.objects.filter(usuario=usuario, recibir=False).values_list("tipo", flat=True)
-    )
-    return JsonResponse({
-        "preferencias": [
-            {"tipo": t.value, "nombre": t.label, "descripcion": DESCRIPCIONES[t], "recibir": t.value not in no}
-            for t in tipos
-        ]
-    })

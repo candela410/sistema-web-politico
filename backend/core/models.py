@@ -639,23 +639,3 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return f"{self.titulo} ({self.usuario_id})"
-
-
-# Qué avisos quiere recibir cada usuario (Configuración → Notificaciones). Una
-# fila por usuario y tipo; si no hay fila, el aviso se recibe.
-class PreferenciaNotificacion(models.Model):
-    pk = models.CompositePrimaryKey("usuario", "tipo")
-    usuario = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        db_column="documento_usuario",
-        related_name="preferencias_notificaciones",
-    )
-    tipo = models.CharField(max_length=30, choices=Notificacion.Tipo)
-    recibir = models.BooleanField(default=True)
-
-    class Meta:
-        db_table = "preferencias_notificaciones"
-        verbose_name = "preferencia de notificación"
-        verbose_name_plural = "preferencias de notificaciones"
-        default_permissions = ()

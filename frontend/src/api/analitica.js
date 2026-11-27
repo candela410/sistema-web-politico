@@ -13,3 +13,7 @@ export const obtenerResumenAnalitica = (filtros) => pedir(`/api/analitica/${cons
 // Dirección de la imagen PNG de un gráfico (periodo, donut, evolucion, heatmap, dashboard o
 // respuestas con ?cuestionario=&zona=)
 export const urlGraficoAnalitica = (clave, filtros) => `/api/analitica/${clave}.png${consulta(filtros)}`
+
+// Encuestas de un cuestionario en una zona (la del equipo de quien la cargó) y sus respuestas
+export const obtenerRespuestasPorZona = (zona, cuestionario) =>
+  pedir(`/api/analitica/respuestas-por-zona/${consulta({ zona, cuestionario })}`)

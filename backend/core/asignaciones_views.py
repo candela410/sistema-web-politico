@@ -18,7 +18,6 @@ from .api import error, leer_json, requiere_permiso
 from .bitacora import registrar
 from .cuestionarios_views import cuestionarios_de_campana
 from .equipos_views import equipos_de_campana
-from . import notificaciones
 from .models import AsignacionCuestionario, Encuesta, Usuario
 
 PERMISOS = {
@@ -90,8 +89,6 @@ def asignaciones(request, pk):
             AsignacionCuestionario.objects.bulk_create(
                 [AsignacionCuestionario(cuestionario=cuestionario, usuario_id=i) for i in nuevos]
             )
-        if nuevos:
-            notificaciones.cuestionario_asignado(Usuario.objects.filter(pk__in=nuevos), cuestionario)
         nombres = {u.pk: _nombre(u) for u in Usuario.objects.filter(pk__in=antes | elegidos)}
         lista = lambda ids_: ", ".join(sorted(nombres[i] for i in ids_)) or "Nadie"
         partes = []

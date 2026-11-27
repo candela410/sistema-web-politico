@@ -3,6 +3,7 @@ import { Download, FileDown } from 'lucide-react'
 import { obtenerResumenAnalitica, urlGraficoAnalitica } from '../../api/analitica'
 import { useTemaActual } from '../../tema'
 import Modal from '../comunes/Modal'
+import ImagenAmpliable from '../comunes/ImagenAmpliable'
 import RespuestasPorZona from './RespuestasPorZona'
 import './analitica.css'
 
@@ -83,7 +84,8 @@ function Grafico({ grafico, url, onError, mensajeError = 'No se pudo generar el 
       </figcaption>
       <div className={`analitica__imagen analitica__imagen--${estado}`}>
         {estado === 'error' && <p className="aviso-info">{motivo || mensajeError}</p>}
-        <img
+        <ImagenAmpliable
+          titulo={grafico.titulo}
           src={url}
           alt={`${grafico.titulo}: ${grafico.pregunta}`}
           loading="lazy"

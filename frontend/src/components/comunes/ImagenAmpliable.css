@@ -1,0 +1,63 @@
+/* Gráfico que se agranda al tocarlo (ImagenAmpliable.jsx) */
+.imagen-ampliable {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+  border-radius: 8px;
+}
+
+.imagen-ampliable img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.imagen-ampliable__icono {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgb(21 18 28 / 0.6);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.imagen-ampliable:hover .imagen-ampliable__icono,
+.imagen-ampliable:focus-visible .imagen-ampliable__icono {
+  opacity: 1;
+}
+
+/* En pantallas táctiles no hay hover: el ícono se ve siempre */
+@media (hover: none) {
+  .imagen-ampliable__icono {
+    opacity: 1;
+  }
+}
+
+.imagen-ampliable:focus-visible {
+  outline: 2px solid var(--lla-violeta);
+  outline-offset: 2px;
+}
+
+.ventana.modal--grafico {
+  max-width: min(1200px, calc(100% - 32px));
+}
+
+.imagen-ampliada {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 78vh;
+  object-fit: contain;
+  border-radius: 8px;
+}

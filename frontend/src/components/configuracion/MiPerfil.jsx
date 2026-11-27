@@ -17,15 +17,15 @@ import {
 } from '../../validaciones'
 import Avatar from '../comunes/Avatar'
 import AvisoOk from '../comunes/AvisoOk'
-import Confirmacion from '../comunes/Confirmacion'
 import Modal from '../comunes/Modal'
 import FichaUsuario from '../perfil/FichaUsuario'
 import { fotoCuadrada } from './foto'
 import Obligatorio from '../comunes/Obligatorio'
 
-// Mi perfil: los datos del usuario que inició sesión. Puede cambiar su foto,
-// modificar sus datos (nombre, apellido, correo, teléfono y dirección) y pedir
-// el enlace para cambiar la contraseña. El documento, el rol, la campaña y el
+// Mi perfil: los datos del usuario que inició sesión (solo para ver). Desde
+// "Editar mis datos" se cambia la foto, se modifican los datos (nombre,
+// apellido, correo, teléfono y dirección) y se pide el enlace para cambiar la
+// contraseña (igual que en la app móvil). El documento, el rol, la campaña y el
 // equipo los cambia la administración; el nombre de usuario lo arma el sistema.
 
 // Contraseña de la cuenta, para confirmar el cambio de correo. Oculta lo
@@ -76,7 +76,38 @@ function ContrasenaActual({ valor, onCambio, error, entrada }) {
   )
 }
 
-function EditarDatos({ usuario, onGuardado, onCerrar }) {
+function EditarDatos({ usuario, onGuardado, onCerrar, onFoto, onQuitarFoto, onContrasena }) {
+  // Acción abierta arriba del formulario: 'quitar' | 'contrasena'
+  const [accion, setAccion] = useState(null)
+  const [ocupado, setOcupado] = useState(false)
+  const [mensaje, setMensaje] = useState('')
+  const [errorAccion, setErrorAccion] = useState('')
+  const archivo = useRef(null)
+
+  async function hacer(tarea) {
+    setErrorAccion('')
+    setMensaje('')
+    setOcupado(true)
+    try {
+      const texto = await tarea()
+      if (texto) setMensaje(texto)
+      setAccion(null)
+    } catch (e) {
+      setErrorAccion(e.message)
+    } finally {
+      setOcupado(false)
+    }
+  }
+  const abrir = (cual) => {
+    setMensaje('')
+    setErrorAccion('')
+    setAccion((a) => (a === cual ? null : cual))
+  }
+  function elegirFoto(e) {
+    const elegido = e.target.files?.[0]
+    e.target.value = '' // permite volver a elegir el mismo archivo
+    if (elegido) hacer(() => onFoto(elegido))
+  }
   const [form, setForm] = useState(() => ({
     nombre: usuario.nombre ?? '',
     apellido: usuario.apellido ?? '',
@@ -164,6 +195,63 @@ function EditarDatos({ usuario, onGuardado, onCerrar }) {
 
   return (
     <Modal titulo="Editar mis datos" onCerrar={onCerrar}>
+      {/* Foto de perfil y contraseña (solo se cambian desde acá) */}
+      <div className="editar-cuenta">
+        <Avatar usuario={usuario} className="ficha__avatar" />
+        <div className="editar-cuenta__botones">
+          <button type="button" className="boton boton--borde boton--chico" onClick={() => archivo.current?.click()} disabled={ocupado}>
+            <Camera size={16} aria-hidden="true" />
+            {ocupado && !accion ? 'Subiendo…' : usuario.foto ? 'Cambiar foto' : 'Subir foto'}
+          </button>
+          {usuario.foto && (
+            <button type="button" className="boton boton--borde boton--chico" onClick={() => abrir('quitar')} disabled={ocupado}>
+              <Trash2 size={16} aria-hidden="true" />
+              Quitar foto
+            </button>
+          )}
+          <button type="button" className="boton boton--borde boton--chico" onClick={() => abrir('contrasena')} disabled={ocupado}>
+            <KeyRound size={16} aria-hidden="true" />
+            Cambiar contraseña
+          </button>
+          <input ref={archivo} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={elegirFoto} />
+        </div>
+      </div>
+      {accion === 'quitar' && (
+        <div className="editar-cuenta__confirmar" role="group" aria-label="Quitar foto">
+          <p>¿Desea quitar su foto de perfil? Se mostrará la inicial de su nombre.</p>
+          <div>
+            <button type="button" className="boton boton--borde boton--chico" onClick={() => setAccion(null)}>
+              Cancelar
+            </button>
+            <button type="button" className="boton boton--peligro boton--chico" onClick={() => hacer(onQuitarFoto)} disabled={ocupado}>
+              Quitar
+            </button>
+          </div>
+        </div>
+      )}
+      {accion === 'contrasena' && (
+        <div className="editar-cuenta__confirmar" role="group" aria-label="Cambiar contraseña">
+          <p>
+            Se enviará a <b>{usuario.email}</b> un enlace para elegir una contraseña nueva. Su contraseña actual sigue
+            funcionando hasta que elija la nueva.
+          </p>
+          <div>
+            <button type="button" className="boton boton--borde boton--chico" onClick={() => setAccion(null)}>
+              Cancelar
+            </button>
+            <button type="button" className="boton boton--chico" onClick={() => hacer(onContrasena)} disabled={ocupado}>
+              {ocupado ? 'Enviando…' : 'Enviar enlace'}
+            </button>
+          </div>
+        </div>
+      )}
+      <AvisoOk>{mensaje}</AvisoOk>
+      {errorAccion && (
+        <p className="aviso-error" role="alert">
+          {errorAccion}
+        </p>
+      )}
+
       <form className="formulario-modal" onSubmit={guardar} noValidate>
         <div className="formulario-modal__fila">
           {campo('nombre', 'Nombre', { maxLength: 150, autoCapitalize: 'words', autoComplete: 'given-name' })}
@@ -245,13 +333,9 @@ function EditarDatos({ usuario, onGuardado, onCerrar }) {
 
 function MiPerfil({ usuario, onCambio }) {
   const [editando, setEditando] = useState(false)
-  const [confirmando, setConfirmando] = useState(null) // 'contrasena' | 'foto'
-  const [subiendo, setSubiendo] = useState(false)
   const [aviso, setAviso] = useState('')
-  const [error, setError] = useState('')
   // Correo nuevo que todavía falta confirmar desde el enlace
   const [correoPendiente, setCorreoPendiente] = useState('')
-  const archivo = useRef(null)
 
   // Datos frescos (por si cambiaron desde que se inició sesión)
   useEffect(() => {
@@ -266,44 +350,21 @@ function MiPerfil({ usuario, onCambio }) {
     return () => clearTimeout(t)
   }, [aviso])
 
+  // Acciones del modal "Editar mis datos": devuelven el mensaje para mostrar
+  // (o lanzan el error, que el modal muestra)
   async function cambiarContrasena() {
-    setError('')
-    try {
-      const r = await pedirCambioDeContrasena()
-      setAviso(`Se envió a ${r.email} un enlace para elegir una contraseña nueva. Revise su correo.`)
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setConfirmando(null)
-    }
+    const r = await pedirCambioDeContrasena()
+    return `Se envió a ${r.email} un enlace para elegir una contraseña nueva. Revise su correo.`
   }
 
-  async function elegirFoto(e) {
-    const elegido = e.target.files?.[0]
-    e.target.value = '' // permite volver a elegir el mismo archivo
-    if (!elegido) return
-    setError('')
-    setSubiendo(true)
-    try {
-      onCambio(await guardarFoto(await fotoCuadrada(elegido)))
-      setAviso('Se actualizó su foto de perfil.')
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setSubiendo(false)
-    }
+  async function elegirFoto(elegido) {
+    onCambio(await guardarFoto(await fotoCuadrada(elegido)))
+    return 'Se actualizó su foto de perfil.'
   }
 
   async function borrarFoto() {
-    setError('')
-    try {
-      onCambio(await quitarFoto())
-      setAviso('Se quitó su foto de perfil.')
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setConfirmando(null)
-    }
+    onCambio(await quitarFoto())
+    return 'Se quitó su foto de perfil.'
   }
 
   function guardado(nuevo, correoPendiente) {
@@ -318,22 +379,6 @@ function MiPerfil({ usuario, onCambio }) {
     setCorreoPendiente(correoPendiente || '')
   }
 
-  const avatar = (
-    <button
-      type="button"
-      className="foto-perfil"
-      onClick={() => archivo.current?.click()}
-      disabled={subiendo}
-      aria-label="Cambiar la foto de perfil"
-      title="Cambiar la foto de perfil"
-    >
-      <Avatar usuario={usuario} className="ficha__avatar" />
-      <span className="foto-perfil__camara" aria-hidden="true">
-        <Camera size={15} />
-      </span>
-    </button>
-  )
-
   return (
     <>
       <div className="perfil-acciones">
@@ -341,21 +386,6 @@ function MiPerfil({ usuario, onCambio }) {
           <Pencil size={17} aria-hidden="true" />
           Editar mis datos
         </button>
-        <button type="button" className="boton boton--borde" onClick={() => archivo.current?.click()} disabled={subiendo}>
-          <Camera size={17} aria-hidden="true" />
-          {subiendo ? 'Subiendo…' : usuario.foto ? 'Cambiar foto' : 'Subir foto'}
-        </button>
-        {usuario.foto && (
-          <button type="button" className="boton boton--borde" onClick={() => setConfirmando('foto')}>
-            <Trash2 size={17} aria-hidden="true" />
-            Quitar foto
-          </button>
-        )}
-        <button type="button" className="boton boton--borde" onClick={() => setConfirmando('contrasena')}>
-          <KeyRound size={17} aria-hidden="true" />
-          Cambiar contraseña
-        </button>
-        <input ref={archivo} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={elegirFoto} />
       </div>
 
       <AvisoOk>{aviso}</AvisoOk>
@@ -368,36 +398,18 @@ function MiPerfil({ usuario, onCambio }) {
           </p>
         </div>
       )}
-      {error && (
-        <p className="aviso-error" role="alert">
-          {error}
-        </p>
-      )}
+      {/* La foto solo se ve: se cambia desde "Editar mis datos" */}
+      <FichaUsuario usuario={usuario} campana={usuario.campana?.nombre ?? ''} />
 
-      <FichaUsuario usuario={usuario} campana={usuario.campana?.nombre ?? ''} avatar={avatar} />
-
-      {editando && <EditarDatos usuario={usuario} onGuardado={guardado} onCerrar={() => setEditando(false)} />}
-      {confirmando === 'contrasena' && (
-        <Confirmacion
-          titulo="Cambiar contraseña"
-          textoConfirmar="Enviar enlace"
-          peligro={false}
-          onCerrar={() => setConfirmando(null)}
-          onConfirmar={cambiarContrasena}
-        >
-          Se enviará a <b>{usuario.email}</b> un enlace para elegir una contraseña nueva. Su contraseña actual sigue
-          funcionando hasta que elija la nueva.
-        </Confirmacion>
-      )}
-      {confirmando === 'foto' && (
-        <Confirmacion
-          titulo="Quitar foto"
-          textoConfirmar="Quitar"
-          onCerrar={() => setConfirmando(null)}
-          onConfirmar={borrarFoto}
-        >
-          ¿Desea quitar su foto de perfil? Se mostrará la inicial de su nombre.
-        </Confirmacion>
+      {editando && (
+        <EditarDatos
+          usuario={usuario}
+          onGuardado={guardado}
+          onCerrar={() => setEditando(false)}
+          onFoto={elegirFoto}
+          onQuitarFoto={borrarFoto}
+          onContrasena={cambiarContrasena}
+        />
       )}
     </>
   )

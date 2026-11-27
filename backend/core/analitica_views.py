@@ -251,26 +251,19 @@ def grafico(request, clave):
 # Respuestas por zona y cuestionario (filtros del Dashboard)
 # ---------------------------------------------------------------------------
 #
-# La zona es la ADMINISTRATIVA, no el GPS: una encuesta es de una zona cuando
-# el usuario que la cargó tiene un equipo cuya ruta pasa por calles de barrios
-# de esa zona:
-#   encuestas → usuarios (documento_usuario) → equipos → rutas → calles → barrios → zonas
+# La zona de cada encuesta es la del LUGAR DONDE SE CARGÓ: el punto GPS del
+# celular (encuestas.latitud/longitud) cae dentro del polígono de la zona.
+# Cada respuesta guarda el mismo punto (respuesta_cargada.latitud/longitud),
+# así que las respuestas de cada zona se cuentan con ese punto, sin mezclar
+# zonas. Lo que se cargó sin GPS (por ejemplo, desde la web) no tiene zona.
+#   respuesta_cargada → opciones → preguntas → cuestionarios
 #
-# Las respuestas se cuentan con: respuesta_cargada → opciones → preguntas →
-# cuestionarios. respuesta_cargada no guarda a qué encuesta pertenece, así que
-# las respuestas de un cuestionario solo se pueden atribuir a una zona cuando
-# TODAS las encuestas de ese cuestionario son de esa zona. Si el cuestionario
-# también se cargó en otras zonas (o por usuarios sin zona), no se pueden
-# separar y no se muestran como si fueran de la zona.
+# Se pueden elegir varias zonas (?zona=1,2,3) para compararlas: cada gráfico
+# muestra, por opción, el porcentaje de las encuestas de cada zona que la eligió.
 
-_ZONAS_DE_ENCUESTA = """
-    SELECT DISTINCT b.id_zona
-    FROM usuarios u
-    JOIN equipos q ON q.id_equipo = u.id_equipo
-    JOIN calles ca ON ca.id_ruta = q.id_ruta
-    JOIN barrios b ON b.id_barrio = ca.id_barrio
-    WHERE u.documento = e.documento_usuario AND b.id_zona IS NOT NULL
-"""
+MAXIMO_ZONAS = 6
+# Colores de las zonas en los gráficos de comparación (si la zona no tiene color propio)
+COLORES_ZONAS = ["#51318f", "#2fb4e9", "#c3268c", "#f7a832", "#1f8a5b", "#eb6834"]
 
 
 def _filas(sql, parametros):
@@ -279,78 +272,218 @@ def _filas(sql, parametros):
         return cur.fetchall()
 
 
-@require_GET
-@requiere_permiso("core.view_encuesta")
-def respuestas_por_zona(request):
-    """GET ?zona=&cuestionario= → encuestas de ese cuestionario en esa zona y,
-    si se pueden atribuir a la zona, las preguntas con sus respuestas."""
-    zona_id, cuestionario_id = request.GET.get("zona", ""), request.GET.get("cuestionario", "")
-    if not zona_id.isdigit() or not cuestionario_id.isdigit():
-        return error("Seleccione una zona y un cuestionario.")
-    zona = Zona.objects.filter(pk=int(zona_id)).first()
-    if zona is None:
-        return error("La zona no existe.", 404)
+def _adentro(geometria, puntos):
+    """Máscara de los puntos [(lat, lng), ...] que caen dentro de la zona."""
+    if not puntos:
+        return []
+    lat = [float(p[0]) for p in puntos]
+    lng = [float(p[1]) for p in puntos]
+    return [bool(x) for x in analitica.dentro_de(geometria, lat, lng)]
+
+
+def _zona_de(puntos, zonas):
+    """Nombre de la zona de cada punto (la primera por nombre si se superponen),
+    "Fuera de las zonas" si no cae en ninguna."""
+    nombres = ["Fuera de las zonas"] * len(puntos)
+    for z in zonas:
+        for k, dentro in enumerate(_adentro(z.geometria, puntos)):
+            if dentro and nombres[k] == "Fuera de las zonas":
+                nombres[k] = z.nombre
+    return nombres
+
+
+def _filtros_zona(request):
+    """(zonas, cuestionario, error) de ?zona=1,2&cuestionario=3. Las zonas
+    quedan en el orden en que se eligieron."""
+    ids = [z.strip() for z in request.GET.get("zona", "").split(",") if z.strip()]
+    cuestionario_id = request.GET.get("cuestionario", "")
+    if not ids or not all(z.isdigit() for z in ids) or not cuestionario_id.isdigit():
+        return None, None, error("Seleccione al menos una zona y un cuestionario.")
+    ids = list(dict.fromkeys(int(z) for z in ids))
+    if len(ids) > MAXIMO_ZONAS:
+        return None, None, error(f"Se pueden comparar hasta {MAXIMO_ZONAS} zonas a la vez.")
+    por_id = {z.pk: z for z in Zona.objects.filter(pk__in=ids)}
+    if len(por_id) != len(ids):
+        return None, None, error("Alguna de las zonas elegidas no existe.", 404)
     cuestionario = cuestionarios_de_campana(request.campana).filter(pk=int(cuestionario_id)).first()
     if cuestionario is None:
-        return error("El cuestionario no existe en esta campaña.", 404)
+        return None, None, error("El cuestionario no existe en esta campaña.", 404)
+    return [por_id[i] for i in ids], cuestionario, None
 
-    # Cada encuesta del cuestionario con las zonas de quien la cargó
-    encuestas = _filas(
-        f"""
-        SELECT e.id_encuesta, u.id_campana,
-               ARRAY(SELECT z.nombre FROM zonas z WHERE z.id_zona IN ({_ZONAS_DE_ENCUESTA}) ORDER BY z.nombre)
-        FROM encuestas e
-        JOIN usuarios u ON u.documento = e.documento_usuario
-        WHERE e.id_cuestionario = %s
+
+def _color_zona(zona, k):
+    color = (zona.color or "").strip()
+    return color if len(color) == 7 and color.startswith("#") else COLORES_ZONAS[k % len(COLORES_ZONAS)]
+
+
+def _datos_zonas(zonas, cuestionario):
+    """Encuestas por zona y, por pregunta y opción, cuántas respuestas de cada
+    zona. Devuelve (encuestas_por_zona, total_encuestas, sin_gps, reparto, preguntas)."""
+    # Encuestas del cuestionario con su punto GPS. No se filtra por la campaña
+    # de quien la cargó: el cuestionario ya es de esta campaña, quien administra
+    # puede no tener campaña propia, y las respuestas (respuesta_cargada) tampoco
+    # guardan campaña, así encuestas y respuestas cuentan lo mismo.
+    encuestas = _filas("SELECT e.latitud, e.longitud FROM encuestas e WHERE e.id_cuestionario = %s", [cuestionario.pk])
+    con_gps = [(la, ln) for la, ln in encuestas if la is not None and ln is not None]
+    sin_gps = len(encuestas) - len(con_gps)
+    por_zona = {z.pk: sum(_adentro(z.geometria, con_gps)) for z in zonas}
+
+    reparto = {}
+    for nombre in _zona_de(con_gps, Zona.objects.order_by("nombre")):
+        reparto[nombre] = reparto.get(nombre, 0) + 1
+    if sin_gps:
+        reparto["Sin ubicación GPS"] = sin_gps
+
+    opciones = _filas(
+        """
+        SELECT p.id_pregunta, p.orden, p.enunciado, p.tipo, o.id_opcion, o.texto
+        FROM preguntas p JOIN opciones o ON o.id_pregunta = p.id_pregunta
+        WHERE p.id_cuestionario = %s
+        ORDER BY p.orden, o.orden
         """,
         [cuestionario.pk],
     )
-    total = len(encuestas)
-    en_zona = sum(1 for _, campana, zonas in encuestas if zona.nombre in zonas and campana == request.campana.pk)
-    # Dónde se cargó el resto (para explicar por qué no se pueden separar)
-    reparto = {}
-    for _, _, zonas in encuestas:
-        for nombre in zonas or ["Sin zona"]:
-            reparto[nombre] = reparto.get(nombre, 0) + 1
-    exacto = total > 0 and en_zona == total
+    respuestas = _filas(
+        """
+        SELECT r.id_opcion, r.latitud, r.longitud
+        FROM respuesta_cargada r
+        JOIN opciones o ON o.id_opcion = r.id_opcion
+        JOIN preguntas p ON p.id_pregunta = o.id_pregunta
+        WHERE p.id_cuestionario = %s AND r.latitud IS NOT NULL AND r.longitud IS NOT NULL
+        """,
+        [cuestionario.pk],
+    )
+    puntos = [(la, ln) for _, la, ln in respuestas]
+    cantidad = {}  # (id_zona, id_opcion) → respuestas
+    for z in zonas:
+        for (id_opcion, _, _), adentro in zip(respuestas, _adentro(z.geometria, puntos)):
+            if adentro:
+                cantidad[(z.pk, id_opcion)] = cantidad.get((z.pk, id_opcion), 0) + 1
 
-    preguntas = []
-    if exacto:
-        filas = _filas(
-            """
-            SELECT p.id_pregunta, p.orden, p.enunciado, p.tipo, o.id_opcion, o.texto, COUNT(r.id_respuesta)
-            FROM preguntas p
-            JOIN opciones o ON o.id_pregunta = p.id_pregunta
-            LEFT JOIN respuesta_cargada r ON r.id_opcion = o.id_opcion
-            WHERE p.id_cuestionario = %s
-            GROUP BY p.id_pregunta, p.orden, p.enunciado, p.tipo, o.id_opcion, o.orden, o.texto
-            ORDER BY p.orden, o.orden
-            """,
-            [cuestionario.pk],
-        )
-        por_id = {}
-        for id_p, orden, enunciado, tipo, id_o, texto, cantidad in filas:
-            p = por_id.get(id_p)
-            if p is None:
-                p = por_id[id_p] = {
-                    "id": id_p, "orden": orden, "enunciado": enunciado, "tipo": tipo,
-                    "multiple": tipo == "opcion_multiple", "opciones": [], "respuestas": 0,
-                }
-                preguntas.append(p)
-            p["opciones"].append({"id": id_o, "texto": texto, "cantidad": cantidad})
-            p["respuestas"] += cantidad
-        for p in preguntas:
-            for o in p["opciones"]:
-                # Porcentaje sobre las encuestas de la zona (en opción múltiple
-                # una persona puede elegir varias, así que no suman 100 %)
-                o["porcentaje"] = round(100 * o["cantidad"] / total, 1)
+    preguntas, por_id = [], {}
+    for id_p, orden, enunciado, tipo, id_o, texto in opciones:
+        p = por_id.get(id_p)
+        if p is None:
+            p = por_id[id_p] = {
+                "id": id_p, "orden": orden, "enunciado": enunciado, "tipo": tipo,
+                "multiple": tipo == "opcion_multiple", "opciones": [], "respuestas": 0,
+            }
+            preguntas.append(p)
+        zonas_opcion = []
+        for z in zonas:
+            n = cantidad.get((z.pk, id_o), 0)
+            # Porcentaje sobre las encuestas de esa zona (así se comparan zonas
+            # de distinto tamaño; en opción múltiple no suman 100 %)
+            zonas_opcion.append({"zona": z.pk, "cantidad": n,
+                                 "porcentaje": round(100 * n / por_zona[z.pk], 1) if por_zona[z.pk] else 0})
+        total = sum(x["cantidad"] for x in zonas_opcion)
+        p["opciones"].append({"id": id_o, "texto": texto, "cantidad": total, "zonas": zonas_opcion})
+        p["respuestas"] += total
+    return por_zona, len(encuestas), sin_gps, reparto, preguntas
 
+
+@require_GET
+@requiere_permiso("core.view_encuesta")
+def respuestas_por_zona(request):
+    """GET ?zona=1,2&cuestionario= → por zona, las encuestas de ese cuestionario
+    cargadas dentro de ella (según el GPS), y las preguntas con sus respuestas."""
+    zonas, cuestionario, problema = _filtros_zona(request)
+    if problema:
+        return problema
+    por_zona, total, sin_gps, reparto, preguntas = _datos_zonas(zonas, cuestionario)
+    en_zonas = sum(por_zona.values())
     return JsonResponse({
-        "zona": {"id": zona.pk, "nombre": zona.nombre},
+        "zonas": [{"id": z.pk, "nombre": z.nombre, "color": _color_zona(z, k), "encuestas": por_zona[z.pk]}
+                  for k, z in enumerate(zonas)],
         "cuestionario": {"id": cuestionario.pk, "titulo": cuestionario.titulo},
-        "encuestas": en_zona,
+        "encuestas": en_zonas,
         "encuestas_cuestionario": total,
-        "separable": exacto,
+        "sin_gps": sin_gps,
         "reparto": [{"zona": z, "encuestas": n} for z, n in sorted(reparto.items(), key=lambda x: (-x[1], x[0]))],
-        "preguntas": preguntas,
+        "preguntas": preguntas if en_zonas else [],
     })
+
+
+def _comparacion_png(pregunta, zonas, oscuro):
+    """Barras agrupadas: una fila por opción y una barra por zona con el % de
+    las encuestas de esa zona que eligió la opción (y la cantidad)."""
+    import io
+
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    from . import graficos
+
+    opciones = pregunta["opciones"][::-1]  # la primera opción arriba
+    con_datos = [(k, z) for k, z in enumerate(zonas) if z["encuestas"]]
+    n = max(len(con_datos), 1)
+    alto_grupo = 0.8
+    alto = alto_grupo / n
+    figura, ax = plt.subplots(figsize=(8, max(2.6, 0.42 * len(opciones) * n + 1.2)), dpi=110)
+    try:
+        y = np.arange(len(opciones))
+        tope = 1
+        for j, (k, z) in enumerate(con_datos):
+            valores = [o["zonas"][k]["porcentaje"] for o in opciones]
+            cantidades = [o["zonas"][k]["cantidad"] for o in opciones]
+            posiciones = y + alto_grupo / 2 - alto * (j + 0.5)
+            ax.barh(posiciones, valores, height=alto * 0.9, color=z["color"], label=f"{z['nombre']} ({z['encuestas']})")
+            tope = max(tope, *valores)
+            for py, v, c in zip(posiciones, valores, cantidades):
+                ax.text(v + 1, py, f"{graficos._numero(v)} % ({c})", va="center", fontsize=9, color=graficos.TINTA)
+        ax.set_yticks(y, [graficos._recortar(o["texto"], 24) for o in opciones])
+        ax.set_xlim(0, min(100, tope) * 1.25 if tope < 100 else 125)
+        ax.set_xticks([t for t in range(0, 101, 20) if t <= max(tope, 20) * 1.25])
+        ax.xaxis.grid(True, color=graficos.GRILLA)
+        graficos._ejes_limpios(ax)
+        ax.set_xlabel("% de las encuestas de cada zona", color=graficos.TINTA_SUAVE, fontsize=9)
+        ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=min(n, 3), frameon=False, fontsize=9,
+                  labelcolor=graficos.TINTA)
+        figura.tight_layout()
+        if oscuro:
+            oscurecer(figura)
+        salida = io.BytesIO()
+        figura.savefig(salida, format="png", facecolor=figura.get_facecolor(), bbox_inches="tight")
+        return salida.getvalue()
+    finally:
+        plt.close(figura)
+
+
+@require_GET
+@requiere_permiso("core.view_encuesta")
+def grafico_zona(request, pregunta):
+    """PNG de una pregunta con las respuestas de las zonas elegidas (GPS).
+    Una zona: torta (una sola opción) o barras (opción múltiple), igual que
+    Estadísticas. Varias zonas: barras agrupadas para compararlas."""
+    import pandas as pd
+    from django.shortcuts import get_object_or_404
+
+    from . import graficos
+
+    zonas, cuestionario, problema = _filtros_zona(request)
+    if problema:
+        return problema
+    p = get_object_or_404(cuestionario.preguntas.prefetch_related("opciones"), pk=pregunta)
+    oscuro = request.GET.get("tema") == "oscuro"
+    por_zona, _, _, _, preguntas = _datos_zonas(zonas, cuestionario)
+    dato = next(x for x in preguntas if x["id"] == p.pk)
+    if dato["respuestas"] == 0:
+        return error("No hay respuestas de esta pregunta en las zonas elegidas.", 404)
+
+    if len(zonas) == 1:
+        respuestas = pd.DataFrame(
+            [(p.pk, o["id"]) for o in dato["opciones"] for _ in range(o["cantidad"])],
+            columns=["pregunta", "opcion"],
+        )
+        tabla, _, respondidas = graficos.tabla_de(p, respuestas)
+        png = graficos.grafico_png("barras" if p.tipo == "opcion_multiple" else "torta", tabla, respondidas, oscuro=oscuro)
+    else:
+        lista = [{"id": z.pk, "nombre": z.nombre, "color": _color_zona(z, k), "encuestas": por_zona[z.pk]}
+                 for k, z in enumerate(zonas)]
+        png = _comparacion_png(dato, lista, oscuro)
+    respuesta = HttpResponse(png, content_type="image/png")
+    respuesta["Cache-Control"] = "private, no-cache"
+    return respuesta

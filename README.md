@@ -66,6 +66,18 @@ Corren sobre SQLite local, sin tocar Neon:
 $env:DATABASE_URL = "sqlite:///test.sqlite3"; python manage.py test core; Remove-Item Env:DATABASE_URL
 ```
 
+## App móvil
+
+La app para celular (React Native + Expo) está en `movil/` y usa **este mismo
+backend**: se prende `backend` (`python manage.py runserver`, que ya escucha en la
+red y acepta sola la IP de la compu) y la app con Expo. Ver `movil/README.md`.
+
+```powershell
+cd movil
+npm install
+npx expo start
+```
+
 ## Frontend
 
 ```powershell

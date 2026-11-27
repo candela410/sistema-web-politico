@@ -142,15 +142,24 @@
 }
 
 /* Cada campaña: la tarjeta para ingresar y, al lado, el botón de editar */
+/* El lápiz de editar va adentro de la tarjeta, arriba a la derecha */
 .elegir__item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  position: relative;
 }
 
 .elegir__item .elegir__campana {
-  flex: 1;
+  width: 100%;
   min-width: 0;
+}
+
+.elegir__item:has(.elegir__editar) .elegir__campana {
+  padding-right: 60px;
+}
+
+.elegir__item .elegir__editar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
 
 .elegir__inactivas h2 {

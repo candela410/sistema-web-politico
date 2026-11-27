@@ -17,3 +17,6 @@ export const urlGraficoAnalitica = (clave, filtros) => `/api/analitica/${clave}.
 // Encuestas de un cuestionario en una zona (la del equipo de quien la cargó) y sus respuestas
 export const obtenerRespuestasPorZona = (zona, cuestionario) =>
   pedir(`/api/analitica/respuestas-por-zona/${consulta({ zona, cuestionario })}`)
+
+// Gráfico PNG de una pregunta con las respuestas de la zona (torta o barras)
+export const urlGraficoZona = (pregunta, filtros) => `/api/analitica/respuestas-por-zona/${pregunta}.png${consulta(filtros)}`

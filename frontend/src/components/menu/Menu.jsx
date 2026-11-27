@@ -4,7 +4,6 @@ import { Menu as IconoMenu, Moon, Sun } from 'lucide-react'
 import { salirDeCampana } from '../../api/campanas'
 import Logo from '../comunes/Logo'
 import { useTema } from '../../tema'
-import Avisos from './avisos'
 import BuscadorSecciones from './BuscadorSecciones'
 import Lateral from './Lateral'
 import MenuUsuario from './MenuUsuario'
@@ -112,7 +111,6 @@ function Menu({ usuario, onCambio, onSalir }) {
             <Sun size={22} className="tema-boton__sol" aria-hidden="true" />
             <Moon size={22} className="tema-boton__luna" aria-hidden="true" />
           </button>
-          {usuario.campana && <Avisos usuario={usuario} />}
           <MenuUsuario
             usuario={usuario}
             onCambiarCampana={usuario.puede_elegir_campana ? cambiarCampana : null}

@@ -36,19 +36,64 @@ function marcarSesion(valor) {
   }
 }
 
-// Se ingresa con el nombre de usuario (apellido + inicial del nombre)
+// Se ingresa con el nombre de usuario (apellido + inicial del nombre).
+// "Recordar" solo guarda el usuario y la contraseña para la próxima vez; la
+// sesión termina igual al cerrar el navegador (como en la app móvil).
 export async function iniciarSesion(nombreDeUsuario, password, recordar = false) {
   const { usuario } = await pedir('/api/auth/login/', {
     method: 'POST',
-    datos: { usuario: nombreDeUsuario, password, recordar },
+    datos: { usuario: nombreDeUsuario, password },
   })
   marcarSesion(true)
-  recordarUsuario(usuario.username)
+  if (recordar) {
+    recordarUsuario(usuario.username)
+    await guardarCredenciales(usuario.username, password)
+  } else {
+    recordarUsuario(null)
+    await olvidarCredenciales()
+  }
   return usuario
 }
 
-// Último nombre de usuario que ingresó en este navegador: se propone en el
-// login y en "¿Olvidó su contraseña?" para no tener que recordarlo
+// La contraseña NO se guarda en localStorage (cualquier script de la página
+// podría leerla): se le pasa al gestor de contraseñas del navegador con la
+// Credential Management API (Chrome, Edge, Opera). En los navegadores sin esa
+// API, el propio navegador ofrece guardarla gracias a autocomplete.
+const conCredenciales = () => typeof window !== 'undefined' && 'PasswordCredential' in window && navigator.credentials
+
+async function guardarCredenciales(usuario, password) {
+  if (!conCredenciales()) return
+  try {
+    // eslint-disable-next-line no-undef
+    await navigator.credentials.store(new PasswordCredential({ id: usuario, password, name: usuario }))
+  } catch {
+    // El usuario no quiso guardarla o el navegador no deja: no se recuerda
+  }
+}
+
+async function olvidarCredenciales() {
+  if (!conCredenciales()) return
+  try {
+    // No se vuelven a completar solas hasta que se marque "Recordar" otra vez
+    await navigator.credentials.preventSilentAccess()
+  } catch {
+    // nada que olvidar
+  }
+}
+
+// Usuario y contraseña guardados con "Recordar" ({ usuario, password } o null)
+export async function credencialesGuardadas() {
+  if (!conCredenciales() || !ultimoUsuario()) return null
+  try {
+    const c = await navigator.credentials.get({ password: true, mediation: 'optional' })
+    return c?.password ? { usuario: c.id, password: c.password } : null
+  } catch {
+    return null
+  }
+}
+
+// Nombre de usuario recordado en este navegador (con "Recordar"): se propone
+// en el login y en "¿Olvidó su contraseña?"
 const ULTIMO_USUARIO = 'ultimo-usuario'
 
 export function ultimoUsuario() {
@@ -61,7 +106,8 @@ export function ultimoUsuario() {
 
 function recordarUsuario(nombre) {
   try {
-    localStorage.setItem(ULTIMO_USUARIO, nombre)
+    if (nombre) localStorage.setItem(ULTIMO_USUARIO, nombre)
+    else localStorage.removeItem(ULTIMO_USUARIO)
   } catch {
     // Sin almacenamiento: no se recuerda
   }

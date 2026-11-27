@@ -3,7 +3,6 @@ from django.urls import path
 from . import (
     analitica_views,
     asignaciones_views,
-    avisos_views,
     backup_views,
     campanas_views,
     categorias_views,
@@ -30,8 +29,6 @@ urlpatterns = [
     path("auth/cambiar-contrasena/", contrasenas_views.cambiar_propia, name="auth-cambiar-contrasena"),
     path("auth/restablecer/<str:uid>/<str:token>/", contrasenas_views.restablecer, name="auth-restablecer"),
     path("auth/confirmar-correo/", contrasenas_views.confirmar_correo, name="auth-confirmar-correo"),
-    path("avisos/", avisos_views.avisos, name="avisos"),
-    path("avisos/leidas/", avisos_views.marcar_leidas, name="avisos-leidas"),
     path("backup/", backup_views.backups, name="backups"),
     path("backup/programacion/", backup_views.programacion, name="backup-programacion"),
     path("backup/<str:pk>/", backup_views.backup_detalle, name="backup"),
@@ -75,5 +72,6 @@ urlpatterns = [
     path("encuestas/por-dia/", encuestas_views.por_dia, name="encuestas-por-dia"),
     path("analitica/", analitica_views.resumen, name="analitica"),
     path("analitica/respuestas-por-zona/", analitica_views.respuestas_por_zona, name="analitica-respuestas-zona"),
+    path("analitica/respuestas-por-zona/<int:pregunta>.png", analitica_views.grafico_zona, name="analitica-grafico-zona"),
     path("analitica/<str:clave>.png", analitica_views.grafico, name="analitica-grafico"),
 ]

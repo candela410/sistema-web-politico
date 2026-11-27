@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import socket
 from pathlib import Path
 
 import dj_database_url
@@ -33,7 +34,32 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-only-chang
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
+
+
+def ips_de_esta_compu():
+    # IPs de la compu en la red local (Wi-Fi / cable). No envía nada: el
+    # "connect" de UDP solo elige la interfaz de salida.
+    ips = set()
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(('10.255.255.255', 1))
+            ips.add(s.getsockname()[0])
+    except OSError:
+        pass
+    try:
+        ips.update(socket.gethostbyname_ex(socket.gethostname())[2])
+    except OSError:
+        pass
+    return sorted(ip for ip in ips if not ip.startswith('127.'))
+
+
+# En desarrollo la app móvil (carpeta movil/) entra por la IP de la compu en la
+# red Wi-Fi: sin ella en ALLOWED_HOSTS Django responde 400 "Invalid HTTP_HOST
+# header". Como la IP la asigna el router y cambia, se agrega sola. En
+# producción (DJANGO_DEBUG=False) solo valen los hosts de DJANGO_ALLOWED_HOSTS.
+if DEBUG:
+    ALLOWED_HOSTS += [ip for ip in ips_de_esta_compu() if ip not in ALLOWED_HOSTS]
 
 
 # Application definition

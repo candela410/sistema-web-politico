@@ -35,7 +35,6 @@ from django.views.decorators.http import require_http_methods, require_POST
 from .api import error, leer_json, requiere_permiso
 from .bitacora import registrar
 from .limites import ip_de, sumar, superado
-from .notificaciones import contrasena_cambiada
 from .validaciones import email as validar_email
 from .models import Usuario
 
@@ -307,12 +306,8 @@ def restablecer(request, uid, token):
         validate_password(password, usuario)
     except ValidationError as e:
         return error(" ".join(e.messages))
-    tenia = usuario.has_usable_password()
     usuario.set_password(password)
     usuario.save(update_fields=["password"])
-    # Al elegirla por primera vez (invitación) no se avisa: no es un cambio
-    if tenia:
-        contrasena_cambiada(usuario)
     return JsonResponse({"ok": True})
 
 

@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { f } from './catalogoGraficos'
 import { useTemaActual } from '../../tema'
+import ImagenAmpliable from '../comunes/ImagenAmpliable'
 
 const IMAGENES = new Set(['barras', 'columnas', 'linea', 'torta', 'distribucion'])
 
@@ -25,7 +26,8 @@ function ImagenTema({ cuestionario, pregunta, clave, version, tema }) {
   return (
     <div className={`grafico-imagen grafico-imagen--${estado}`}>
       {estado === 'error' && <p className="texto-error">No se pudo dibujar el gráfico.</p>}
-      <img
+      <ImagenAmpliable
+        titulo={pregunta.enunciado}
         src={`/api/cuestionarios/${cuestionario}/estadisticas/${pregunta.id}/${clave}.png?v=${version ?? 0}${oscuro}`}
         alt={`Gráfico de ${pregunta.enunciado}`}
         loading="lazy"

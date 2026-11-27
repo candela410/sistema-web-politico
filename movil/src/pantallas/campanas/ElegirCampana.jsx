@@ -153,7 +153,7 @@ export default function ElegirCampana({ usuario, onElegida, onSalir }) {
           ) : (
             <>
               {paginado.items.map((x) => (
-                <Fila key={x.id} gap={8} style={{ alignItems: 'stretch' }}>
+                <View key={x.id}>
                   <Pressable
                     onPress={() => entrar(x)}
                     disabled={entrando !== null}
@@ -164,6 +164,8 @@ export default function ElegirCampana({ usuario, onElegida, onSalir }) {
                       borderLeftWidth: 4,
                       borderLeftColor: pressed ? MARCA.magenta : MARCA.violeta,
                       padding: 16,
+                      // Lugar para el lápiz de editar, que va adentro arriba a la derecha
+                      paddingRight: puedeEditar ? 60 : 16,
                       gap: 4,
                       opacity: entrando !== null && entrando !== x.id ? 0.6 : 1,
                     })}
@@ -176,8 +178,12 @@ export default function ElegirCampana({ usuario, onElegida, onSalir }) {
                       {entrando !== x.id && <ArrowRight size={16} color={c.violetaTexto} />}
                     </Fila>
                   </Pressable>
-                  {puedeEditar && <BotonIcono icono={Pencil} etiqueta={`Editar ${x.nombre}`} ayuda="Editar o desactivar" onPress={() => setEditando(x)} />}
-                </Fila>
+                  {puedeEditar && (
+                    <View style={{ position: 'absolute', top: 10, right: 10 }}>
+                      <BotonIcono icono={Pencil} etiqueta={`Editar ${x.nombre}`} ayuda="Editar o desactivar" onPress={() => setEditando(x)} />
+                    </View>
+                  )}
+                </View>
               ))}
               <Paginacion {...paginado} />
             </>

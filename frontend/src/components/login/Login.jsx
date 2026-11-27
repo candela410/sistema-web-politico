@@ -1,8 +1,8 @@
 // useState: hook de React para guardar valores que cambian (lo que escribe el usuario, errores, etc.)
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 // iniciarSesion: habla con Django (src/api/auth.js)
-import { iniciarSesion, ultimoUsuario } from '../../api/auth'
+import { credencialesGuardadas, iniciarSesion, ultimoUsuario } from '../../api/auth'
 // Mismas reglas que el backend
 import { conFiltro, errorUsuario, sinEspaciosMinusculas } from '../../validaciones'
 // Logo del águila (src/assets/logo.png)
@@ -21,10 +21,25 @@ export default function Login({ onIngreso }) {
   // Se propone el último que ingresó en este navegador.
   const [nombre, setNombre] = useState(ultimoUsuario)
   const [password, setPassword] = useState('')
-  const [remember, setRemember] = useState(false) // checkbox "Recordar"
+  // checkbox "Recordar": queda marcado si la vez anterior se recordaron los datos
+  const [remember, setRemember] = useState(() => Boolean(ultimoUsuario()))
   const [tocados, setTocados] = useState({ nombre: false, password: false })
   const [error, setError] = useState('') // error que devuelve el servidor
   const [loading, setLoading] = useState(false)
+
+  // Con "Recordar" marcado la vez anterior, la contraseña guardada en el navegador ya aparece escrita
+  useEffect(() => {
+    let vigente = true
+    credencialesGuardadas().then((c) => {
+      if (!vigente || !c) return
+      setNombre(c.usuario)
+      setPassword(c.password)
+      setRemember(true)
+    })
+    return () => {
+      vigente = false
+    }
+  }, [])
 
   // En el login solo se pide que la contraseña esté escrita: la regla de 8 caracteres,
   // mayúscula, etc. se exige al crearla. Si es incorrecta, el servidor responde
@@ -46,7 +61,7 @@ export default function Login({ onIngreso }) {
     }
     setLoading(true)
     try {
-      // "remember" se manda al backend: si es false, la sesión termina al cerrar el navegador
+      // "remember": guarda (o borra) el usuario y la contraseña para la próxima vez
       const usuario = await iniciarSesion(nombre.trim(), password, remember)
       onIngreso?.(usuario)
     } catch (err) {

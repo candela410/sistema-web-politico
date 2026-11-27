@@ -12,7 +12,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
-from . import graficos, notificaciones
+from . import graficos
 from .cuestionarios_views import cuestionarios_de_campana, encuestas_de
 from .api import error, leer_json, permisos_de, requiere_permiso
 from .bitacora import registrar
@@ -201,7 +201,6 @@ def responder(request, pk):
         request, encuesta, "crear",
         detalle=f"Cargó una encuesta de {cuestionario.titulo} (documento {encuestado.documento})",
     )
-    notificaciones.encuesta_cargada(request.user, cuestionario, request.campana)
     return JsonResponse({"ok": True, "encuesta": encuesta.pk}, status=201)
 
 
